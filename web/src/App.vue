@@ -101,6 +101,8 @@ async function openResource(parentId: string | null) {
 </template>
 
 <style>
+/* 全局主色参数：所有强调蓝统一走 --kh-brand（默认取 Element 主题主色） */
+:root { --kh-brand: var(--el-color-primary, #409eff); }
 body {
   margin: 0;
   font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;

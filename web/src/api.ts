@@ -93,9 +93,9 @@ export interface GraphData {
 export const getGraph = (dimension: string) =>
   http.get('/graph', { params: { dimension } }).then(r => r.data.data as GraphData);
 
-/** 时间线：按创建时间倒序的资源流 */
-export const getTimeline = (type = '') =>
-  http.get('/timeline', { params: { type } }).then(r => r.data.data as Resource[]);
+/** 时间线：按创建时间倒序的资源流（type/tag 可筛选） */
+export const getTimeline = (type = '', tag = '') =>
+  http.get('/timeline', { params: { type, tag } }).then(r => r.data.data as Resource[]);
 
 /** 报表中心 */
 export interface ReportGenResult {

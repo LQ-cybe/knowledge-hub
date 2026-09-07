@@ -177,17 +177,19 @@ router.get('/dashboard', (_req, res) => {
   res.json({ code: 0, data: { total, byType, tagCount, topFolders, recent, topTags } });
 });
 
-/** GET /api/timeline?type= —— 垂直时间线：按创建时间倒序的资源流（前端按天分组，含大小/标签辅助信息） */
+/** GET /api/timeline?type=&tag= —— 垂直时间线：按创建时间倒序的资源流（前端按天分组，含大小/标签辅助信息） */
 router.get('/timeline', (req, res) => {
   const db = getDb();
   const type = (req.query.type as string || '').trim();
+  const tag = (req.query.tag as string || '').trim();
   const rows = db.prepare(
     `SELECT r.id, r.type, r.title, r.path, r.parent_id, r.created_at, r.size,
        (SELECT GROUP_CONCAT(t.name, ',') FROM resource_tags rt JOIN tags t ON t.id = rt.tag_id WHERE rt.resource_id = r.id) AS tag_names
      FROM resources r
      WHERE r.status='active' AND (? = '' OR r.type = ?)
+       AND (? = '' OR EXISTS (SELECT 1 FROM resource_tags rt WHERE rt.resource_id = r.id AND rt.tag_id = ?))
      ORDER BY r.created_at DESC LIMIT 500`
-  ).all(type, type) as { id: string; type: string; title: string; path: string; parent_id: string | null; created_at: string; size: number | null; tag_names: string | null }[];
+  ).all(type, type, tag, tag) as { id: string; type: string; title: string; path: string; parent_id: string | null; created_at: string; size: number | null; tag_names: string | null }[];
   res.json({ code: 0, data: rows });
 });
 
@@ -201,23 +203,29 @@ router.get('/search', (req, res) => {
   const like = `%${q}%`;
   const matchQ = `"${q.replace(/"/g, '')}"*`;
   const rows = db.prepare(
-    `SELECT resources.id, resources.type, resources.title, resources.path, resources.parent_id,
-            resources.created_at, resources.updated_at,
-            snippet(resources_fts, 1, '[', ']', '…', 12) AS highlight
-     FROM resources_fts
-     JOIN resources ON resources.rowid = resources_fts.rowid
-     WHERE resources_fts MATCH @q
-     UNION
-     SELECT resources.id, resources.type, resources.title, resources.path, resources.parent_id,
-            resources.created_at, resources.updated_at, '' AS highlight
-     FROM resources
-     WHERE resources.status = 'active' AND (resources.title LIKE @like OR resources.path LIKE @like)
-       AND resources.id NOT IN (
-         SELECT resources.id FROM resources_fts
-         JOIN resources ON resources.rowid = resources_fts.rowid
-         WHERE resources_fts MATCH @q
-       )
-     LIMIT 100`
+    `SELECT * FROM (
+      SELECT resources.id, resources.type, resources.title, resources.path, resources.parent_id,
+             resources.created_at, resources.updated_at,
+             snippet(resources_fts, 1, '[', ']', '…', 12) AS highlight
+      FROM resources_fts
+      JOIN resources ON resources.rowid = resources_fts.rowid
+      WHERE resources_fts MATCH @q
+      UNION
+      SELECT resources.id, resources.type, resources.title, resources.path, resources.parent_id,
+             resources.created_at, resources.updated_at, '' AS highlight
+      FROM resources
+      WHERE resources.status = 'active' AND (resources.title LIKE @like OR resources.path LIKE @like)
+        AND resources.id NOT IN (
+          SELECT resources.id FROM resources_fts
+          JOIN resources ON resources.rowid = resources_fts.rowid
+          WHERE resources_fts MATCH @q
+        )
+    )
+    ORDER BY
+      CASE type WHEN 'file' THEN 0 WHEN 'note' THEN 1 WHEN 'bookmark' THEN 2 WHEN 'todo' THEN 3 WHEN 'report' THEN 4 ELSE 5 END,
+      CASE WHEN title LIKE @like THEN 0 ELSE 1 END,
+      created_at DESC
+    LIMIT 100`
   ).all({ q: matchQ, like }) as unknown[];
   res.json({ code: 0, data: rows });
 });

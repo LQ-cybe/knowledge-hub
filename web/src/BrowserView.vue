@@ -187,6 +187,8 @@ async function onSearch() {
     list.value = rows;
     total.value = rows.length;
     searchMode.value = true;
+  } catch (e) {
+    ElMessage.error('搜索失败：' + ((e as Error).message || '服务异常'));
   } finally {
     loading.value = false;
   }
@@ -448,8 +450,7 @@ defineExpose({ openFolder, openTag });
           <el-table-column label="标签" min-width="150">
             <template #default="{ row }">
               <div class="tag-cell">
-                <el-tag v-for="(n, i) in rowTagNames(row)" :key="i" size="small"
-                  :color="tagColor(rowTagIds(row)[i] || '')" class="cell-tag">{{ n }}</el-tag>
+                <span v-for="(n, i) in rowTagNames(row)" :key="i" class="cell-tag" :title="n">{{ n }}</span>
                 <el-button size="small" text type="primary" @click="openTagDialog(row)">打标</el-button>
               </div>
             </template>
@@ -474,7 +475,7 @@ defineExpose({ openFolder, openTag });
           <div class="card-title" :title="r.title">{{ r.title }}</div>
           <div class="card-meta">{{ r.type === 'file' ? r.path : typeLabels[r.type] }}</div>
           <div class="card-tags">
-            <el-tag v-for="(n, i) in rowTagNames(r)" :key="i" size="small" :color="tagColor(rowTagIds(r)[i] || '')">{{ n }}</el-tag>
+            <span v-for="(n, i) in rowTagNames(r)" :key="i" class="cell-tag" :title="n">{{ n }}</span>
           </div>
         </div>
       </div>
@@ -535,7 +536,7 @@ defineExpose({ openFolder, openTag });
 .tree-actions { display: flex; gap: 2px; }
 .tree-actions .el-button { padding: 0 4px; margin: 0; }
 .tree-wrap { flex: 1; min-height: 0; overflow: auto; padding-right: 8px; }
-.file-tree { --el-tree-node-content-height: 28px; }
+.file-tree { --el-tree-node-content-height: 26px; }
 .tn { display: flex; align-items: center; gap: 5px; min-width: 0; }
 .tn-icon { flex: none; font-size: 14px; display: inline-flex; align-items: center; }
 .tn-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
@@ -556,9 +557,24 @@ html.dark .tree-wrap::-webkit-scrollbar-thumb:hover, html.dark .grid::-webkit-sc
 .toolbar .total { font-size: 12px; color: var(--el-text-color-secondary, #9ca3af); margin-left: auto; }
 
 .table-wrap { flex: 1; min-height: 0; background: var(--el-bg-color, #fff); margin: 12px 14px 0; border-radius: 10px; border: 1px solid var(--el-border-color, #e5e7eb); overflow: hidden; }
+/* 表格行高压到正常（内容紧凑单行） */
+.table-wrap :deep(.el-table td.el-table__cell) { padding: 4px 0; }
+.table-wrap :deep(.el-table th.el-table__cell) { padding: 5px 0; }
+.table-wrap :deep(.el-table .cell) { padding: 0 8px; line-height: 1.5; }
+.table-wrap :deep(.el-table__empty-block) { min-height: 60px; }
+/* 结构树行高（变量 + 兜底双重保证） */
+.file-tree :deep(.el-tree-node__content) { height: 26px; }
+.file-tree { --el-tree-node-content-height: 26px; }
 .path { color: var(--el-text-color-secondary, #9ca3af); font-size: 12px; }
-.tag-cell { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
-.cell-tag { max-width: 90px; }
+.tag-cell { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; overflow: hidden; }
+.tag-cell .el-button { flex: none; }
+/* 标签统一主色蓝底白字（--kh-brand 全局主色参数） */
+.cell-tag {
+  display: inline-block; flex: 0 1 auto; min-width: 0; max-width: 80px; padding: 1px 8px; border-radius: 4px;
+  font-size: 12px; line-height: 18px; color: #fff; background: var(--kh-brand, #409eff);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.card-tags .cell-tag { max-width: 100%; }
 
 .grid { flex: 1; overflow: auto; padding: 12px 14px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; align-content: start; }
 .card { background: var(--el-bg-color, #fff); border: 1px solid var(--el-border-color, #e5e7eb); border-radius: 10px; padding: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04); transition: box-shadow 0.15s; }

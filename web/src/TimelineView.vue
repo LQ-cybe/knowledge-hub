@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { getTimeline, type Resource } from './api';
+import { getTimeline, getTags, type Resource, type TagItem } from './api';
 
 const emit = defineEmits<{ (e: 'open-resource', parentId: string | null): void }>();
 
 const typeFilter = ref('');
+const tagFilter = ref('');
+const tags = ref<TagItem[]>([]);
 const items = ref<Resource[]>([]);
 const loading = ref(true);
 
@@ -60,11 +62,14 @@ const allCollapsed = () => groups.value.length > 0 && groups.value.every(g => is
 
 async function load() {
   loading.value = true;
-  items.value = await getTimeline(typeFilter.value);
+  items.value = await getTimeline(typeFilter.value, tagFilter.value);
   groups.value = groupByDay(items.value);
   loading.value = false;
 }
-onMounted(load);
+onMounted(async () => {
+  try { tags.value = await getTags(); } catch { tags.value = []; }
+  await load();
+});
 
 function fmtHM(s: string) {
   if (!s) return '';
@@ -83,13 +88,14 @@ function fmtBytes(b?: number | null) {
   <div class="tl" v-loading="loading">
     <div class="tl-head">
       <div class="tl-title">🕐 时间线<small>（按创建时间倒序 · 最近 {{ items.length }} 条）</small></div>
-      <el-select v-model="typeFilter" size="default" style="width: 150px;" @change="load">
+      <el-select v-model="typeFilter" size="default" style="width: 130px;" @change="load">
         <el-option v-for="o in typeOptions" :key="o.value" :value="o.value" :label="o.label" />
       </el-select>
-      <div class="tl-tools">
-        <el-button size="small" text :disabled="groups.length === 0 || allCollapsed()" @click="toggleAll(true)">全部折叠</el-button>
-        <el-button size="small" text :disabled="groups.length === 0 || !allCollapsed()" @click="toggleAll(false)">全部展开</el-button>
-      </div>
+      <el-select v-model="tagFilter" size="default" placeholder="按标签筛选" clearable style="width: 150px;" @change="load">
+        <el-option v-for="t in tags" :key="t.id" :value="t.id" :label="`${t.name}（${t.count}）`" />
+      </el-select>
+      <el-button size="small" :disabled="groups.length === 0 || allCollapsed()" @click="toggleAll(true)">全部折叠</el-button>
+      <el-button size="small" :disabled="groups.length === 0 || !allCollapsed()" @click="toggleAll(false)">全部展开</el-button>
     </div>
 
     <div class="tl-body">
@@ -146,7 +152,6 @@ function fmtBytes(b?: number | null) {
 }
 .tl-title { font-size: 15px; font-weight: 600; color: var(--el-text-color-primary, #1f2937); }
 .tl-title small { font-size: 12px; font-weight: 400; color: var(--el-text-color-secondary, #9ca3af); margin-left: 6px; }
-.tl-tools { margin-left: auto; display: flex; gap: 2px; }
 
 /* 贯穿时间线：线左缘 = --line-x（中心 = --line-x + 1），贯穿全部内容高度 */
 .tl-body { position: relative; --line-x: 150px; }
