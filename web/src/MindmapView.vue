@@ -115,7 +115,7 @@ const THEMES: Record<string, { name: string; rootFill: string; darkBg: string; c
   'nexa-light': {
     name: 'Nexa 明亮', rootFill: '#3b82f6', darkBg: '#20242e',
     cfg: {
-      background: '#ffffff', lineColor: '#9bb7e8', generalizationLineColor: '#9bb7e8',
+      background: '#ffffff', backgroundColor: '#ffffff', lineColor: '#9bb7e8', generalizationLineColor: '#9bb7e8',
       generalization: { borderRadius: 10 },
       borderRadius: 10,
       associativeLineWidth: 1.5, associativeLineColor: '#93a4bc', associativeLineDasharray: '6,4', associativeLineTextFontSize: 11, associativeLineTextColor: '#64748b',
@@ -127,7 +127,7 @@ const THEMES: Record<string, { name: string; rootFill: string; darkBg: string; c
   'nexa-dark': {
     name: 'Nexa 深色', rootFill: '#4a8cf7', darkBg: '#1e222b',
     cfg: {
-      background: '#1e222b', lineColor: '#3d4759', generalizationLineColor: '#3d4759',
+      background: '#1e222b', backgroundColor: '#1e222b', lineColor: '#3d4759', generalizationLineColor: '#3d4759',
       generalization: { borderRadius: 10 },
       borderRadius: 10,
       associativeLineWidth: 1.5, associativeLineColor: '#5a6b84', associativeLineDasharray: '6,4', associativeLineTextFontSize: 11, associativeLineTextColor: '#8fa3bd',
@@ -139,7 +139,7 @@ const THEMES: Record<string, { name: string; rootFill: string; darkBg: string; c
   classic: {
     name: '经典分支', rootFill: '#2563eb', darkBg: '#26211a',
     cfg: {
-      background: '#fdf8f2', lineColor: '#f59e0b', generalizationLineColor: '#f59e0b',
+      background: '#fdf8f2', backgroundColor: '#fdf8f2', lineColor: '#f59e0b', generalizationLineColor: '#f59e0b',
       generalization: { borderRadius: 10 },
       borderRadius: 10,
       associativeLineWidth: 1.5, associativeLineColor: '#c2884a', associativeLineDasharray: '6,4', associativeLineTextFontSize: 11, associativeLineTextColor: '#9a6b2f',
@@ -151,7 +151,7 @@ const THEMES: Record<string, { name: string; rootFill: string; darkBg: string; c
   azure: {
     name: '音蓝架构', rootFill: '#1d4ed8', darkBg: '#1c2433',
     cfg: {
-      background: '#f0f6ff', lineColor: '#60a5fa', generalizationLineColor: '#60a5fa',
+      background: '#f0f6ff', backgroundColor: '#f0f6ff', lineColor: '#60a5fa', generalizationLineColor: '#60a5fa',
       generalization: { borderRadius: 10 },
       borderRadius: 10,
       associativeLineWidth: 1.5, associativeLineColor: '#7ba7e0', associativeLineDasharray: '6,4', associativeLineTextFontSize: 11, associativeLineTextColor: '#4a76b8',
@@ -583,7 +583,8 @@ function setTheme(k: string) {
 function themeCfgFor(k: string): Record<string, any> {
   const t = THEMES[k] || THEMES['nexa-light'];
   const isDark = document.documentElement.classList.contains('dark');
-  return isDark ? { ...t.cfg, background: t.darkBg } : t.cfg;
+  // SMM 重渲染（切布局等）会用 themeConfig.backgroundColor 覆盖容器背景，必须同时替换该字段
+  return isDark ? { ...t.cfg, backgroundColor: t.darkBg, background: t.darkBg } : t.cfg;
 }
 // SMM 用内联样式设置容器背景，需手动应用（themeConfig.background 不会自动同步到容器）
 function applyCanvasBg() {
