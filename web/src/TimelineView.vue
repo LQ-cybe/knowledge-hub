@@ -81,23 +81,23 @@ function fmtBytes(b?: number | null) {
 
     <div class="tl-body">
       <template v-for="g in groups" :key="g.date">
-        <!-- 日期节点（可点击折叠；时间线贯穿所有天，与折叠无关） -->
+        <!-- 日期行：单独一行（数字+日期+星期·项数），箭头常驻并在线 X 上 -->
         <div class="tl-day">
           <button
             class="tl-date" :class="{ collapsed: isCollapsed(g.date) }"
             :aria-expanded="String(!isCollapsed(g.date))"
             @click="toggleDay(g.date)"
           >
-            <div class="tl-date-num">{{ g.date.slice(8) }}</div>
-            <div class="tl-date-rest">
-              <div class="tl-date-ym">{{ g.date }}</div>
-              <div class="tl-date-wd">{{ g.weekday }} · {{ g.list.length }} 项</div>
-            </div>
+            <span class="tl-date-num">{{ g.date.slice(8) }}</span>
+            <span class="tl-date-rest">
+              <span class="tl-date-ym">{{ g.date }}</span>
+              <span class="tl-date-wd">{{ g.weekday }} · {{ g.list.length }} 项</span>
+            </span>
             <svg class="caret" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </button>
-          <div class="tl-col-line"></div>
+          <!-- 卡片列表：位于日期行下方，圆点中心与时间线精确对齐 -->
           <div class="tl-cards">
             <button
               v-for="r in g.list" :key="r.id"
@@ -121,63 +121,64 @@ function fmtBytes(b?: number | null) {
 </template>
 
 <style scoped>
-.tl { padding: 0 20px 20px; display: flex; flex-direction: column; gap: 0; height: 100%; box-sizing: border-box; overflow-y: auto; }
+/* 容器直接滚动；.tl-body 高度=内容高度（不能 flex:1 限高，否则线只画到视口底、滚动后下方无线） */
+.tl { padding: 0 20px 20px; height: 100%; box-sizing: border-box; overflow-y: auto; }
 
 /* 筛选行固定冻结在顶部 */
 .tl-head {
   position: sticky; top: 0; z-index: 6;
-  display: flex; align-items: center; gap: 14px; flex: none;
+  display: flex; align-items: center; gap: 14px;
   padding: 10px 0 8px;
   background: var(--el-bg-color-page, #f5f7fa);
 }
 .tl-title { font-size: 15px; font-weight: 600; color: var(--el-text-color-primary, #1f2937); }
 .tl-title small { font-size: 12px; font-weight: 400; color: var(--el-text-color-secondary, #9ca3af); margin-left: 6px; }
 
-/* 贯穿时间线：一条实色竖线，贯穿所有日期，与折叠状态无关 */
-.tl-body { flex: 1; min-height: 0; position: relative; --line-x: 164px; }
+/* 贯穿时间线：线左缘 = --line-x（中心 = --line-x + 1），贯穿全部内容高度 */
+.tl-body { position: relative; --line-x: 150px; }
 .tl-body::before {
-  content: ''; position: absolute; left: calc(var(--line-x) - 1px); top: 0; bottom: 0;
+  content: ''; position: absolute; left: var(--line-x); top: 0; bottom: 0;
   width: 2px; background: var(--el-color-primary, #409eff); z-index: 0;
 }
 
-.tl-day { display: grid; grid-template-columns: 150px 2px 1fr; column-gap: 12px; }
-.tl-col-line { width: 2px; } /* 占位列：线由 .tl-body::before 提供 */
-
-/* 日期头（可点击折叠；箭头中心与时间线 X 方向重合） */
+/* 日期行：单独一行。箭头常驻，中心 = 线中心（--line-x + 1），带底色圆避免与线重叠 */
 .tl-date {
-  position: relative; padding: 14px 0 0; cursor: pointer; user-select: none;
-  display: flex; align-items: flex-start; justify-content: flex-end; gap: 8px;
+  position: relative; display: flex; align-items: flex-start; gap: 10px;
+  padding: 16px 0 8px; cursor: pointer; user-select: none; width: 100%;
   text-align: left; font-family: inherit; background: none; border: none;
 }
-.tl-date-num { font-size: 22px; font-weight: 700; line-height: 1; color: var(--el-color-primary, #409eff); }
-.tl-date-rest { text-align: left; }
-.tl-date-ym { font-size: 12px; color: var(--el-text-color-secondary, #9ca3af); }
-.tl-date-wd { font-size: 12px; color: var(--el-text-color-secondary, #9ca3af); margin-top: 2px; }
+.tl-date-num {
+  flex: none; width: 56px; font-size: 24px; font-weight: 700; line-height: 1;
+  color: var(--el-color-primary, #409eff); text-align: right; padding-right: 10px;
+}
+.tl-date-rest { flex: none; }
+.tl-date-ym { display: block; font-size: 13px; font-weight: 500; color: var(--el-text-color-primary, #1f2937); }
+.tl-date-wd { display: block; font-size: 12px; color: var(--el-text-color-secondary, #9ca3af); margin-top: 2px; }
 .caret {
-  position: absolute; left: calc(var(--line-x) - 7px); top: 14px;
-  color: var(--el-color-primary, #409eff); transition: transform .18s; z-index: 1;
+  position: absolute; left: calc(var(--line-x) - 6px); top: 16px;
+  color: var(--el-color-primary, #409eff); transition: transform .18s; z-index: 2;
+  background: var(--el-bg-color-page, #f5f7fa); border-radius: 50%;
+  box-sizing: border-box; padding: 1px;
 }
 .tl-date.collapsed .caret { transform: rotate(-90deg); }
 
-/* 卡片列：紧凑行高；圆点参考 aihot 样式（主色+背景描边+外圈），中心与时间线重合 */
-.tl-cards { padding: 6px 0 10px; position: relative; }
+/* 卡片列表：卡片左缘 = --line-x + 14；圆点 box-sizing:border-box 使盒宽=9px，
+   中心 = 卡片左缘 - 17.5 + 4.5 = 线中心（数学精确，无像素偏差） */
+.tl-cards { padding: 0 0 14px calc(var(--line-x) + 14px); }
 .tl-card {
   position: relative; display: flex; align-items: center; gap: 8px;
-  padding: 4px 12px; margin: 2px 0;
-  text-align: left; cursor: pointer; font-family: inherit;
-  background: var(--el-bg-color, #fff);
-  border: 1px solid var(--el-border-color-lighter, #ebeef5);
-  border-radius: 8px; box-sizing: border-box;
-  transition: border-color .15s;
+  padding: 5px 10px; margin: 1px 0; border-radius: 6px; width: 100%;
+  text-align: left; cursor: pointer; font-family: inherit; box-sizing: border-box;
+  background: none; border: none; transition: background .12s;
 }
-.tl-card:hover { border-color: var(--el-color-primary, #409eff); }
+.tl-card:hover { background: var(--el-fill-color-light, #f5f7fa); }
 .tl-dot {
-  position: absolute; left: calc(var(--line-x) - 176px - 4.5px); top: 50%; margin-top: -4.5px;
+  position: absolute; left: -17.5px; top: 50%; margin-top: -4.5px;
   width: 9px; height: 9px; border-radius: 50%;
   background: var(--el-color-primary, #409eff);
   border: 2px solid var(--el-bg-color, #fff);
   box-shadow: 0 0 0 1px var(--el-border-color, #e5e7eb);
-  z-index: 1;
+  box-sizing: border-box; z-index: 1;
 }
 .tl-ico { font-size: 14px; flex: none; }
 .tl-name {
