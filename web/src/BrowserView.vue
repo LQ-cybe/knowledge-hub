@@ -50,13 +50,14 @@ function collectFolders(nodes: TreeNode[], acc: string[] = []) {
 async function loadTree() {
   treeLoading.value = true;
   try {
-    treeData.value = await getTree();
-    const root = treeData.value.find(n => !n.parent_id) || treeData.value[0];
+    const raw = await getTree();
+    const root = raw.find(n => !n.parent_id) || raw[0];
     rootId.value = root?.id ?? null;
+    // Code 为主目录（根容器），直接展示其子项为顶级，根节点本身不显示
+    treeData.value = root?.children ?? raw;
     allFolderIds.value = collectFolders(treeData.value);
-    // 默认展开根 + 一级目录
-    const firstLevel = root?.children?.map(c => c.id) ?? [];
-    expandedKeys.value = [root?.id, ...firstLevel].filter((x): x is string => !!x);
+    // 默认全部折叠（只显示主目录下的顶级项）
+    expandedKeys.value = [];
     // 默认加载根目录内容
     currentFolderId.value = rootId.value;
     await loadResources();
@@ -70,7 +71,7 @@ function expandAll() {
   treeKey.value++;
 }
 function collapseAll() {
-  expandedKeys.value = rootId.value ? [rootId.value] : [];
+  expandedKeys.value = [];
   treeKey.value++;
 }
 /** 用户手动展开/折叠节点时同步状态（供后续重建树时保持） */
@@ -558,13 +559,13 @@ html.dark .tree-wrap::-webkit-scrollbar-thumb:hover, html.dark .grid::-webkit-sc
 
 .table-wrap { flex: 1; min-height: 0; background: var(--el-bg-color, #fff); margin: 12px 14px 0; border-radius: 10px; border: 1px solid var(--el-border-color, #e5e7eb); overflow: hidden; }
 /* 表格行高压到正常（内容紧凑单行） */
-.table-wrap :deep(.el-table td.el-table__cell) { padding: 4px 0; }
-.table-wrap :deep(.el-table th.el-table__cell) { padding: 5px 0; }
+.table-wrap :deep(.el-table td.el-table__cell) { padding: 2px 0; }
+.table-wrap :deep(.el-table th.el-table__cell) { padding: 4px 0; }
 .table-wrap :deep(.el-table .cell) { padding: 0 8px; line-height: 1.5; }
 .table-wrap :deep(.el-table__empty-block) { min-height: 60px; }
 /* 结构树行高（变量 + 兜底双重保证） */
-.file-tree :deep(.el-tree-node__content) { height: 26px; }
-.file-tree { --el-tree-node-content-height: 26px; }
+.file-tree :deep(.el-tree-node__content) { height: 21px; }
+.file-tree { --el-tree-node-content-height: 21px; }
 .path { color: var(--el-text-color-secondary, #9ca3af); font-size: 12px; }
 .tag-cell { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; overflow: hidden; }
 .tag-cell .el-button { flex: none; }

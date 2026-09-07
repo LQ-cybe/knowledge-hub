@@ -33,13 +33,14 @@ interface ResourceRow {
  *  带 page 参数时返回 { list, total }（数据库视图用）；否则兼容返回数组（浏览页用） */
 router.get('/resources', (req: Request, res) => {
   const db = getDb();
-  const { type, parentId, status = 'active', q, tag, orderBy = 'updated_at', orderDir = 'desc' } = req.query as Record<string, string>;
+  const { type, parentId, status = 'active', q, tag, id, orderBy = 'updated_at', orderDir = 'desc' } = req.query as Record<string, string>;
   const page = req.query.page !== undefined ? Math.max(1, parseInt(String(req.query.page), 10) || 1) : null;
   const pageSize = Math.min(200, Math.max(1, parseInt(String(req.query.pageSize || '50'), 10) || 50));
 
   const where: string[] = ['r.status = @status'];
   const params: Record<string, unknown> = { status };
   if (type) { where.push('r.type = @type'); params.type = type; }
+  if (id) { where.push('r.id = @id'); params.id = id; }
   if (parentId !== undefined) { where.push('r.parent_id = @parentId'); params.parentId = parentId === 'root' ? null : parentId; }
   if (q) { where.push('(r.title LIKE @like OR r.path LIKE @like)'); params.like = `%${q}%`; }
   if (tag) {
