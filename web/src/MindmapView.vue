@@ -98,6 +98,26 @@ function radialLayout(roots: MMNode[], byId: Map<string, MMNode>, kids: Map<stri
   }
   return pos;
 }
+/** 组织图布局：垂直向下，父在上子在下，按叶子列宽居中（类公司组织架构） */
+function orgLayout(roots: MMNode[], byId: Map<string, MMNode>, kids: Map<string, MMNode[]>): Map<string, { x: number; y: number }> {
+  const pos = new Map<string, { x: number; y: number }>();
+  const leaves = new Map<string, number>();
+  const calc = (id: string) => { const v = leafCount(id, byId, kids); leaves.set(id, v); return v; };
+  const place = (id: string, depth: number, start: number, span: number) => {
+    const x = (start + span / 2 - 0.5) * COL_W;
+    const y = depth * 96;
+    pos.set(id, { x, y });
+    let cur = start;
+    for (const c of kids.get(id) || []) {
+      const clc = calc(c.id);
+      place(c.id, depth + 1, cur, clc);
+      cur += clc;
+    }
+  };
+  let col = 0;
+  for (const r of roots) { const rlc = calc(r.id); place(r.id, 0, col, rlc); col += rlc; }
+  return pos;
+}
 /** 计算所有 node 节点的渲染坐标（自由布局用存储坐标；其余自动计算，不写回存储，保护自由坐标） */
 const renderPos = ref<Map<string, { x: number; y: number }>>(new Map());
 function applyLayout() {
@@ -114,7 +134,7 @@ function applyLayout() {
   if (mapLayout.value === 'free') {
     for (const n of nodes.value) m.set(n.id, { x: n.x, y: n.y });
   } else {
-    const auto = mapLayout.value === 'radial' ? radialLayout(roots, byId, kids) : treeLayout(roots, byId, kids);
+    const auto = mapLayout.value === 'radial' ? radialLayout(roots, byId, kids) : mapLayout.value === 'org' ? orgLayout(roots, byId, kids) : treeLayout(roots, byId, kids);
     for (const n of nodes.value) { const p = auto.get(n.id); if (p) m.set(n.id, p); }
   }
   // 概要节点固定显示在所属主题右侧（不参与层级递推）
