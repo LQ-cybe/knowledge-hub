@@ -22,11 +22,11 @@
         <el-button size="small" text @click="backToLib">← 返回导图库</el-button>
         <input v-model="mapTitle" class="mm-title-input" @change="markDirty" placeholder="导图标题" />
         <div class="mm-tools">
-          <el-button size="small" @click="addChild">＋子主题</el-button>
-          <el-button size="small" @click="addSibling">＋同级</el-button>
-          <el-button size="small" @click="addSummary">{}概要</el-button>
-          <el-button size="small" @click="addOutline">边界</el-button>
-          <el-button size="small" @click="addAssoc">关系</el-button>
+          <el-button size="small" title="为选中节点添加子主题" @click="addChild">＋子主题</el-button>
+          <el-button size="small" title="为选中节点添加同级（根节点除外）" @click="addSibling">＋同级</el-button>
+          <el-button size="small" title="概要：Shift 多选同一父节点的多个子节点后点击，输入多行说明" @click="addSummary">{}概要</el-button>
+          <el-button size="small" title="边界：选中父节点（框住其子节点）或 Shift 多选同级节点，输入边界名称" @click="addOutline">边界</el-button>
+          <el-button size="small" title="关系线：先单击起点节点 → 点此按钮 → 再单击目标节点（支持跨层级）" @click="addAssoc">关系</el-button>
         </div>
         <div class="mm-zoom">
           <el-button size="small" text @click="zoomOut">－</el-button>
@@ -49,7 +49,7 @@
             <el-radio value="org">组织图</el-radio>
             <el-radio value="radial">放射</el-radio>
           </el-radio-group>
-          <p class="ms-hint">单击选中节点<br/>双击编辑文字<br/>Enter 新建同级<br/>Tab 新建子级<br/>Delete 删除<br/>拖拽节点调整层级<br/>全部修改自动保存</p>
+          <p class="ms-hint">单击选中 · Shift 多选<br/>双击编辑节点 / 关系线 / 边界文字<br/>Enter 新建同级 · Tab 新建子级<br/>Delete 删除<br/>拖拽节点调整层级<br/>关系线：先选起点→点关系→选终点<br/>概要 / 边界：选中节点后点击工具栏<br/>全部修改自动保存</p>
         </div>
 
         <!-- 画布 -->
@@ -82,6 +82,26 @@
           </div>
         </div>
       </div>
+
+      <!-- 概要多行输入 -->
+      <el-dialog v-model="summaryDialog" title="添加概要" width="420" append-to-body :close-on-click-modal="false">
+        <p class="mm-dialog-tip">概要显示在所选节点上方，用于描述这组子节点的共同属性。支持多行文本。</p>
+        <el-input v-model="summaryText" type="textarea" :rows="5" placeholder="输入概要内容（支持多行）" />
+        <template #footer>
+          <el-button size="small" @click="summaryDialog = false">取消</el-button>
+          <el-button size="small" type="primary" @click="confirmSummary">确定</el-button>
+        </template>
+      </el-dialog>
+
+      <!-- 边界文本输入 -->
+      <el-dialog v-model="outlineDialog" title="添加边界" width="420" append-to-body :close-on-click-modal="false">
+        <p class="mm-dialog-tip">边界将以矩形框包裹所选节点（选中父节点则框住其所有子节点），显示在底层。</p>
+        <el-input v-model="outlineText" placeholder="边界名称" maxlength="30" />
+        <template #footer>
+          <el-button size="small" @click="outlineDialog = false">取消</el-button>
+          <el-button size="small" type="primary" @click="confirmOutline">确定</el-button>
+        </template>
+      </el-dialog>
     </div>
   </div>
 </template>
@@ -101,22 +121,47 @@ const SHAPE_MAP: Record<string, string> = { auto: 'rectangle', rect: 'rectangle'
 const SHAPE_REV: Record<string, string> = { rectangle: 'rect', roundedRectangle: 'round', ellipse: 'ellipse' };
 
 // 四套主题（NexaNote 风格），基于默认主题的覆盖配置
+// 关联线全局样式：细线（1.5）+ 主题色；分支节点与父节点同色系（second/node 取 root 的浅色调变体）
 const THEMES: Record<string, { name: string; rootFill: string; cfg: Record<string, any> }> = {
   'nexa-light': {
     name: 'Nexa 明亮', rootFill: '#3b82f6',
-    cfg: { background: '#ffffff', lineColor: '#9bb7e8', generalizationLineColor: '#9bb7e8', root: { fillColor: '#3b82f6', color: '#ffffff', borderColor: 'transparent' }, second: { fillColor: '#ffffff', color: '#333333', borderColor: '#3b82f6' }, node: { fillColor: '#f5f7fa', color: '#333333', borderColor: 'transparent' } },
+    cfg: {
+      background: '#ffffff', lineColor: '#9bb7e8', generalizationLineColor: '#9bb7e8',
+      associativeLineWidth: 1.5, associativeLineColor: '#93a4bc', associativeLineDasharray: '6,4', associativeLineTextFontSize: 11, associativeLineTextColor: '#64748b',
+      root: { fillColor: '#3b82f6', color: '#ffffff', borderColor: 'transparent' },
+      second: { fillColor: '#dbeafe', color: '#1e3a5f', borderColor: '#93c5fd' },
+      node: { fillColor: '#eff6ff', color: '#274b6d', borderColor: '#bfdbfe' },
+    },
   },
   'nexa-dark': {
     name: 'Nexa 深色', rootFill: '#4a8cf7',
-    cfg: { background: '#1e222b', lineColor: '#3d4759', generalizationLineColor: '#3d4759', root: { fillColor: '#4a8cf7', color: '#ffffff', borderColor: 'transparent' }, second: { fillColor: '#2a2f3a', color: '#e6e9ef', borderColor: '#4a8cf7' }, node: { fillColor: '#232936', color: '#c5cad5', borderColor: '#3d4759' } },
+    cfg: {
+      background: '#1e222b', lineColor: '#3d4759', generalizationLineColor: '#3d4759',
+      associativeLineWidth: 1.5, associativeLineColor: '#5a6b84', associativeLineDasharray: '6,4', associativeLineTextFontSize: 11, associativeLineTextColor: '#8fa3bd',
+      root: { fillColor: '#4a8cf7', color: '#ffffff', borderColor: 'transparent' },
+      second: { fillColor: '#2b3a55', color: '#cfd8e6', borderColor: '#4a8cf7' },
+      node: { fillColor: '#232f42', color: '#b8c4d6', borderColor: '#3d557a' },
+    },
   },
   classic: {
     name: '经典分支', rootFill: '#2563eb',
-    cfg: { background: '#fdf8f2', lineColor: '#f59e0b', generalizationLineColor: '#f59e0b', root: { fillColor: '#2563eb', color: '#ffffff', borderColor: 'transparent' }, second: { fillColor: '#ffffff', color: '#7c2d12', borderColor: '#f59e0b' }, node: { fillColor: '#fffbeb', color: '#92400e', borderColor: '#fbbf24' } },
+    cfg: {
+      background: '#fdf8f2', lineColor: '#f59e0b', generalizationLineColor: '#f59e0b',
+      associativeLineWidth: 1.5, associativeLineColor: '#c2884a', associativeLineDasharray: '6,4', associativeLineTextFontSize: 11, associativeLineTextColor: '#9a6b2f',
+      root: { fillColor: '#2563eb', color: '#ffffff', borderColor: 'transparent' },
+      second: { fillColor: '#fdeed0', color: '#7c4a12', borderColor: '#f5c765' },
+      node: { fillColor: '#fef6e4', color: '#8a5a1a', borderColor: '#f5d795' },
+    },
   },
   azure: {
     name: '音蓝架构', rootFill: '#1d4ed8',
-    cfg: { background: '#f0f6ff', lineColor: '#60a5fa', generalizationLineColor: '#60a5fa', root: { fillColor: '#1d4ed8', color: '#ffffff', borderColor: 'transparent' }, second: { fillColor: '#eff6ff', color: '#1e3a8a', borderColor: '#3b82f6' }, node: { fillColor: '#ffffff', color: '#334155', borderColor: '#bfdbfe' } },
+    cfg: {
+      background: '#f0f6ff', lineColor: '#60a5fa', generalizationLineColor: '#60a5fa',
+      associativeLineWidth: 1.5, associativeLineColor: '#7ba7e0', associativeLineDasharray: '6,4', associativeLineTextFontSize: 11, associativeLineTextColor: '#4a76b8',
+      root: { fillColor: '#1d4ed8', color: '#ffffff', borderColor: 'transparent' },
+      second: { fillColor: '#dbeafe', color: '#1e3a8a', borderColor: '#60a5fa' },
+      node: { fillColor: '#f0f7ff', color: '#334f7c', borderColor: '#b3d4ff' },
+    },
   },
 };
 
@@ -138,6 +183,12 @@ let mm: any = null;
 let saveTimer: any = null;
 let dirty = false;
 let loading = false;
+// 概要多行输入弹窗
+const summaryDialog = ref(false);
+const summaryText = ref('');
+// 边界文本输入弹窗
+const outlineDialog = ref(false);
+const outlineText = ref('');
 
 const fmtTime = (s: string) => (s ? s.slice(5, 16).replace('T', ' ') : '');
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'n' + Date.now() + Math.random().toString(16).slice(2, 8));
@@ -257,6 +308,8 @@ async function openMap(id: string) {
       themeConfig: THEMES[themeKey.value].cfg,
       enableFreeDrag: true,
       mousewheelAction: 'zoom',
+      // 关联线渲染在节点下层，避免遮挡节点内容（默认 true 会盖住节点）
+      associativeLineIsAlwaysAboveNode: false,
     });
     let fitted = false;
     mm.on('node_tree_render_end', () => {
@@ -342,6 +395,11 @@ function active() {
   if (l.length && l[0].nodeData?.data && l[0].nodeData.data.uid !== VIRT_ROOT) return l[0];
   return null;
 }
+// 当前选中的有效节点（支持 Shift 多选）
+function selNodes(): any[] {
+  const l = mm?.renderer?.activeNodeList || [];
+  return l.filter(n => n.nodeData?.data && n.nodeData.data.uid !== VIRT_ROOT);
+}
 function addChild() {
   const n = active(); if (!n) { ElMessage.warning('请先单击选中一个节点'); return; }
   mm.execCommand('INSERT_CHILD_NODE', true, [n]);
@@ -351,14 +409,49 @@ function addSibling() {
   if (n.isRoot) { ElMessage.warning('根节点不能添加同级'); return; }
   mm.execCommand('INSERT_NODE', true, [n]);
 }
+// 概要：针对同一父节点的多个子节点（按住 Shift 多选），输入多行文本
 function addSummary() {
-  const n = active(); if (!n) { ElMessage.warning('请先选中一个节点'); return; }
-  mm.execCommand('ADD_GENERALIZATION', { text: '概要' }, false);
+  const ns = selNodes();
+  if (!ns.length) { ElMessage.warning('请先单击选中节点（按住 Shift 可多选同一父节点的多个子节点）'); return; }
+  if (ns.some(n => n.isRoot || n.isGeneralization)) { ElMessage.warning('根节点 / 概要节点不能添加概要'); return; }
+  const p = ns[0].parent;
+  if (ns.some(n => n.parent !== p)) { ElMessage.warning('概要只能针对同一父节点的多个子节点'); return; }
+  summaryText.value = '';
+  summaryDialog.value = true;
 }
+function confirmSummary() {
+  const ns = selNodes();
+  if (!ns.length) { summaryDialog.value = false; return; }
+  const hasG = ns.some(n => { const d = n.getData ? n.getData('generalization') : null; return d && d.length; });
+  if (hasG) { ElMessage.warning('选中节点已有概要，请先删除旧概要或选择其他节点'); summaryDialog.value = false; return; }
+  const text = summaryText.value.trim();
+  try {
+    mm.execCommand('ADD_GENERALIZATION', { text: text || '概要' }, false);
+    markDirty();
+    ElMessage.success('已添加概要');
+  } catch (e: any) { ElMessage.error('添加概要失败：' + (e?.message || e)); }
+  summaryDialog.value = false;
+}
+// 边界：选中父节点（框住其子节点）或按住 Shift 多选同级节点，输入边界文字
 function addOutline() {
-  const n = active(); if (!n) { ElMessage.warning('请先选中一个节点'); return; }
-  mm.execCommand('ADD_OUTER_FRAME', [n], { text: '边界' });
+  const ns = selNodes();
+  if (!ns.length) { ElMessage.warning('请先单击选中节点：选中父节点可框住其子节点，或按住 Shift 多选同级节点'); return; }
+  if (ns.some(n => n.isRoot || n.isGeneralization)) { ElMessage.warning('根节点 / 概要节点不能添加边界'); return; }
+  outlineText.value = '边界';
+  outlineDialog.value = true;
 }
+function confirmOutline() {
+  const ns = selNodes();
+  if (!ns.length) { outlineDialog.value = false; return; }
+  const text = outlineText.value.trim();
+  try {
+    mm.execCommand('ADD_OUTER_FRAME', ns, { text: text || '边界' });
+    markDirty();
+    ElMessage.success('已添加边界');
+  } catch (e: any) { ElMessage.error('添加边界失败：' + (e?.message || e)); }
+  outlineDialog.value = false;
+}
+// 关系线：先单击起点节点 → 点「关系」→ 再单击目标节点（支持跨层级）
 function addAssoc() {
   const n = active(); if (!n) { ElMessage.warning('请先单击起点节点'); return; }
   assocFrom = n;
@@ -427,4 +520,39 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 .mm-canvas { flex: 1; min-width: 0; overflow: hidden; position: relative; }
 .mm-host { width: 100%; height: 100%; }
 .mm-host :deep(.smm-container) { width: 100%; height: 100%; }
+.mm-dialog-tip { font-size: 12px; color: #8a8f99; margin: 0 0 10px; line-height: 1.6; }
+
+/* ===== simple-mind-map 外观修正 ===== */
+/* 1) 节点文字垂直居中：消除富文本 <p> 默认上下 margin 导致的文字偏下溢出 */
+.mm-host :deep(.smm-node p),
+.mm-host :deep(.smm-generalization-node p),
+.mm-host :deep(.smm-richtext-node-wrap p) {
+  margin: 0;
+  line-height: 1.5;
+}
+.mm-host :deep(.smm-richtext-node-wrap) {
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  box-sizing: border-box;
+}
+.mm-host :deep(.smm-richtext-node-wrap > *),
+.mm-host :deep(.smm-richtext-node-wrap .smm-richtext-node-content) {
+  max-width: 100%;
+  word-break: break-word;
+}
+/* 2) 关联线细线（主题已配置 width=1.5，此处兜底防覆盖） */
+.mm-host :deep(.smm-associative-line-container path),
+.mm-host :deep(.smm-associative-line-container line) {
+  stroke-width: 1.5 !important;
+}
+/* 3) 概要节点 / 边界文字行高紧凑；概要多行文本（\n）按换行显示
+   注：概要节点类名形如 smm-node generalization_{nodeId} */
+.mm-host :deep(.smm-node[class*="generalization_"]) { font-size: 12px; }
+.mm-host :deep(.smm-node[class*="generalization_"] p),
+.mm-host :deep(.smm-node[class*="generalization_"] .smm-richtext-node-wrap) { white-space: pre-line; }
+.mm-host :deep(.smm-outer-frame-text) { font-size: 12px; }
+.mm-host :deep(.smm-associative-line-text) { font-size: 11px; }
 </style>
