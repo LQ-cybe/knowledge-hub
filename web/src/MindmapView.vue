@@ -49,7 +49,6 @@
             <el-radio value="org">组织图</el-radio>
             <el-radio value="radial">放射</el-radio>
           </el-radio-group>
-          <p class="ms-hint">单击选中 · Shift 多选<br/>双击编辑节点 / 关系线 / 边界文字<br/>Enter 新建同级 · Tab 新建子级<br/>Delete 删除选中节点 / 关系线 / 边界<br/>拖拽节点调整层级<br/>概要 / 边界 / 关系：Shift 多选两个及以上节点后点击工具栏对应按钮<br/>概要创建后直接输入多行文本<br/>边界：多选节点 → 一个矩形包裹<br/>关系线：多选顺序即方向（先选为起点）<br/>单击矩形可选中，双击文字可改名<br/>全部修改自动保存</p>
         </div>
 
         <!-- 画布 -->
@@ -112,45 +111,53 @@ const SHAPE_REV: Record<string, string> = { rectangle: 'rect', roundedRectangle:
 
 // 四套主题（NexaNote 风格），基于默认主题的覆盖配置
 // 关联线全局样式：细线（1.5）+ 主题色；分支节点与父节点同色系（second/node 取 root 的浅色调变体）
-const THEMES: Record<string, { name: string; rootFill: string; cfg: Record<string, any> }> = {
+const THEMES: Record<string, { name: string; rootFill: string; darkBg: string; cfg: Record<string, any> }> = {
   'nexa-light': {
-    name: 'Nexa 明亮', rootFill: '#3b82f6',
+    name: 'Nexa 明亮', rootFill: '#3b82f6', darkBg: '#20242e',
     cfg: {
       background: '#ffffff', lineColor: '#9bb7e8', generalizationLineColor: '#9bb7e8',
+      generalization: { borderRadius: 10 },
+      borderRadius: 10,
       associativeLineWidth: 1.5, associativeLineColor: '#93a4bc', associativeLineDasharray: '6,4', associativeLineTextFontSize: 11, associativeLineTextColor: '#64748b',
-      root: { fillColor: '#3b82f6', color: '#ffffff', borderColor: 'transparent' },
-      second: { fillColor: '#dbeafe', color: '#1e3a5f', borderColor: '#93c5fd' },
-      node: { fillColor: '#eff6ff', color: '#274b6d', borderColor: '#bfdbfe' },
+      root: { fillColor: '#3b82f6', color: '#ffffff', borderColor: 'transparent' , borderRadius: 10 },
+      second: { fillColor: '#dbeafe', color: '#1e3a5f', borderColor: 'transparent' , borderRadius: 10 },
+      node: { fillColor: '#eff6ff', color: '#274b6d', borderColor: 'transparent' , borderRadius: 10 },
     },
   },
   'nexa-dark': {
-    name: 'Nexa 深色', rootFill: '#4a8cf7',
+    name: 'Nexa 深色', rootFill: '#4a8cf7', darkBg: '#1e222b',
     cfg: {
       background: '#1e222b', lineColor: '#3d4759', generalizationLineColor: '#3d4759',
+      generalization: { borderRadius: 10 },
+      borderRadius: 10,
       associativeLineWidth: 1.5, associativeLineColor: '#5a6b84', associativeLineDasharray: '6,4', associativeLineTextFontSize: 11, associativeLineTextColor: '#8fa3bd',
-      root: { fillColor: '#4a8cf7', color: '#ffffff', borderColor: 'transparent' },
-      second: { fillColor: '#2b3a55', color: '#cfd8e6', borderColor: '#4a8cf7' },
-      node: { fillColor: '#232f42', color: '#b8c4d6', borderColor: '#3d557a' },
+      root: { fillColor: '#4a8cf7', color: '#ffffff', borderColor: 'transparent' , borderRadius: 10 },
+      second: { fillColor: '#2b3a55', color: '#cfd8e6', borderColor: 'transparent' , borderRadius: 10 },
+      node: { fillColor: '#232f42', color: '#b8c4d6', borderColor: 'transparent' , borderRadius: 10 },
     },
   },
   classic: {
-    name: '经典分支', rootFill: '#2563eb',
+    name: '经典分支', rootFill: '#2563eb', darkBg: '#26211a',
     cfg: {
       background: '#fdf8f2', lineColor: '#f59e0b', generalizationLineColor: '#f59e0b',
+      generalization: { borderRadius: 10 },
+      borderRadius: 10,
       associativeLineWidth: 1.5, associativeLineColor: '#c2884a', associativeLineDasharray: '6,4', associativeLineTextFontSize: 11, associativeLineTextColor: '#9a6b2f',
-      root: { fillColor: '#2563eb', color: '#ffffff', borderColor: 'transparent' },
-      second: { fillColor: '#fdeed0', color: '#7c4a12', borderColor: '#f5c765' },
-      node: { fillColor: '#fef6e4', color: '#8a5a1a', borderColor: '#f5d795' },
+      root: { fillColor: '#2563eb', color: '#ffffff', borderColor: 'transparent' , borderRadius: 10 },
+      second: { fillColor: '#fdeed0', color: '#7c4a12', borderColor: 'transparent' , borderRadius: 10 },
+      node: { fillColor: '#fef6e4', color: '#8a5a1a', borderColor: 'transparent' , borderRadius: 10 },
     },
   },
   azure: {
-    name: '音蓝架构', rootFill: '#1d4ed8',
+    name: '音蓝架构', rootFill: '#1d4ed8', darkBg: '#1c2433',
     cfg: {
       background: '#f0f6ff', lineColor: '#60a5fa', generalizationLineColor: '#60a5fa',
+      generalization: { borderRadius: 10 },
+      borderRadius: 10,
       associativeLineWidth: 1.5, associativeLineColor: '#7ba7e0', associativeLineDasharray: '6,4', associativeLineTextFontSize: 11, associativeLineTextColor: '#4a76b8',
-      root: { fillColor: '#1d4ed8', color: '#ffffff', borderColor: 'transparent' },
-      second: { fillColor: '#dbeafe', color: '#1e3a8a', borderColor: '#60a5fa' },
-      node: { fillColor: '#f0f7ff', color: '#334f7c', borderColor: '#b3d4ff' },
+      root: { fillColor: '#1d4ed8', color: '#ffffff', borderColor: 'transparent' , borderRadius: 10 },
+      second: { fillColor: '#dbeafe', color: '#1e3a8a', borderColor: 'transparent' , borderRadius: 10 },
+      node: { fillColor: '#f0f7ff', color: '#334f7c', borderColor: 'transparent' , borderRadius: 10 },
     },
   },
 };
@@ -299,12 +306,15 @@ async function openMap(id: string) {
       data: smmData,
       layout: LAYOUT_MAP[layoutKey.value] || 'logicalStructure',
       theme: 'default',
-      themeConfig: THEMES[themeKey.value].cfg,
+      themeConfig: themeCfgFor(themeKey.value),
       enableFreeDrag: true,
       mousewheelAction: 'zoom',
+      // 关系线激活时不显示两端拖拽调节锚点（用户不需要调节曲线控制点）
+      enableAdjustAssociativeLinePoints: false,
       // 关联线渲染在节点下层，避免遮挡节点内容（默认 true 会盖住节点）
       associativeLineIsAlwaysAboveNode: false,
     });
+    applyCanvasBg();
     let fitted = false;
     mm.on('node_tree_render_end', () => {
       scale.value = mm.view.scale || 1;
@@ -338,6 +348,7 @@ function destroyMindMap() {
     mm = null;
   }
   window.removeEventListener('keydown', onEditorKeydown);
+  if (themeObserver) { themeObserver.disconnect(); themeObserver = null; }
   khBounds.value = [];
   khActiveBound.value = '';
 }
@@ -564,13 +575,34 @@ function onLayoutChange() {
 }
 function setTheme(k: string) {
   themeKey.value = k;
-  if (mm) mm.setThemeConfig(THEMES[k].cfg);
+  if (mm) mm.setThemeConfig(themeCfgFor(k));
+  applyCanvasBg();
   markDirty();
+}
+// 主题配置：系统深色时画布背景自动切为该主题的深色背景（跟随系统主题）
+function themeCfgFor(k: string): Record<string, any> {
+  const t = THEMES[k] || THEMES['nexa-light'];
+  const isDark = document.documentElement.classList.contains('dark');
+  return isDark ? { ...t.cfg, background: t.darkBg } : t.cfg;
+}
+// SMM 用内联样式设置容器背景，需手动应用（themeConfig.background 不会自动同步到容器）
+function applyCanvasBg() {
+  if (mmEl.value) mmEl.value.style.background = themeCfgFor(themeKey.value).background;
+}
+// 监听系统主题（html.dark class）变化：重新应用画布背景，避免深色系统下画布仍为浅色
+let themeObserver: MutationObserver | null = null;
+function watchSystemTheme() {
+  if (themeObserver) themeObserver.disconnect();
+  themeObserver = new MutationObserver(() => {
+    if (mm) { try { mm.setThemeConfig(themeCfgFor(themeKey.value)); } catch {} }
+    applyCanvasBg();
+  });
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 }
 function zoomIn() { mm?.view.enlarge(); }
 function zoomOut() { mm?.view.narrow(); }
 
-onMounted(() => { loadMaps(); });
+onMounted(() => { loadMaps(); watchSystemTheme(); });
 onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 </script>
 
@@ -580,46 +612,48 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 .ml-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .ml-head h3 { margin: 0; font-size: 16px; }
 .ml-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-.ml-card { position: relative; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; cursor: pointer; background: #fff; transition: box-shadow .15s; }
-.ml-card:hover { box-shadow: 0 3px 12px rgba(0, 0, 0, .08); }
-.ml-title { font-weight: 600; margin-bottom: 6px; }
-.ml-meta { font-size: 12px; color: #8a8f99; }
-.ml-del { position: absolute; top: 8px; right: 10px; color: #c0c4cc; font-size: 12px; display: none; }
+.ml-card { position: relative; border: 1px solid var(--el-border-color); border-radius: 10px; padding: 14px; cursor: pointer; background: var(--el-bg-color); transition: box-shadow .15s; }
+.ml-card:hover { box-shadow: 0 3px 12px var(--el-box-shadow-light); }
+.ml-title { font-weight: 600; margin-bottom: 6px; color: var(--el-text-color-primary); }
+.ml-meta { font-size: 12px; color: var(--el-text-color-secondary); }
+.ml-del { position: absolute; top: 8px; right: 10px; color: var(--el-text-color-placeholder); font-size: 12px; display: none; }
 .ml-card:hover .ml-del { display: block; }
-.ml-empty { color: #8a8f99; text-align: center; padding: 60px 0; }
+.ml-empty { color: var(--el-text-color-secondary); text-align: center; padding: 60px 0; }
 
 .mm-editor { height: 100%; display: flex; flex-direction: column; min-height: 0; }
-.mm-toolbar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid #eef0f3; flex-wrap: nowrap; }
-.mm-title-input { width: 170px; border: 1px solid #e5e7eb; border-radius: 6px; padding: 4px 8px; font-size: 13px; outline: none; }
-.mm-tools { display: flex; gap: 6px; margin-left: 8px; }
-.mm-zoom { display: flex; align-items: center; gap: 2px; margin-left: auto; font-size: 12px; color: #555; }
-.mm-saved { font-size: 12px; color: #10b981; margin-left: 10px; white-space: nowrap; }
+.mm-toolbar { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-bottom: 1px solid var(--el-border-color); flex-wrap: nowrap; }
+.mm-title-input { width: 170px; border: 1px solid var(--el-border-color); border-radius: 6px; padding: 4px 8px; font-size: 13px; outline: none; background: var(--el-bg-color); color: var(--el-text-color-primary); }
+.mm-tools { display: flex; gap: 4px; margin-left: 6px; }
+.mm-zoom { display: flex; align-items: center; gap: 2px; margin-left: auto; font-size: 12px; color: var(--el-text-color-regular); }
+.mm-saved { font-size: 12px; color: #10b981; margin-left: 8px; white-space: nowrap; }
 .mm-saved.err { color: #e74c3c; }
 
 .mm-body { flex: 1; display: flex; min-height: 0; }
-.mm-side { width: 170px; flex: none; overflow: auto; padding: 10px 12px; border-right: 1px solid #eef0f3; }
-.mm-side-right { border-right: none; border-left: 1px solid #eef0f3; }
-.ms-title { font-weight: 600; font-size: 13px; margin-bottom: 10px; }
+.mm-side { width: 170px; flex: none; overflow: auto; padding: 10px 12px; border-right: 1px solid var(--el-border-color); }
+.mm-side-right { border-right: none; border-left: 1px solid var(--el-border-color); }
+.ms-title { font-weight: 600; font-size: 13px; margin-bottom: 10px; color: var(--el-text-color-primary); }
 .ms-layout { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
 .ms-layout :deep(.el-radio) { margin-right: 0; height: 26px; width: 100%; }
 .ms-layout :deep(.el-radio__label) { text-align: left; }
-.ms-hint { font-size: 11px; color: #9aa1ab; margin-top: 14px; line-height: 1.8; }
 .ms-themes { display: flex; flex-direction: column; gap: 6px; }
-.ms-theme { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; border: 1px solid transparent; }
+.ms-theme { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; border: 1px solid transparent; color: var(--el-text-color-regular); }
 .ms-theme.on { border-color: var(--kh-brand, #409eff); background: rgba(64, 158, 255, .06); }
 .mt-dot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
 .ms-colors { display: flex; flex-wrap: wrap; gap: 8px; }
 .ms-color { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
 .ms-color.on { border-color: #333; }
 .ms-shapes { display: flex; flex-wrap: wrap; gap: 6px; }
-.ms-shape { padding: 3px 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; cursor: pointer; }
+.ms-shape { padding: 3px 8px; border: 1px solid var(--el-border-color); border-radius: 6px; font-size: 12px; cursor: pointer; color: var(--el-text-color-regular); }
 .ms-shape.on { border-color: var(--kh-brand, #409eff); color: var(--kh-brand, #409eff); }
-.ms-tip { font-size: 12px; color: #9aa1ab; line-height: 1.7; }
+.ms-tip { font-size: 12px; color: var(--el-text-color-secondary); line-height: 1.7; }
+.ms-label { color: var(--el-text-color-regular); }
 
-.mm-canvas { flex: 1; min-width: 0; overflow: hidden; position: relative; }
+.mm-canvas { flex: 1; min-width: 0; overflow: hidden; position: relative; background: var(--el-bg-color); }
 .mm-host { width: 100%; height: 100%; }
+/* 系统深色时画布底色跟随深色主题（SMM 容器默认浅色 #fafafa，需强制覆盖） */
+:global(.dark) .mm-host { background: #1e222b; }
 .mm-host :deep(.smm-container) { width: 100%; height: 100%; }
-.mm-dialog-tip { font-size: 12px; color: #8a8f99; margin: 0 0 10px; line-height: 1.6; }
+.mm-dialog-tip { font-size: 12px; color: var(--el-text-color-secondary); margin: 0 0 10px; line-height: 1.6; }
 
 /* ===== simple-mind-map 外观修正 ===== */
 /* 1) 节点文字垂直居中：消除富文本 <p> 默认上下 margin 导致的文字偏下溢出 */
