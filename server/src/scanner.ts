@@ -53,12 +53,11 @@ function readTextIfPossible(absPath: string): string {
 export function scanLibrary(): ScanResult {
   const db = getDb();
   const result: ScanResult = { folders: 0, files: 0, textIndexed: 0, skipped: 0 };
-  const now = new Date().toISOString();
   const idByDir = new Map<string, string>(); // 绝对路径 -> folder 资源 id
 
   const insert = db.prepare(`
     INSERT INTO resources (id, type, title, content, path, parent_id, status, size, created_at, updated_at)
-    VALUES (@id, @type, @title, @content, @path, @parentId, 'active', @size, @now, @now)
+    VALUES (@id, @type, @title, @content, @path, @parentId, 'active', @size, @ts, @ts)
   `);
 
   const walk = (dir: string, parentId: string | null) => {
@@ -76,9 +75,10 @@ export function scanLibrary(): ScanResult {
 
       if (ent.isDirectory()) {
         const id = randomUUID();
+        const st = fs.statSync(abs, { throwIfNoEntry: false });
         insert.run({
           id, type: 'folder', title: ent.name, content: '',
-          path: toRel(abs), parentId, now, size: 0,
+          path: toRel(abs), parentId, ts: st ? st.mtime.toISOString() : new Date(0).toISOString(), size: 0,
         });
         idByDir.set(abs, id);
         result.folders++;
@@ -91,7 +91,7 @@ export function scanLibrary(): ScanResult {
         const content = isText ? readTextIfPossible(abs) : '';
         insert.run({
           id: randomUUID(), type: 'file', title: ent.name, content,
-          path: toRel(abs), parentId, now, size,
+          path: toRel(abs), parentId, ts: st ? st.mtime.toISOString() : new Date(0).toISOString(), size,
         });
         result.files++;
         if (isText && content) result.textIndexed++;
@@ -104,7 +104,7 @@ export function scanLibrary(): ScanResult {
     db.prepare(`DELETE FROM resources WHERE type IN ('folder','file')`).run();
     // 根目录本身也作为顶层 folder 节点，parent_id 为空
     const rootId = randomUUID();
-    insert.run({ id: rootId, type: 'folder', title: path.basename(STORAGE_ROOT), content: '', path: '', parentId: null, now, size: 0 });
+    insert.run({ id: rootId, type: 'folder', title: path.basename(STORAGE_ROOT), content: '', path: '', parentId: null, ts: new Date(0).toISOString(), size: 0 });
     idByDir.set(STORAGE_ROOT, rootId);
     result.folders++;
     walk(STORAGE_ROOT, rootId);

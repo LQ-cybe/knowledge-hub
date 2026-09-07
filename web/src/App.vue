@@ -5,6 +5,7 @@ import { getSavedTheme, setTheme, type KhTheme } from './theme';
 import GraphView from './GraphView.vue';
 import HomeView from './HomeView.vue';
 import BrowserView from './BrowserView.vue';
+import TimelineView from './TimelineView.vue';
 
 const activeTab = ref('browse');
 const browserRef = ref<InstanceType<typeof BrowserView>>();
@@ -39,6 +40,12 @@ async function openFolder(id: string) {
 async function openTag(tagId: string) {
   activeTab.value = 'browse';
   await browserRef.value?.openTag(tagId);
+}
+
+/** 时间线点击资源 → 跳转浏览页定位到其所在目录 */
+async function openResource(parentId: string | null) {
+  activeTab.value = 'browse';
+  if (parentId) await browserRef.value?.openFolder(parentId);
 }
 </script>
 
@@ -81,6 +88,9 @@ async function openTag(tagId: string) {
       </el-tab-pane>
       <el-tab-pane label="🕸️ 图谱" name="graph">
         <GraphView />
+      </el-tab-pane>
+      <el-tab-pane label="🕐 时间线" name="timeline">
+        <TimelineView @open-resource="openResource" />
       </el-tab-pane>
     </el-tabs>
   </div>

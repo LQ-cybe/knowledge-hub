@@ -177,6 +177,18 @@ router.get('/dashboard', (_req, res) => {
   res.json({ code: 0, data: { total, byType, tagCount, topFolders, recent, topTags } });
 });
 
+/** GET /api/timeline?type= —— 垂直时间线：按创建时间倒序的资源流（前端按天分组） */
+router.get('/timeline', (req, res) => {
+  const db = getDb();
+  const type = (req.query.type as string || '').trim();
+  const rows = db.prepare(
+    `SELECT id, type, title, path, parent_id, created_at FROM resources
+     WHERE status='active' AND (? = '' OR type = ?)
+     ORDER BY created_at DESC LIMIT 500`
+  ).all(type, type) as { id: string; type: string; title: string; path: string; parent_id: string | null; created_at: string }[];
+  res.json({ code: 0, data: rows });
+});
+
 /** GET /api/search?q= —— FTS5 全文检索（跨 title/content） */
 router.get('/search', (req, res) => {
   const db = getDb();

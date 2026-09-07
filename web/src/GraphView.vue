@@ -113,7 +113,7 @@ function render() {
         },
         series: [{
           type: 'graph', layout: 'force', roam: true, draggable: true,
-          animationDurationUpdate: 0,
+          animation: false, // 关系图动画彻底关闭（初始布局与拖动重排直接呈现）
           emphasis: { scale: 1.15, label: { show: true } },
           data: nodes.map(n => ({
             id: n.id, name: n.name, symbolSize: n.symbolSize, category: n.category,
