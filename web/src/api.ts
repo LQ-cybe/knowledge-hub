@@ -96,3 +96,23 @@ export const getGraph = (dimension: string) =>
 /** 时间线：按创建时间倒序的资源流 */
 export const getTimeline = (type = '') =>
   http.get('/timeline', { params: { type } }).then(r => r.data.data as Resource[]);
+
+/** 报表中心 */
+export interface ReportGenResult {
+  content: string;
+  period_start: string;
+  period_end: string;
+  total: number;
+}
+export interface ReportItem {
+  id: string;
+  title: string;
+  period_start: string | null;
+  period_end: string | null;
+  created_at: string;
+}
+export const generateReport = (type: string, ref = '') =>
+  http.post('/reports/generate', { type, ref }).then(r => r.data.data as ReportGenResult);
+export const saveReport = (title: string, content: string, period_start: string, period_end: string) =>
+  http.post('/reports/save', { title, content, period_start, period_end }).then(r => r.data.data as { id: string; title: string; created_at: string });
+export const getReports = () => http.get('/reports').then(r => r.data.data as ReportItem[]);

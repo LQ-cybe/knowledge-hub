@@ -6,6 +6,7 @@ import GraphView from './GraphView.vue';
 import HomeView from './HomeView.vue';
 import BrowserView from './BrowserView.vue';
 import TimelineView from './TimelineView.vue';
+import ReportView from './ReportView.vue';
 
 const activeTab = ref('browse');
 const browserRef = ref<InstanceType<typeof BrowserView>>();
@@ -91,6 +92,9 @@ async function openResource(parentId: string | null) {
       </el-tab-pane>
       <el-tab-pane label="🕐 时间线" name="timeline">
         <TimelineView @open-resource="openResource" />
+      </el-tab-pane>
+      <el-tab-pane label="📊 报表" name="report">
+        <ReportView />
       </el-tab-pane>
     </el-tabs>
   </div>

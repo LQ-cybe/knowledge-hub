@@ -49,6 +49,15 @@ function toggleDay(date: string) {
 }
 function isCollapsed(date: string) { return !!collapsedDays.value[date]; }
 
+/** 折叠/展开全部（只作用于当前分组的日期，状态持久化） */
+function toggleAll(collapsed: boolean) {
+  const next: Record<string, boolean> = {};
+  for (const g of groups.value) next[g.date] = collapsed;
+  collapsedDays.value = next;
+  try { sessionStorage.setItem(COLLAPSE_KEY, JSON.stringify(next)); } catch { /* 忽略 */ }
+}
+const allCollapsed = () => groups.value.length > 0 && groups.value.every(g => isCollapsed(g.date));
+
 async function load() {
   loading.value = true;
   items.value = await getTimeline(typeFilter.value);
@@ -77,6 +86,10 @@ function fmtBytes(b?: number | null) {
       <el-select v-model="typeFilter" size="default" style="width: 150px;" @change="load">
         <el-option v-for="o in typeOptions" :key="o.value" :value="o.value" :label="o.label" />
       </el-select>
+      <div class="tl-tools">
+        <el-button size="small" text :disabled="groups.length === 0 || allCollapsed()" @click="toggleAll(true)">全部折叠</el-button>
+        <el-button size="small" text :disabled="groups.length === 0 || !allCollapsed()" @click="toggleAll(false)">全部展开</el-button>
+      </div>
     </div>
 
     <div class="tl-body">
@@ -133,6 +146,7 @@ function fmtBytes(b?: number | null) {
 }
 .tl-title { font-size: 15px; font-weight: 600; color: var(--el-text-color-primary, #1f2937); }
 .tl-title small { font-size: 12px; font-weight: 400; color: var(--el-text-color-secondary, #9ca3af); margin-left: 6px; }
+.tl-tools { margin-left: auto; display: flex; gap: 2px; }
 
 /* 贯穿时间线：线左缘 = --line-x（中心 = --line-x + 1），贯穿全部内容高度 */
 .tl-body { position: relative; --line-x: 150px; }

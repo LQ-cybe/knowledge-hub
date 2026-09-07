@@ -3,6 +3,7 @@ import cors from 'cors';
 import { PORT } from './config.js';
 import { getDb } from './db.js';
 import resourcesRouter from './routes/resources.js';
+import reportsRouter from './routes/reports.js';
 
 const app = express();
 app.use(cors());
@@ -12,6 +13,7 @@ app.use(express.json());
 getDb();
 
 app.use('/api', resourcesRouter);
+app.use('/api', reportsRouter);
 
 app.get('/api/health', (_req, res) => {
   res.json({ code: 0, msg: 'knowledge-hub server OK' });
