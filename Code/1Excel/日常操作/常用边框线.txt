@@ -1,0 +1,14 @@
+'name=一键设置常用边框
+'officetype=excel,et,wps
+'category=个人常用
+'description=一键为选区设置常用边框（外框+内部线）
+
+Public Sub SetCommonBorders()
+    On Error Resume Next
+    With Selection.Borders
+        .LineStyle = xlContinuous
+        .Weight = xlThin
+        .ColorIndex = xlAutomatic
+    End With
+    Selection.BorderAround LineStyle:=xlContinuous, Weight:=xlThin
+End Sub

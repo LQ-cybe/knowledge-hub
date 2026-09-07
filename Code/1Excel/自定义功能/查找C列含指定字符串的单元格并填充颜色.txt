@@ -1,0 +1,29 @@
+'将C列单元格中含H701和TZH开头的字符串的单元格填充红色
+Sub HighlightMaterialCode_MultiLine()
+    Dim rng As Range, cell As Range
+    Dim sht As Worksheet
+    Dim arrLines As Variant, i As Long
+    Dim bMatch As Boolean
+    
+    Set sht = ActiveSheet
+    Set rng = sht.Range("C:C").SpecialCells(xlCellTypeConstants)
+    
+    Application.ScreenUpdating = False
+    For Each cell In rng
+        bMatch = False
+        arrLines = Split(cell.Value, vbLf)
+        For i = LBound(arrLines) To UBound(arrLines)
+            If Left(Trim(arrLines(i)), 4) = "H701" Or Left(Trim(arrLines(i)), 3) = "TZH" Then
+                bMatch = True
+                Exit For
+            End If
+        Next i
+        If bMatch Then
+            cell.Interior.Color = RGB(255, 0, 0)
+        Else
+            cell.Interior.ColorIndex = xlNone
+        End If
+    Next cell
+    Application.ScreenUpdating = True
+    MsgBox "已完成C列多行料号单元格标红！"
+End Sub

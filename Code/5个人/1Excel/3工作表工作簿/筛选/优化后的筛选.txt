@@ -1,0 +1,54 @@
+﻿    Dim colNum As Integer
+    Dim colLetter  As String
+    ' 获取更新单元格的地址
+Private Sub Worksheet_Change(ByVal Target As Range)
+    Dim intersectRange As Range
+    Set intersectRange = Intersect(Target, Range("A1:C1"))     '设置需筛选值的单元格区域
+    If Not intersectRange Is Nothing Then
+        Dim cell As Range
+        For Each cell In intersectRange
+            colNum = cell.Column
+            colLetter = Split(cell.Address, "$")(1)
+            '            MsgBox colLetter & colNum
+            BlurFilter
+            '            ClearSpecificRangeFilter
+        Next cell
+    End If
+End Sub
+    ' 主程序_根据第一行的值对此列进行筛选操作，需放在工作表事件中
+Sub BlurFilter()
+    Dim lastRow As Long
+    Dim ws As Worksheet
+    Dim rng As Range
+    Dim sxz As String
+    sxz = Cells(1, colNum).Value
+    If Len(Range(colLetter & 1).Value) * 1 < 0 Then
+        ClearSpecificRangeFilter
+        Exit Sub
+    End If
+    Set ws = ActiveSheet
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    Set rng = ws.Range(colLetter & "2:" & colLetter & lastRow) '假设数据从A2开始，可按需调整
+    ws.AutoFilterMode = False                                  '清楚已有的筛选
+    '将数据转换为文本格式
+    Dim cell As Range
+    For Each cell In rng
+        cell.NumberFormat = "@"                                '设置单元格格式为文本
+        cell.Value = CStr(cell.Value)                          '将值转换为字符串
+    Next cell
+    rng.AutoFilter Field:=1, Criteria1:="*" & sxz & "*"
+End Sub
+    '取消单元格区域的筛选
+Sub ClearSpecificRangeFilter()
+    sxz = Cells(1, colNum).Value
+    If sxz = "" Then
+    End If
+    Dim ws As Worksheet
+    Dim rng As Range
+    Set ws = ActiveSheet
+    Set rng = ws.Range("A2:" & colLetter & colNum)             '设置要操作的范围
+    On Error Resume Next                                       '忽略错误继续执行
+    rng.AutoFilter.ShowAllData                                 '尝试清除筛选
+    On Error GoTo 0                                            '恢复正常错误处理
+    '    MsgBox "已取消筛选"
+End Sub

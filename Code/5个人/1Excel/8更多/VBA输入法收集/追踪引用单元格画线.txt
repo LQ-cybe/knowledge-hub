@@ -1,0 +1,23 @@
+Sub Main()
+    Dim ar(1 To 22, 1 To 1)
+    Randomize
+    Range("d1:n999").ClearContents
+    Range("d1:n1").Value = Array("No.", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+    For i = 1 To UBound(ar)
+        ar(i, 1) = Int(Rnd * 10)
+    Next
+    
+    Range("d2").Resize(UBound(ar)).Value = ar
+    
+    s = Cells(2, 5 + ar(1, 1)).Address
+    Range(s) = ar(1, 1)
+    
+    For i = 2 To UBound(ar)
+        c = ar(i - 1, 1) + 5
+        With Cells(i + 1, ar(i, 1) + 5)
+               .Formula = "=sign(" & Cells(i, c).Address & "+1)*" & ar(i, 1)
+               .ShowPrecedents
+        End With
+    Next
+    
+End Sub

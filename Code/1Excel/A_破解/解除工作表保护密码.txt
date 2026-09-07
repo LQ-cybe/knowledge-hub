@@ -1,0 +1,8 @@
+'破解工作表保护密码
+Sub worksheetPasswordCracking()
+    Dim sht As Worksheet
+    For Each sht In Worksheets
+        sht.Protect AllowFiltering:=True
+        sht.Unprotect
+    Next
+End Sub

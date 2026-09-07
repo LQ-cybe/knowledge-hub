@@ -1,0 +1,15 @@
+'name=按列去重
+'officetype=excel,et
+'category=批量删除
+'description=按当前列去重，保留第一次出现的数据行
+
+Public Sub RemoveDupesByColumn()
+    On Error GoTo err1
+    Dim col As Long
+    col = Selection.Column
+    ActiveSheet.UsedRange.RemoveDuplicates Columns:=col, Header:=xlYes
+    MsgBox "去重完成", vbInformation
+    Exit Sub
+err1:
+    MsgBox "去重失败: " & Err.Description, vbExclamation
+End Sub

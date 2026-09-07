@@ -1,0 +1,38 @@
+﻿'取最大值，不适用会增加运行时间，此函数采用先引用Excel库再通过Excel函数实现的方案
+Function GetMaxValue(ByVal num1 As Double, ParamArray nums() As Variant) As Double
+    Dim allNums() As Variant
+    Dim i As Long
+    Dim excelApp As Object
+    Dim wsFunc As Object
+   ' 将第一个数字添加到数组
+    ReDim allNums(0 To UBound(nums) + 1)
+    allNums(0) = num1
+   ' 将ParamArray中的数字添加到数组
+    For i = 0 To UBound(nums)
+        allNums(i + 1) = nums(i)
+    Next i
+   ' 后期绑定创建Excel应用程序对象和WorksheetFunction对象
+    On Error Resume Next
+    Set excelApp = CreateObject("Excel.Application")
+    Set wsFunc = excelApp.WorksheetFunction
+    If Not wsFunc Is Nothing Then
+        GetMaxValue = wsFunc.Max(allNums)
+    Else
+       ' 如果无法创建WorksheetFunction对象，手动比较获取最大值
+        Dim maxVal As Double
+        maxVal = num1
+        For i = 0 To UBound(nums)
+            If nums(i) > maxVal Then
+                maxVal = nums(i)
+            End If
+        Next i
+        GetMaxValue = maxVal
+    End If
+    On Error GoTo 0
+   ' 清理对象
+    If Not wsFunc Is Nothing Then Set wsFunc = Nothing
+    If Not excelApp Is Nothing Then
+        excelApp.Quit
+        Set excelApp = Nothing
+    End If
+End Function

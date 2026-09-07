@@ -1,0 +1,88 @@
+﻿
+'保存指定目录下的xlam文件
+Sub SaveAsXLAM()
+    On Error GoTo ErrHandle
+    
+    ' 关闭弹窗提示
+    Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    
+    ' 指定保存路径（可自行修改）
+    Dim savePath As String
+    savePath = "C:\Users\LQ\AppData\Roaming\Microsoft\AddIns\我的插件l.xlam"   ' 改成你要的路径
+    
+    ' 另存为加载宏
+    ThisWorkbook.SaveAs fileName:=savePath, FileFormat:=xlOpenXMLAddIn
+    
+    ' 恢复显示
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+    
+    Exit Sub
+
+ErrHandle:
+    ' 出错也恢复
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+    MsgBox "保存失败：" & err.Description, vbCritical
+End Sub
+'加载插件
+Sub LoadAddin()
+    Dim addinPath As String
+    Dim addin As addin   ' 改这里：AddIn 而不是 addin
+    
+    ' 指定xlam文件路径
+    addinPath = "C:\Users\LQ\AppData\Roaming\Microsoft\AddIns\我的插件.xlam"
+    
+    ' 检查文件是否存在
+    If Dir(addinPath) = "" Then
+        MsgBox "找不到文件：" & addinPath, vbExclamation
+        Exit Sub
+    End If
+    
+    ' 加载插件
+    On Error Resume Next
+    Set addin = Application.AddIns.Add(addinPath)
+    addin.Installed = True
+    On Error GoTo 0
+    
+    If addin.Installed Then
+        MsgBox "插件加载成功！", vbInformation
+    Else
+        MsgBox "插件加载失败！", vbExclamation
+    End If
+End Sub
+
+' 卸载插件
+Sub UninstallAddin()
+    Dim addin As addin
+    Dim found As Boolean
+    
+    found = False
+    
+    For Each addin In Application.AddIns
+        If addin.FullName = "C:\Users\LQ\AppData\Roaming\Microsoft\AddIns\我的插件.xlam" Then
+            addin.Installed = False
+            found = True
+            Exit For
+        End If
+    Next addin
+    
+    If found Then
+        MsgBox "插件已卸载", vbInformation
+    End If
+End Sub
+
+' 检查插件是否已加载
+Function IsAddinLoaded(addinName As String) As Boolean
+    Dim addin As addin
+    
+    IsAddinLoaded = False
+    
+    For Each addin In Application.AddIns
+        If addin.name Like addinName & "*" And addin.Installed Then
+            IsAddinLoaded = True
+            Exit Function
+        End If
+    Next addin
+End Function

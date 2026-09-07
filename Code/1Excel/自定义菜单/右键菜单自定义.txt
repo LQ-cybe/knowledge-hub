@@ -1,0 +1,22 @@
+﻿'创建右键菜单功能
+Sub 创建右键菜单按钮()
+    On Error Resume Next
+    Application.CommandBars("Cell").Controls("测试按钮").Delete
+    On Error GoTo 0
+    Dim btn As CommandBarButton
+    Set btn = Application.CommandBars("Cell").Controls.Add(msoControlButton)
+    With btn
+        .Caption = "测试按钮"
+        .FaceId = 100
+        .OnAction = "按钮点击测试"
+    End With
+'    MsgBox "创建成功，请在单元格上右键"
+End Sub
+Sub 按钮点击测试()
+    MsgBox "按钮被点击了！"
+End Sub
+Sub 删除右键菜单按钮()
+    On Error Resume Next
+    Application.CommandBars("Cell").Controls("测试按钮").Delete
+'    MsgBox "已删除"
+End Sub

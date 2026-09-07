@@ -1,0 +1,11 @@
+'name=去首尾空格
+'officetype=excel,et
+'category=个人常用
+'description=去除选区单元格内文字的首尾空格
+
+Public Sub TrimSpaces()
+    Dim c As Range
+    For Each c In Selection.Cells
+        If VarType(c.Value) = vbString Then c.Value = Trim(c.Value)
+    Next c
+End Sub

@@ -1,0 +1,7 @@
+﻿Sub ppt另存为需要密码打开的只读ppt()
+    Dim oP As Presentation
+    Set oP = PowerPoint.ActivePresentation
+    oP.Password = "123"
+    oP.WritePassword = "1234"
+    oP.SaveCopyAs2 oP.Path & "\123.pptm", , , msoFalse
+End Sub

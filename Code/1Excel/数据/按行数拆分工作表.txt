@@ -1,0 +1,101 @@
+﻿'复制工作表并删除其它行
+Sub SplitWorksheetFixed()
+    Dim sourceSheet As Worksheet
+    Dim newSheet As Worksheet
+    Dim lastRow As Long
+    Dim sheetName As String
+    Dim time1 As Date
+    Dim markers As Collection
+    Dim i As Long, cycle As Integer
+
+    time1 = Now()
+    sheetName = "4434"
+    Set sourceSheet = ThisWorkbook.Worksheets("CS_" & sheetName & "汇总")
+
+    ' 获取总行数（使用非合并单元格的列确定实际数据行数）
+    lastRow = sourceSheet.Cells(sourceSheet.Rows.Count, 2).End(xlUp).Row    ' 使用B列获取行数，避免A列合并单元格的影响
+
+    ' 查找所有标记行（A列中字符数大于5的单元格）
+    Set markers = New Collection
+    For i = 2 To lastRow    ' 从第2行开始（跳过标题行）
+        If Len(CStr(sourceSheet.Cells(i, 1).Value)) > 5 Then
+            markers.Add i
+        End If
+    Next i
+
+    Application.ScreenUpdating = False
+    Application.Calculation = xlCalculationManual
+    Application.EnableEvents = False
+
+    ' 为每个标记创建新工作表
+    For cycle = 1 To markers.Count
+        ' 复制整个源工作表
+        sourceSheet.Copy After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count)
+        Set newSheet = ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count)
+        newSheet.Name = sheetName & Format(cycle, "00")
+
+        ' 计算当前周期的数据行范围（固定7行）
+        Dim startRow As Long, endRow As Long
+        startRow = markers(cycle)    ' 标记行
+        endRow = startRow + 6    ' 固定7行（包括标记行）
+
+        ' 确保不超过工作表末尾
+        If endRow > lastRow Then
+            endRow = lastRow
+        End If
+
+        ' 获取新工作表的实际行数（使用非合并单元格的列）
+        Dim newLastRow As Long
+        newLastRow = newSheet.Cells(newSheet.Rows.Count, 2).End(xlUp).Row    ' 使用B列获取行数
+
+        ' 删除不属于当前周期的行（从下往上删除，避免行号变化）
+        ' 先删除后面的行
+        If endRow < lastRow Then
+            ' 计算在新工作表中要删除的行范围
+            Dim deleteStart As Long
+            deleteStart = endRow + 1    ' 当前周期结束后的第一行
+
+            ' 确保不会删除标题行
+            If deleteStart > 1 Then
+                newSheet.Rows(deleteStart & ":" & newLastRow).Delete
+            End If
+        End If
+
+        ' 再删除前面的行（保留标题行）
+        If startRow > 2 Then
+            ' 删除当前周期之前的数据行（保留标题行）
+            newSheet.Rows("2:" & (startRow - 1)).Delete
+        End If
+
+        ' 定位到A1单元格
+        newSheet.Range("A1").Select
+
+        ' 确保新工作表只有正确的行数
+        Dim finalRowCount As Long
+        finalRowCount = newSheet.Cells(newSheet.Rows.Count, 2).End(xlUp).Row
+
+        ' 如果还有多余的行，删除它们（从下往上检查）
+        If finalRowCount > 8 Then    ' 标题行 + 7行数据
+            For i = finalRowCount To 9 Step -1
+                ' 检查当前行是否包含数据（使用非合并单元格的列）
+                If newSheet.Cells(i, 2).Value <> "" Then
+                    ' 如果包含数据，停止删除
+                    Exit For
+                Else
+                    ' 如果不包含数据，删除空行
+                    newSheet.Rows(i).Delete
+                End If
+            Next i
+        End If
+        newSheet.Range("A1").Select
+        Application.Goto newSheet.Range("A1"), True
+    Next cycle
+
+    Application.Calculation = xlCalculationAutomatic
+    Application.ScreenUpdating = True
+    Application.EnableEvents = True
+
+'    MsgBox "耗时:" & Format(Now() - time1, "hh:mm:ss") & vbCrLf & _
+'           "工作表拆分完成，共创建" & markers.Count & "个工作表"
+End Sub
+

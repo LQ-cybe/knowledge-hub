@@ -1,0 +1,195 @@
+'VBE对象是根对象，表示在VBA编辑器中存在的所有对象的最上层对象
+ 
+   '一 VBAproject对象: VBE编辑器中的工程
+   
+        '1 VBComponents对象：表示工程中所有的部件集合，包括Excel对象、窗体、模块、类模块。
+        
+            '1) CodeModule 对象：表示部件中相关的代码
+ 
+'操作VBE需要做的工作
+  '1 设置信任
+    'excel2003中，工具--宏--安全性--可靠发行商，选中“信任对于..."
+    'excel2007和excel2010，开发工具--安全性--宏设置--选中"对...的信任"
+  '2 引用
+ 
+ 
+'1、返回模块的行数
+ 
+Sub 返回模块A中的总行数()
+  MsgBox ThisWorkbook.VBProject.VBComponents("A").CodeModule.CountOfLines
+End Sub
+Sub 返回过程test中的总行数()
+  MsgBox ThisWorkbook.VBProject.VBComponents("A").CodeModule.ProcCountLines("test", vbext_pk_Proc)
+End Sub
+Sub 返回过程fe中开始行数()
+  MsgBox ThisWorkbook.VBProject.VBComponents("A").CodeModule.ProcBodyLine("fe", vbext_pk_Proc)
+End Sub
+ 
+'vbext_pk_Get 指定一个返回属性值的过程
+'vbext_pk_Let 指定一个赋值给属性的过程
+'vbext_pk_Set 指定一个给对象设置引用的过程
+'vbext_pk_Proc 指定所有过程除了Property 过程
+ 
+ 
+'2 返回模块的内容
+   Sub 返回过程fe中的所有代码()
+     Dim 开始行数, 总行数
+     With ThisWorkbook.VBProject.VBComponents("A").CodeModule
+         开始行数 = .ProcBodyLine("fe", vbext_pk_Proc)
+         总行数 = .ProcCountLines("fe", vbext_pk_Proc)
+         MsgBox .Lines(开始行数, 总行数)
+     End With
+   End Sub
+  
+  Sub 返回第7行所在的过程名()
+    MsgBox ThisWorkbook.VBProject.VBComponents("A").CodeModule.ProcOfLine(7, vbext_pk_Proc)
+  End Sub
+ 
+'判断模块和过程是否存在
+  Sub 判断A模块是否存在()
+   On Error Resume Next
+   If ThisWorkbook.VBProject.VBComponents("c") Is Nothing Then
+      MsgBox "B模块没有存在"
+   Else
+      MsgBox "B模块存在"
+   End If
+  End Sub
+Sub 判断是否存在b过程()
+'On Error Resume Next
+  Dim 开始行数
+ 开始行数 = ThisWorkbook.VBProject.VBComponents("A").CodeModule.ProcBodyLine("B", vbext_pk_Proc)
+ If Err.Number = 35 Then
+   MsgBox "不存在B过程"
+ Else
+   MsgBox "存在B过程"
+ End If
+End Sub
+ 
+'返回工程中所有部件名称
+  Sub 显示部件列表()
+    Dim x As Byte
+    With ThisWorkbook.VBProject
+    For x = 1 To .VBComponents.Count
+      Cells(x + 1, 1) = .VBComponents(x).Name
+       Cells(x + 1, 2) = .VBComponents(x).Type
+    Next x
+    End With
+  End Sub
+ 
+ 
+ 
+'一 添加模块、过程、代码
+  '1 添加模块
+     Sub 添加新模块B()
+       With ThisWorkbook.VBProject.VBComponents.Add(vbext_ct_StdModule)
+          .Name = "B"
+       End With
+     End Sub
+'     vbext_ct_ClassModule 将一个类模块添加到集合
+'     vbext_ct_MSForm 将窗体添加到集合
+'     vbext_ct_StdModule 将标准模块添加到集合
+ 
+  '2 在模块中添加代码
+     Sub 添加新过程()
+       Dim sr, code
+       sr = "Sub ABC()" & vbCrLf & "Msgbox ""测试添加代码""" & vbCrLf & "End Sub"
+       'MsgBox sr
+       With ThisWorkbook.VBProject.VBComponents("B").CodeModule
+         .AddFromString sr
+       End With
+     End Sub
+  '3 在模块中插入代码
+     Sub 在B模块中的第3行插入一行代码()
+       With ThisWorkbook.VBProject.VBComponents("B").CodeModule
+         .InsertLines 3, "sheets(1).Select"
+       End With
+     End Sub
+'二 删除模块、过程、代码
+     '1 删除模块
+     Sub 删除B模块()
+       With ThisWorkbook.VBProject.VBComponents
+         .Remove ThisWorkbook.VBProject.VBComponents("B")
+       End With
+     End Sub
+      '2 删除过程
+     Sub 删除B模块中的ABC过程()
+       Dim 开始行数, 总行数
+       With ThisWorkbook.VBProject.VBComponents("B").CodeModule
+         开始行数 = .ProcBodyLine("ABC", vbext_pk_Proc)
+         总行数 = .ProcCountLines("ABC", vbext_pk_Proc)
+        .DeleteLines 开始行数, 总行数
+       End With
+     End Sub
+ 
+'三 导入、导出和替换一个模块或代码
+    Sub 导出一个模块()
+     ThisWorkbook.VBProject.VBComponents("A").Export "D:/A.bas"
+    End Sub
+    Sub 导入一个模块()
+      ThisWorkbook.VBProject.VBComponents.Import "D:/A.bas"
+    End Sub
+    
+    Sub 替换一个模块()
+    '先删除模块,然后导入新模块
+     ThisWorkbook.VBProject.VBComponents.Remove ThisWorkbook.VBProject.VBComponents("A")
+     ThisWorkbook.VBProject.VBComponents.Import "D:/A.bas"
+    End Sub
+    Sub 替换A模块的B程序第一行代码()
+     Dim 开始行数
+    With ThisWorkbook.VBProject.VBComponents("B").CodeModule
+        开始行数 = .ProcBodyLine("ABC", vbext_pk_Proc)
+        .ReplaceLine 开始行数 + 1, "MsgBox ""修改后"""
+    End With
+    End Sub
+'四 模块的查找
+     'Find(查找内容,开始行数,开始列始,结束行数,结束列数,是否匹配)
+   Sub 在B模块中查找()
+        With ThisWorkbook.VBProject.VBComponents("B").CodeModule
+         MsgBox .Find("我", 1, 1, 1, 1)
+       End With
+   End Sub
+ 
+ 
+Sub 给文件添加模块()
+ Dim wb As Workbook, ph As String
+ Application.DisplayAlerts = False
+    ph = ThisWorkbook.Path & "\"
+    Set wb = Workbooks.Open(ph & "test.xls")
+       ThisWorkbook.VBProject.VBComponents("A").Export ph & "A.bas"
+       Windows(wb.Name).Visible = True
+       wb.VBProject.VBComponents.Import ph & "A.bas"
+       wb.Close True
+    Set wb = Nothing
+    Kill ph & "A.bas"
+ Application.DisplayAlerts = True
+End Sub
+Sub 删除指定文件模块()
+ Dim wb As Workbook, ph As String
+ Application.DisplayAlerts = False
+    ph = ThisWorkbook.Path & "\"
+    Set wb = Workbooks.Open(ph & "test.xls")
+    Windows(wb.Name).Visible = True
+    wb.VBProject.VBComponents.Remove wb.VBProject.VBComponents("A")
+    wb.Close True
+    Set wb = Nothing
+ Application.DisplayAlerts = True
+End Sub
+ 
+ 
+Sub 引用列表()
+Dim ref, i
+For Each ref In ThisWorkbook.VBProject.References
+i = i + 1
+    Cells(i, 1) = ref.Name
+    Cells(i, 2) = ref.FullPath
+    Cells(i, 3) = ref.Description
+Next ref
+End Sub
+ 
+Sub 引用IDE()
+ ThisWorkbook.VBProject.References.AddFromFile "D:\Program Files\VB98\VB6EXT.OLB"
+End Sub
+ 
+Sub 添加字典引用()
+  ThisWorkbook.VBProject.References.AddFromFile "C:\Windows\System32\scrrun.dll"
+End Sub

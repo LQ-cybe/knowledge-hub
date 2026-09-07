@@ -1,0 +1,5 @@
+  With .Range("A1:A10")
+       .UnMerge
+       .SpecialCells(xlCellTypeBlanks).NumberFormatLocal = "G/通用格式"
+       .SpecialCells(xlCellTypeBlanks).FormulaR1C1 = "=R[-1]C"
+  End With

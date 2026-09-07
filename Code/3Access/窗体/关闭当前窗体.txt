@@ -1,0 +1,1 @@
+DoCmd.Close acForm, Me.Name    ' 示例：关闭窗体

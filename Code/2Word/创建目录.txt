@@ -1,0 +1,32 @@
+'创建目录
+Sub word目录格式()
+    Dim TOC
+    Dim entry As Range
+    ' 确保文档中有目录
+    If ActiveDocument.TablesOfContents.Count = 0 Then
+        MsgBox "文档中没有目录, 自动跳过目录处理"
+        Exit Sub
+    End If
+    '更新目录
+    ActiveDocument.TablesOfContents(1).Update
+    ' 遍历文档中的所有目录
+    For Each TOC In ActiveDocument.TablesOfContents
+        ' 更新目录以确保格式正确
+        TOC.Update
+        ' 遍历目录中的所有条目
+        For Each entry In TOC.Range.Words
+            ' 设置字体大小
+            entry.Font.Size = 10                               ' 五号字体大小通常为10磅
+            entry.Font.Name = "宋体"
+            ' 设置段落格式
+            With entry.ParagraphFormat
+                .SpaceBefore = 0
+                .SpaceAfter = 0
+                .LineSpacingRule = wdLineSpaceExactly
+                .LineSpacing = 16
+            End With
+            ' 确保更新后的目录条目不是斜体
+            entry.Font.Italic = False
+        Next entry
+    Next TOC
+End Sub

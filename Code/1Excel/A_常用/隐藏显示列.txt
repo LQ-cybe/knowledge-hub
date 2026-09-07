@@ -1,0 +1,11 @@
+﻿Sub 隐藏显示列()
+Dim btn As Shape
+Set btn = ActiveSheet.Shapes("Button1")
+If Columns("H:N").Hidden = True Then
+Columns("H:N").Hidden = False
+btn.OLEFormat.Object.Caption = "隐藏列"
+Else
+Columns("H:N").Hidden = True
+btn.OLEFormat.Object.Caption = "显示列"
+End If
+End Sub

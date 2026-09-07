@@ -1,0 +1,25 @@
+'统计C列单元格中含H701和TZH开头的字符串的行数，并写入在D列
+Sub CountTZH_H701_LineInCColumn()
+    Dim rng As Range, cell As Range
+    Dim arrLines As Variant, i As Long, cnt As Long
+    Dim sht As Worksheet
+    
+    Set sht = ActiveSheet
+    Set rng = sht.Range("C1:C" & sht.Cells(sht.Rows.Count, "C").End(xlUp).Row)
+    
+    Application.ScreenUpdating = False
+    For Each cell In rng
+        cnt = 0
+        If Len(cell.Value) > 0 Then
+            arrLines = Split(cell.Value, vbLf)
+            For i = LBound(arrLines) To UBound(arrLines)
+                If Left(Trim(arrLines(i)), 3) = "TZH" Or Left(Trim(arrLines(i)), 4) = "H701" Then
+                    cnt = cnt + 1
+                End If
+            Next i
+        End If
+        cell.Offset(0, 1).Value = cnt
+    Next cell
+    Application.ScreenUpdating = True
+    MsgBox "统计完成！"
+End Sub

@@ -1,0 +1,66 @@
+﻿'导出到桌面PDF
+Sub ExportToPDF()
+' Recorded 2025/9/19
+    Dim docName As String
+    Dim desktopPath As String
+    docName = Left(ActiveDocument.Name, InStrRev(ActiveDocument.Name, ".") - 1)
+    With ActiveDocument.PDFSettings
+        .PublishRange = 0    ' CdrPDFVBA.pdfWholeDocument
+        .PageRange = "1"
+        .Author = "Administrator"
+        .Subject = ""
+        .Keywords = ""
+        .BitmapCompression = 2    ' CdrPDFVBA.pdfJPEG
+        .JPEGQualityFactor = 10
+        .TextAsCurves = False
+        .EmbedFonts = True
+        .EmbedBaseFonts = True
+        .TrueTypeToType1 = True
+        .SubsetFonts = True
+        .SubsetPct = 80
+        .CompressText = True
+        .Encoding = 1    ' CdrPDFVBA.pdfBinary
+        .DownsampleColor = True
+        .DownsampleGray = True
+        .DownsampleMono = True
+        .ColorResolution = 200
+        .MonoResolution = 600
+        .GrayResolution = 200
+        .Hyperlinks = True
+        .Bookmarks = True
+        .Thumbnails = False
+        .Startup = 0    ' CdrPDFVBA.pdfPageOnly
+        .ComplexFillsAsBitmaps = False
+        .Overprints = True
+        .Halftones = False
+        .MaintainOPILinks = False
+        .FountainSteps = 256
+        .EPSAs = 0    ' CdrPDFVBA.pdfPostscript
+        .pdfVersion = 0    ' CdrPDFVBA.pdfVersion12
+        .IncludeBleed = False
+        .Bleed = 31750
+        .Linearize = False
+        .CropMarks = False
+        .RegistrationMarks = False
+        .DensitometerScales = False
+        .FileInformation = False
+        .ColorMode = 3    ' CdrPDFVBA.pdfNative
+        '        .UseColorProfile = True
+        .ColorProfile = 1    ' CdrPDFVBA.pdfSeparationProfile
+        .EmbedFilename = ""
+        .EmbedFile = False
+        .JP2QualityFactor = 10
+        .TextExportMode = 0    ' CdrPDFVBA.pdfTextAsUnicode
+        .PrintPermissions = 0    ' CdrPDFVBA.pdfPrintPermissionNone
+        .EditPermissions = 0    ' CdrPDFVBA.pdfEditPermissionNone
+        .ContentCopyingAllowed = False
+        .OpenPassword = ""
+        .PermissionPassword = ""
+        .EncryptType = 2    ' CdrPDFVBA.pdfEncryptTypeAES
+        .OutputSpotColorsAs = 0    ' CdrPDFVBA.pdfSpotAsSpot
+        .OverprintBlackLimit = 95
+        .ProtectedTextAsCurves = True
+    End With
+    desktopPath = Environ("USERPROFILE") & "\Desktop\"
+    ActiveDocument.PublishToPDF desktopPath & docName & ".pdf"
+End Sub

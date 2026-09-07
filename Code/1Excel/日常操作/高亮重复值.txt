@@ -1,0 +1,16 @@
+'name=高亮重复值
+'officetype=excel,et
+'category=定位引用
+'description=高亮选区中的重复值（填充浅黄色）
+
+Public Sub HighlightDuplicates()
+    Dim r As Range, c As Range, d As Object
+    Set d = CreateObject("Scripting.Dictionary")
+    For Each c In Selection.Cells
+        If Not d.exists(CStr(c.Value)) Then
+            d.Add CStr(c.Value), 1
+        Else
+            c.Interior.Color = RGB(255, 255, 0)
+        End If
+    Next c
+End Sub

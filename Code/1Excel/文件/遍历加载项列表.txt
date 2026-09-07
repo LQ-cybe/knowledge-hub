@@ -1,0 +1,16 @@
+Private Sub 列出所有加载项列表()
+    Dim i, j, k, arr, brr, x, y, rng As Range
+    With Worksheets("sheet1")
+        .Rows(1).Font.Bold = True
+        .Range("a1:d1").Value = _
+            Array("progID", "Description", "Connect", "Guid")
+        For i = 1 To Application.COMAddIns.Count
+            .Cells(i + 1, 1) = Application.COMAddIns(i).progID
+            .Cells(i + 1, 2) = Application.COMAddIns(i).Description
+            .Cells(i + 1, 3) = Application.COMAddIns(i).Connect
+            .Cells(i + 1, 4) = Application.COMAddIns(i).GUID
+        Next
+        .Range("a1").CurrentRegion.Columns.AutoFit
+    End With
+    
+End Sub

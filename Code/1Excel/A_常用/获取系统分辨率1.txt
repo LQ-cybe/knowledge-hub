@@ -1,0 +1,10 @@
+﻿'获取系统分辨率
+Private Declare PtrSafe Function GetSystemMetrics Lib "user32" (ByVal nIndex As Long) As Long
+Const XScreen = 0
+Const YScreen = 1
+Public Sub 技巧21_010()
+    Dim XVal As Long, YVal As Long
+    YVal = GetSystemMetrics(YScreen)
+    XVal = GetSystemMetrics(XScreen)
+    Debug.Print "您电脑屏幕分辨率为: " & XVal & " X " & YVal
+End Sub

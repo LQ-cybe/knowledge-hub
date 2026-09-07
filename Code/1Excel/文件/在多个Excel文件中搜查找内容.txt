@@ -1,0 +1,48 @@
+'VBA实现在多个Excel文件中搜查找内容
+Sub SearchThroughFiles()
+    Dim meekouFileDialog As FileDialog
+    Dim meekouFile As Variant
+    Dim meekouWorkBook As Workbook
+    Dim meekouSearch As String
+    Dim meekouWorkSheet As Worksheet
+    Dim meekouRange As Range
+    Dim meekouIsFound As Boolean
+    meekouIsFound = False
+On Error GoTo ErrorHandler
+    Application.ScreenUpdating = False
+    '输入要查找的内容
+    meekouSearch = Application.InputBox("请输入要查找的内容")
+    ' 选取目标查找Excel文件
+    Set meekouFileDialog = Application.FileDialog(msoFileDialogFilePicker)
+    With meekouFileDialog
+        .AllowMultiSelect = True
+        .Filters.Add "Excel", "*.xlsx*", 1
+        .Show
+        '遍历选中的Excel文件
+        For Each meekouFile In .SelectedItems
+            Debug.Print meekouFile
+            '打开Excel文件
+            Set meekouWorkBook = Workbooks.Open(meekouFile)
+            For Each meekouWorkSheet In meekouWorkBook.Worksheets
+                With meekouWorkSheet.Cells
+                    Set meekouRange = .Find(meekouSearch)
+                    If Not meekouRange Is Nothing Then
+                        meekouIsFound = True
+                        meekouWorkBook.Application.Goto Sheets(meekouRange.Parent.Name).Range(meekouRange.Address)
+                    End If
+                End With
+            Next
+            '如果没有找到，则关闭当前工作簿
+            If Not meekouIsFound Then
+                meekouWorkBook.Close
+            End If
+            meekouIsFound = False
+        Next meekouFile
+    End With
+    Application.ScreenUpdating = True
+    MsgBox "查找完成"
+Exit Sub
+ErrorHandler:
+    MsgBox "报错, 请关注公众号米可爱分享, 联系米可查找解决方案！"
+    Application.ScreenUpdating = True
+End Sub

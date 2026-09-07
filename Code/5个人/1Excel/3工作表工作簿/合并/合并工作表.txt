@@ -1,0 +1,46 @@
+﻿    '合并当前工作簿的所有工作表到当前工作表中，不含标题行
+Sub 合并当前工作簿下的所有工作表()
+    Range("A2:h200").Value = ""
+    Application.ScreenUpdating = False                         ''禁用屏幕刷新
+    Application.DisplayAlerts = False                          ' 关闭提示框显示
+    Dim startRow As Long
+    startRow = Range("B" & Rows.Count).End(xlUp).Row + 1       '获取当前活动工作表A列最后一个有数据单元格的下一行
+    Dim j As Long
+    For j = 1 To Sheets.Count
+        If Sheets(j).Name <> ActiveSheet.Name Then
+            Dim copyRange As Range
+            ' 定义要复制的范围，排除第一行（标题行）
+            Set copyRange = Sheets(j).UsedRange.Offset(1, 0).Resize(Sheets(j).UsedRange.Rows.Count - 1, Sheets(j).UsedRange.Columns.Count)
+            Dim i As Long
+            For i = 1 To copyRange.Rows.Count
+                Cells(startRow + i - 1, 1).Value = Sheets(j).Name    '在第一列写入工作表名称
+            Next i
+            copyRange.Copy Cells(startRow, 2)                  '将去除标题行后的区域复制到当前工作表第startRow行第2列
+            startRow = startRow + copyRange.Rows.Count         '更新起始行位置，为下一次复制做准备
+        End If
+    Next j
+    Application.ScreenUpdating = True                          '启用屏幕刷新
+    Application.DisplayAlerts = True                           ' 关闭提示框显示
+End Sub
+    '获取工作表名称
+Sub GetSheetNamesExceptSummary()
+    Dim ws As Worksheet
+    Dim i As Long
+    Dim targetSheet As Worksheet
+    
+    ' 设置目标工作表，这里假设是"汇总表"，你可以根据实际情况修改
+    On Error Resume Next
+    Set targetSheet = ActiveSheet                              ' 获取当前工作表
+    If targetSheet Is Nothing Then
+        MsgBox "未找到名为'汇总表'的工作表，请检查！"
+        Exit Sub
+    End If
+    On Error GoTo 0
+    i = 2                                                      ' 从A2单元格开始写入
+    For Each ws In ThisWorkbook.Sheets
+        If ws.Name <> "汇总" Then
+            targetSheet.Cells(i, 1).Value = ws.Name
+            i = i + 1
+        End If
+    Next ws
+End Sub

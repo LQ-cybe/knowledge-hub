@@ -1,0 +1,15 @@
+'导出文档中所有的模块
+Sub ExtractModuleCode()
+    Dim mdl As Module
+    Dim strCode As String
+    Dim strFileName As String
+    
+    For Each mdl In CurrentProject.AllModules
+        strCode = mdl.CodeModule.Lines(1, mdl.CodeModule.CountOfLines)
+        strFileName = CurrentProject.Path & "\" & mdl.Name & ".txt"
+        
+        Open strFileName For Output As #1
+        Print #1, strCode
+        Close #1
+    Next mdl
+End Sub

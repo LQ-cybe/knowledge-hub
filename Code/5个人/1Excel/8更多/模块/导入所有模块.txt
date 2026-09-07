@@ -1,0 +1,39 @@
+'导入文件夹下的所有模块
+Sub ImportAllModules()
+    Dim wb As Workbook
+    Dim folderPath As String
+    Dim file As String
+    Dim vbc As VBComponent
+    
+   '设置要导入模块的工作簿为当前工作簿
+    Set wb = ThisWorkbook
+    
+   '设置包含模块文件的文件夹路径，这里使用桌面路径，可按需修改
+    folderPath = "D:\LQ\其它\Excel插件\自定义插件\ExportedModules"
+    
+   '获取文件夹下第一个文件
+    file = Dir(folderPath & "\*.bas", vbNormal)
+    
+    Do While file <> ""
+        On Error Resume Next
+       '尝试导入文件作为标准模块
+        Set vbc = wb.VBProject.VBComponents.Import(folderPath & "\" & file)
+        If vbc Is Nothing Then
+           '如果导入标准模块失败，尝试导入为类模块
+            file = Replace(file, ".bas", ".cls")
+            Set vbc = wb.VBProject.VBComponents.Import(folderPath & "\" & file)
+            If vbc Is Nothing Then
+               '如果导入类模块失败，尝试导入为用户窗体
+                file = Replace(file, ".cls", ".frm")
+                Set vbc = wb.VBProject.VBComponents.Import(folderPath & "\" & file)
+            End If
+        End If
+        On Error GoTo 0
+       '获取下一个文件
+        file = Dir
+    Loop
+    
+    MsgBox "所有模块已尝试导入。"
+    Set vbc = Nothing
+    Set wb = Nothing
+End Sub

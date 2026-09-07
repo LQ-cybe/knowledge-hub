@@ -1,0 +1,17 @@
+﻿'列出Excel命令栏的英文名称和本地名称,写入到A、B两列中
+Sub Get_Commandbars_Names()
+Dim Cbar As CommandBar
+Dim NewWS As Worksheet
+Dim RNum As Long
+RNum = 1
+Set NewWS = Worksheets.Add
+On Error Resume Next
+ActiveSheet.Name = "CommandBarNames"
+On Error GoTo 0
+For Each Cbar In Application.CommandBars
+NewWS.Cells(RNum, "A").Value = Cbar.Name
+NewWS.Cells(RNum, "B").Value = Cbar.NameLocal
+RNum = RNum + 1
+Next Cbar
+NewWS.Columns.AutoFit
+End Sub

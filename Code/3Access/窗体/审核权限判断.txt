@@ -1,0 +1,8 @@
+﻿'审核权限判断
+Sub Audit_judgment()
+If Me.已审核.Value = True Then
+Me.Labelsh.Caption = "已审核"
+Else
+Me.Labelsh.Caption = "未审核"
+End If
+End Sub

@@ -1,0 +1,31 @@
+﻿Function LookupDataByTwoConditions(employeeID As Long, department As String) As Variant
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim strSQL As String
+    
+    '构建SQL查询语句
+    strSQL = "SELECT Salary FROM Employees WHERE EmployeeID = " & employeeID & " AND Department = '" & department & "'"
+    
+    Set db = CurrentDb
+    Set rs = db.OpenRecordset(strSQL)
+    
+    If Not rs.EOF Then
+        LookupDataByTwoConditions = rs!Salary
+    Else
+        LookupDataByTwoConditions = Null
+    End If
+    
+    rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+End Function
+
+Sub TestLookup()
+    Dim result As Variant
+    result = LookupDataByTwoConditions(1, "Sales") '假设查找员工编号为1且部门为Sales的数据
+    If IsNull(result) Then
+        MsgBox "未找到符合条件的数据。"
+    Else
+        MsgBox "找到的数据为：" & result
+    End If
+End Sub

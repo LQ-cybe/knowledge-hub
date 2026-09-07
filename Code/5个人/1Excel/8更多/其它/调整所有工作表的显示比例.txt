@@ -1,0 +1,10 @@
+﻿''调整所有工作表的显示比例到120
+'Sub AdjustZoomTo120()
+'    Dim wb As Workbook
+'    ' 遍历当前工作簿中的所有工作表
+'    For Each ws In ActiveWorkbook.Worksheets
+'        ' 设置当前工作表的显示比例为 120%
+'        ws.Activate
+'        ActiveWindow.Zoom = 120
+'    Next ws
+'End Sub

@@ -1,0 +1,64 @@
+'提取指定工作表的部份单元格数据
+Sub ExtractDataFromProtectedFiles()
+    Application.ScreenUpdating = False
+    Dim lastRow As Long
+    Dim i As Long
+    Dim filePath As String
+    Dim wb As Workbook
+    Dim ws As Worksheet
+    Dim cellAddresses As Variant
+    Dim cellValue As Variant
+    Dim password As String '工作表保护密码
+    Dim targetSheet As Worksheet
+    Dim colIndex As Long
+    Dim targetWorksheetName As String ' 目标工作表名称
+    
+    ' 设置要操作的工作表为 A 表，你可按需修改表名
+    Set targetSheet = ThisWorkbook.Sheets("A")
+    
+    ' 设置工作表保护密码
+    password = "123456" '请将此处替换为实际的工作表保护密码
+    
+    ' 指定要提取的单元格地址（可根据实际情况修改）
+    cellAddresses = Array("B2", "B3", "B4", "B9", "B10", "A13", "C13", "E7")
+    
+    ' 获取 A 表的最后一行数据
+    lastRow = targetSheet.Cells(targetSheet.Rows.Count, 1).End(xlUp).Row
+    
+    ' 假设目标工作表名称固定，可根据实际情况修改
+    targetWorksheetName = "单变码"
+    
+    For i = 1 To lastRow
+        ' 判断 C 列单元格是否等于 "双变码"
+        If targetSheet.Cells(i, 3).Value = "单变码" Then
+            ' 拼接文件的完整路径
+            filePath = targetSheet.Cells(i, 1).Value & "\" & targetSheet.Cells(i, 2).Value
+            ' 打开工作簿，暂时去掉错误处理以便调试
+            Set wb = Workbooks.Open(filePath, ReadOnly:=True, UpdateLinks:=False)
+            If Not wb Is Nothing Then
+                On Error Resume Next
+                ' 通过名称获取工作表
+                Set ws = wb.Sheets(targetWorksheetName)
+                On Error GoTo 0
+                If Not ws Is Nothing Then
+                    ' 修改工作表名称为 "A"
+                    ws.Name = "A"
+                    ' 解除工作表保护
+                    ws.Unprotect password:=password
+                    colIndex = 4 ' 从第 4 列开始存放提取的数据
+                    For Each addr In cellAddresses
+                        targetSheet.Cells(i, colIndex).Value = ws.Range(addr).Value2 ' 使用 Value2 获取实际值
+                        colIndex = colIndex + 1 ' 移动到下一列
+                    Next addr
+                    ' 重新保护工作表（如果需要）
+                    ws.Protect password:=password
+                End If
+                ' 关闭工作簿，不保存更改
+                wb.Close SaveChanges:=False
+            End If
+            Set wb = Nothing
+            Set ws = Nothing
+        End If
+    Next i
+    Application.ScreenUpdating = True
+End Sub

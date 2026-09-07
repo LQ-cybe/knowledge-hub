@@ -1,0 +1,6 @@
+
+lastrow =  Cells(Rows.Count, "E").End(xlUp).Row
+
+
+'所有列最大行号
+lastrow= ActiveSheet.Cells.Find("*", , , , xlByRows, xlPrevious).Row 

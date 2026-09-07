@@ -1,0 +1,29 @@
+﻿Sub DeleteLinkedTable(tblName As String)
+    
+'    DoCmd.SetWarning False
+    ' 检查链接表是否存在
+    If IsTableLinked(tblName) Then
+        ' 删除链接表
+        DoCmd.DeleteObject acTable, tblName
+       
+    Else
+'      MsgBox  '不存在: " & tblName
+    End If
+End Sub
+Function IsTableLinked(tblName As String) As Boolean
+    Dim db As DAO.Database
+    Dim tdf As DAO.TableDef
+    
+    Set db = CurrentDb()
+    On Error Resume Next ' 防止错误发生
+    Set tdf = db.TableDefs(tblName)
+    
+    IsTableLinked = Not tdf Is Nothing And Not (tdf.Attributes And dbSystemObject)
+    Set tdf = Nothing
+    Set db = Nothing
+End Function
+Sub 删除链接表()
+Dim tblName As String
+tblName = "Sheet5"
+Call DeleteLinkedTable(tblName)
+End Sub

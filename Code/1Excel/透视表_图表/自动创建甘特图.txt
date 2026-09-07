@@ -1,0 +1,56 @@
+﻿Sub 自动创建甘特图()
+    Dim X, Y, Z, F1, F2, F3
+    Dim sht As Worksheet
+    Dim i As Integer
+    
+    Set sht = ActiveSheet
+    
+    With sht
+        X = Application.Transpose(.Range("A2:A10").Value)
+        Y = Application.Transpose(.Range("B2:B10").Value)
+        Z = Application.Transpose(.Range("C2:C10").Value)
+        ReDim F1(1 To UBound(Y))
+        ReDim F2(1 To UBound(Y))
+        ReDim F3(1 To UBound(Y))
+    End With
+    
+    For i = 1 To UBound(X)
+        Y(i) = DateValue(Y(i)) * 1
+        Z(i) = DateValue(Z(i)) * 1
+        F1(i) = Z(i) - Y(i)
+        F2(i) = Date * 1
+        F3(i) = i
+    Next i
+    
+    Dim chtobj As ChartObject, cht As Chart
+    Set chtobj = sht.ChartObjects.Add(sht.Range("D1").Left, 0, sht.Range("O1").Left, sht.Range("A20").Top)
+    Set cht = chtobj.Chart
+    
+    Call addser(cht, xlBarStacked, "开始时间", X, Y)
+    Call addser(cht, xlBarStacked, "任务周期", X, F1)
+    Call addser(cht, xlXYScatterSmoothNoMarkers, "当前日期", F2, F3)
+    
+    With cht
+        .Axes(xlValue).MinimumScale = Application.Min(Y)
+        .Axes(xlValue).MaximumScale = Application.Max(Z)
+        .Axes(xlValue).MajorUnit = 10
+        .Axes(xlValue).TickLabels.NumberFormat = "yyyy-mm-dd"
+        .ChartArea.Border.LineStyle = xlLineStyleNone
+        .PlotArea.Border.LineStyle = xlLineStyleNone
+'        .ChartArea.Format.Line.Visible = msoFalse              ' 外框无边框
+'        .PlotArea.Format.Line.Visible = msoFalse               ' 内部无边框
+'        .ChartArea.Format.Fill.Visible = msoFalse              ' 背景透明
+'        .PlotArea.Format.Fill.Visible = msoFalse               ' 绘图区透明
+    End With
+End Sub
+
+Sub addser(cht As Chart, typ, strname, arrX, arrY)
+    Dim ser As Series
+    Set ser = cht.SeriesCollection.NewSeries
+    With ser
+        .ChartType = typ
+        .name = strname
+        .XValues = arrX
+        .Values = arrY
+    End With
+End Sub

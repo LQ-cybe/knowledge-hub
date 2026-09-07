@@ -1,0 +1,210 @@
+﻿'左上角L标记线
+Sub CreateLMarkAtTopLeft()
+    Dim s As shape
+    Dim markLen As Double
+    Dim offsetX As Double
+    Dim offsetY As Double
+    Dim startX As Double
+    Dim startY As Double
+    Dim line1 As shape
+    Dim line2 As shape
+    ActiveDocument.Unit = cdrMillimeter
+    
+    ' 检查文档和选择
+    If ActiveDocument Is Nothing Then
+        MsgBox "没有打开的文档！", vbExclamation
+        Exit Sub
+    End If
+    
+    If ActiveSelection.Shapes.count = 0 Then
+        MsgBox "请先选择对象！", vbExclamation
+        Exit Sub
+    End If
+    
+    ' 获取第一个选中的对象
+    Set s = ActiveSelection.Shapes(1)
+    
+    ' 参数设置（毫米转英寸）
+    markLen = 2      ' L型标记线长度5mm
+    offsetX = 3       ' 水平偏移0mm
+    offsetY = 0        ' 垂直偏移0mm
+    
+    ' 计算对象左上角坐标（英寸）
+    ' 注意：CorelDRAW中PositionX/Y是左下角坐标
+    startX = s.PositionX - offsetX
+    startY = s.PositionY + offsetY
+    
+    ' 创建L型标记线（水平向右，垂直向下）
+    Set line1 = ActiveLayer.CreateLineSegment(startX - markLen, startY, startX, startY)
+    Set line2 = ActiveLayer.CreateLineSegment(startX, startY, startX, startY - markLen)
+    
+    ' 设置线条属性
+    line1.Outline.width = 0.2
+    line1.Outline.Color.CMYKAssign 0, 0, 0, 100
+    line2.Outline.width = 0.2
+    line2.Outline.Color.CMYKAssign 0, 0, 0, 100
+    
+    Application.Refresh
+    
+    Set line1 = Nothing
+    Set line2 = Nothing
+    Set s = Nothing
+End Sub
+
+'右上角L标记线
+Sub CreateLMarkAtTopTop()
+    Dim s As shape
+    Dim markLen As Double
+    Dim offsetX As Double
+    Dim offsetY As Double
+    Dim startX As Double
+    Dim startY As Double
+    Dim line1 As shape
+    Dim line2 As shape
+    ActiveDocument.Unit = cdrMillimeter
+
+    ' 检查文档和选择
+    If ActiveDocument Is Nothing Then
+        MsgBox "没有打开的文档！", vbExclamation
+        Exit Sub
+    End If
+
+    If ActiveSelection.Shapes.count = 0 Then
+        MsgBox "请先选择对象！", vbExclamation
+        Exit Sub
+    End If
+
+    ' 获取第一个选中的对象
+    Set s = ActiveSelection.Shapes(1)
+
+    ' 参数设置（毫米转英寸）
+    markLen = 2      ' L型标记线长度5mm
+    offsetX = 3       ' 水平偏移0mm
+    offsetY = 0        ' 垂直偏移0mm
+
+    ' 计算对象左上角坐标（英寸）
+    ' 注意：CorelDRAW中PositionX/Y是左下角坐标
+    startX = s.PositionX + offsetX + s.SizeWidth
+    startY = s.PositionY + offsetY
+
+    ' 创建L型标记线（水平向右，垂直向下）
+    Set line1 = ActiveLayer.CreateLineSegment(startX, startY, startX + markLen, startY)
+    Set line2 = ActiveLayer.CreateLineSegment(startX, startY, startX, startY - markLen)
+
+    ' 设置线条属性
+    line1.Outline.width = 0.2
+    line1.Outline.Color.CMYKAssign 0, 0, 0, 100
+    line2.Outline.width = 0.2
+    line2.Outline.Color.CMYKAssign 0, 0, 0, 100
+
+    Application.Refresh
+
+    Set line1 = Nothing
+    Set line2 = Nothing
+    Set s = Nothing
+End Sub
+
+'左下角L标记线
+Sub CreateLMarkAtTopBottomleft()
+    Dim s As shape
+    Dim markLen As Double
+    Dim offsetX As Double
+    Dim offsetY As Double
+    Dim startX As Double
+    Dim startY As Double
+    Dim line1 As shape
+    Dim line2 As shape
+    ActiveDocument.Unit = cdrMillimeter
+
+    ' 检查文档和选择
+    If ActiveDocument Is Nothing Then
+        MsgBox "没有打开的文档！", vbExclamation
+        Exit Sub
+    End If
+
+    If ActiveSelection.Shapes.count = 0 Then
+        MsgBox "请先选择对象！", vbExclamation
+        Exit Sub
+    End If
+
+    ' 获取第一个选中的对象
+    Set s = ActiveSelection.Shapes(1)
+
+    ' 参数设置（毫米转英寸）
+    markLen = 2      ' L型标记线长度5mm
+    offsetX = 3       ' 水平偏移0mm
+    offsetY = 0        ' 垂直偏移0mm
+
+    ' 计算对象左上角坐标（英寸）
+    ' 注意：CorelDRAW中PositionX/Y是左下角坐标
+    startX = s.PositionX - offsetX
+    startY = s.PositionY + offsetY - s.SizeHeight
+
+    ' 创建L型标记线（水平向右，垂直向下）
+    Set line1 = ActiveLayer.CreateLineSegment(startX - markLen, startY, startX, startY)
+    Set line2 = ActiveLayer.CreateLineSegment(startX, startY, startX, startY + markLen)
+
+    ' 设置线条属性
+    line1.Outline.width = 0.2
+    line1.Outline.Color.CMYKAssign 0, 0, 0, 100
+    line2.Outline.width = 0.2
+    line2.Outline.Color.CMYKAssign 0, 0, 0, 100
+
+    Application.Refresh
+
+    Set line1 = Nothing
+    Set line2 = Nothing
+    Set s = Nothing
+End Sub
+'右下角L标记线
+Sub CreateLMarkAtRight()
+    Dim s As shape
+    Dim markLen As Double
+    Dim offsetX As Double
+    Dim offsetY As Double
+    Dim startX As Double
+    Dim startY As Double
+    Dim line1 As shape
+    Dim line2 As shape
+    ActiveDocument.Unit = cdrMillimeter
+
+    ' 检查文档和选择
+    If ActiveDocument Is Nothing Then
+        MsgBox "没有打开的文档！", vbExclamation
+        Exit Sub
+    End If
+
+    If ActiveSelection.Shapes.count = 0 Then
+        MsgBox "请先选择对象！", vbExclamation
+        Exit Sub
+    End If
+
+    ' 获取第一个选中的对象
+    Set s = ActiveSelection.Shapes(1)
+
+    ' 参数设置（毫米转英寸）
+    markLen = 2      ' L型标记线长度5mm
+    offsetX = 3       ' 水平偏移0mm
+    offsetY = 0        ' 垂直偏移0mm
+
+    ' 计算对象左上角坐标（英寸）
+    ' 注意：CorelDRAW中PositionX/Y是左下角坐标
+    startX = s.PositionX + offsetX + s.SizeWidth
+    startY = s.PositionY + offsetY - s.SizeHeight
+
+    ' 创建L型标记线（水平向右，垂直向下）
+    Set line1 = ActiveLayer.CreateLineSegment(startX, startY, startX + markLen, startY)
+    Set line2 = ActiveLayer.CreateLineSegment(startX, startY + markLen, startX, startY)
+
+    ' 设置线条属性
+    line1.Outline.width = 0.2
+    line1.Outline.Color.CMYKAssign 0, 0, 0, 100
+    line2.Outline.width = 0.2
+    line2.Outline.Color.CMYKAssign 0, 0, 0, 100
+
+    Application.Refresh
+
+    Set line1 = Nothing
+    Set line2 = Nothing
+    Set s = Nothing
+End Sub

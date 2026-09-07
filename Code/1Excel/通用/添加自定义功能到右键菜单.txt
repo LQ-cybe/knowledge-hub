@@ -1,0 +1,39 @@
+﻿'添加自定义功能到右键菜单
+Sub AddButtonToContextMenu()
+    Dim cbc As CommandBarControl
+    Dim contextMenu As CommandBar
+    Dim name As String
+    name = "测试"
+    ' 获取单元格右键菜单
+    On Error Resume Next
+    Set contextMenu = Application.CommandBars("Cell")
+    If Err.Number <> 0 Then
+        MsgBox "无法访问右键菜单！", vbCritical
+        Exit Sub
+    End If
+    On Error GoTo 0
+    
+    ' 删除现有命令（如果存在）
+    On Error Resume Next
+    For i = contextMenu.Controls.Count To 1 Step -1
+        If contextMenu.Controls(i).caption = name Then
+            contextMenu.Controls(i).Delete
+        End If
+    Next i
+    On Error GoTo 0
+    
+    ' 添加新命令
+    Set cbc = contextMenu.Controls.Add(Type:=msoControlButton, Temporary:=True)
+    With cbc
+        .caption = name
+        .OnAction = "MyCustomFunction"
+        .Style = msoButtonCaption
+    End With
+    
+'    MsgBox "已在右键菜单中添加:" & name, vbInformation
+End Sub
+
+Sub MyCustomFunction()
+    MsgBox "自定义功能已触发！" & vbCrLf & _
+           "Excel版本: " & Application.Version, vbInformation
+End Sub

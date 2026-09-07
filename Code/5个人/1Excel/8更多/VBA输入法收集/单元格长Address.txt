@@ -1,0 +1,7 @@
+Function LongSelectionAddress(rngToGetAddress As Range) As String
+    Dim LongAddress As String, rngArea As Range
+    For Each rngArea In rngToGetAddress.Areas
+        LongAddress = LongAddress & rngArea.Address & ","
+    Next rngArea
+    LongSelectionAddress = Left(LongAddress, Len(LongAddress) - 1)
+End Function

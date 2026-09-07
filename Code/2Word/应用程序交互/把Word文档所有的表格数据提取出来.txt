@@ -1,0 +1,42 @@
+﻿Option Explicit
+Sub ReadFromWord()
+'    Dim wordApp As Object
+'    Dim wordDoc As Object
+'    Dim tableCount As Integer
+'    Dim filePath As String
+    
+    Dim oWordApp As Object, oDoc As Object      '声明Word相关变量
+    Dim myPath$, MyName$, k%, Result(1 To 1000, 1 To 50)
+    '声明文件夹路径、文件名称、数组：最大文件数以及提取的最大标题列数
+On Error Resume Next        '遇到错误忽视，程序继续
+    Range("A2:M2000").ClearContents  '清除汇总表中的数据
+    myPath = ThisWorkbook.Path & "\"    '文件夹路径
+    MyName = Dir(myPath & "*.doc*")     '文件夹中文档名称
+Set oWordApp = CreateObject("Word.Applica-tion")     '创建Word程序应用
+    Do While MyName <> ""
+        Set oDoc = GetObject(myPath & MyName)   '打开文件夹中每一个Word文档
+'        tableCount = wordDoc.Tables.Count
+'        MsgBox tableCount
+    Dim I As Integer
+    For I = 1 To 657
+            With oDoc.Tables(I)  '提取当前文档中的第一个表格
+              k = k + 1 '循环变量
+                Result(k, 1) = k '文档序号
+                Result(k, 2) = Application.Clean(.Cell(1, 5).Range.Text)    '订单号码
+                Result(k, 3) = Application.Clean(.Cell(1, 7).Range.Text)    '料号
+                Result(k, 4) = Application.Clean(.Cell(2, 5).Range.Text)    '品名
+                Result(k, 5) = Application.Clean(.Cell(5, 2).Range.Text)    '供应商
+                Result(k, 6) = Application.Clean(.Cell(5, 3).Range.Text)    '材质
+                Result(k, 7) = Application.Clean(.Cell(6, 2).Range.Text)    '供应商2
+                Result(k, 8) = Application.Clean(.Cell(6, 3).Range.Text)    '材质2
+                Result(k, 9) = Application.Clean(.Cell(7, 2).Range.Text)    '供应商3
+                Result(k, 10) = Application.Clean(.Cell(7, 3).Range.Text)    '材质3
+            End With
+    Next I
+    oDoc.Close True     '当前文档提取完后，关闭
+    MyName = Dir '提取下一个文档
+    Loop
+    Range("A2").Resize(k, 10) = Result   '将结果写入汇总表
+    Set oWordApp = Nothing      '将Word应用程序关闭，释放内存
+End Sub
+

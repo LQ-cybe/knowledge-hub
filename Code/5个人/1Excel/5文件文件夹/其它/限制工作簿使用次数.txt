@@ -1,0 +1,28 @@
+﻿Private Sub Workbook_Open()
+'选择工作簿只能使用50次，当到达50次就自动销毁
+    Dim counter As Long, term As Long, chk
+    chk = GetSetting("hhh", "budget", "使用次数", "")
+    If chk = "" Then
+        term = 50 '限制使用50次
+        MsgBox "本工作簿只能使用" & term & "次" & vbCrLf & "超过次数将自动销毁!", vbExclamation
+        SaveSetting "hhh", "budget", "使用次数", term '将值写入注册表
+    Else
+        counter = Val(chk) - 1 '计算剩余使用次数
+        MsgBox "你还能使用" & counter & "次,请及时注册!", vbExclamation
+        SaveSetting "hhh", "budget", "使用次数", counter '写入剩余次数
+        If counter <= 0 Then '如果使用次数用完，就删除注册表记录使用次数的信息，调用自毁代码
+            DeleteSetting "hhh", "budget", "使用次数"
+            killme
+        End If
+    End If
+End Sub
+
+Public Sub killme()
+    Application.DisplayAlerts = False
+    ActiveWorkbook.ChangeFileAccess xlReadOnly
+'需要注意的是，文件在使用状态下无法直接使用Kill。我们加了一句ChangeFileAccess xlReadOnly，
+'这一条代表把文件设置成只读，设置成只读后，文件才不是使用状态，才能执行删除动作。
+    Kill ActiveWorkbook.FullName
+    ThisWorkbook.Close False
+End Sub
+

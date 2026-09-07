@@ -1,0 +1,24 @@
+﻿Sub AddNewMenu()
+    Dim HelpMenu As CommandBarControl
+    Dim NewMenu As CommandBarPopup
+    
+    '利用ID属性查找帮助菜单
+    Set HelpMenu = CommandBars(1).FindControl(ID:=30010)
+    
+    If HelpMenu Is Nothing Then
+        '如果该菜单不存在,则将新菜单添加到末尾
+        '设置新菜单为临时的
+        Set NewMenu = CommandBars(1).Controls _
+          .Add(Type:=msoControlPopup, Temporary:=True)
+    Else
+        '将新菜单添加到帮助菜单之前
+        Set NewMenu = CommandBars(1).Controls _
+          .Add(Type:=msoControlPopup, Before:=HelpMenu.Index, _
+          Temporary:=True)
+    End If
+    
+    '添加标题并指定快捷键
+    NewMenu.Caption = "统计(&S)"
+    End Sub
+'删除创建的“统计”菜单
+'CommandBars(1).Controls("统计(&S)").Delete

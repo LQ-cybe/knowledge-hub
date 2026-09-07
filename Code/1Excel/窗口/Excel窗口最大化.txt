@@ -1,0 +1,2 @@
+﻿AppActivate Application.Caption
+Application.WindowState = xlMaximized

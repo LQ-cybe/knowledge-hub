@@ -1,0 +1,24 @@
+'删除所有与工作簿级有相同名称的工作表级的名称
+Sub DeleteDuplicateSheetNames()
+ Dim n As Name
+ Dim nn As Name
+ Dim strName As String
+
+ On Error GoTo ErrorHandler
+
+ For Each n In Names
+   If TypeOf n.Parent Is Workbook Then
+     For Each nn In Names
+       If TypeOf nn.Parent Is Worksheet Then
+         strName = Right(nn.Name, Len(nn.Name) - InStr(nn.Name, "!"))
+         If n.Name = strName Then nn.Delete
+       End If
+     Next nn
+   End If
+ Next n
+
+ Exit Sub
+
+ErrorHandler:
+ MsgBox "遇到错误 - 宏停止运行", , "错误"
+End Sub

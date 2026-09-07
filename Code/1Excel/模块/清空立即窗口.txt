@@ -1,0 +1,4 @@
+Sub ClearImmediateWindow()
+    ' 模拟手动清空立即窗口的快捷键序列
+    Application.SendKeys "^g ^a {DEL}", True
+End Sub

@@ -1,0 +1,37 @@
+﻿Sub ImportAllObjects()
+    Dim db As Database
+    Dim obj As Object 
+    Dim sourceDbPath As String
+    
+    ' 设置要导入的Access数据库路径
+    sourceDbPath = "C:\Path\To\Source\Database.accdb" 
+    
+    ' 打开源数据库
+    Set db = OpenDatabase(sourceDbPath)
+    
+    ' 导入所有对象
+    For Each obj In db.AllObjects
+        If obj.Type = acTable Then
+            ' 导入表
+            CurrentDb().CreateObject(obj.Name, obj.Source)
+        ElseIf obj.Type = acQuery Then 
+            ' 导入查询
+            CurrentDb().CreateObject(obj.Name, obj.Source)
+        ElseIf obj.Type = acForm Then 
+            ' 导入窗体
+            CurrentDb().CreateObject(obj.Name, obj.Source)
+        ElseIf obj.Type = acReport Then 
+            ' 导入报表
+            CurrentDb().CreateObject(obj.Name, obj.Source)
+        ElseIf obj.Type = acMacro Then 
+            ' 导入宏
+            CurrentDb().CreateObject(obj.Name, obj.Source)
+        ElseIf obj.Type = acModule Then 
+            ' 导入模块
+            CurrentDb().CreateObject(obj.Name, obj.Source)
+        End If
+    Next obj
+    
+    ' 关闭源数据库
+    db.Close
+End Sub

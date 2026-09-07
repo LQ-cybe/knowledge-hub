@@ -1,0 +1,13 @@
+import Database from 'better-sqlite3';
+const db = new Database('./data/knowledge.db', { readonly: true });
+console.log('=== 类型统计 ===');
+console.log(db.prepare(`SELECT type, COUNT(*) AS n FROM resources GROUP BY type`).all());
+console.log('=== 顶层文件夹 ===');
+console.log(db.prepare(`SELECT title, path FROM resources WHERE type='folder' AND parent_id=(SELECT id FROM resources WHERE type='folder' AND path='')`).all());
+console.log('=== 全文检索: 批量 ===');
+const r = db.prepare(`SELECT resources.id, resources.type, resources.title, resources.path FROM resources_fts JOIN resources ON resources.rowid=resources_fts.rowid WHERE resources_fts MATCH ? LIMIT 10`).all('批量*');
+console.log(r.length, '条:', r.slice(0, 5).map((x: any) => x.title));
+console.log('=== 全文检索: Excel ===');
+const r2 = db.prepare(`SELECT resources.id, resources.type, resources.title FROM resources_fts JOIN resources ON resources.rowid=resources_fts.rowid WHERE resources_fts MATCH ? LIMIT 10`).all('Excel*');
+console.log(r2.length, '条:', r2.slice(0, 5).map((x: any) => x.title));
+db.close();

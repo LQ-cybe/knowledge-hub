@@ -1,0 +1,14 @@
+﻿'记录是否存在
+
+Function RecordExists1(sTbName1 As String, SFdName1 As String, sRecordValue1 As String) As Boolean
+    'sTbName1 要查找的表名
+    'SFdName1 要查找的字段名
+    'sRecordValue1 要查找的记录值
+
+    RecordExists1 = False
+    SFdName1 = "[" & SFdName1 & "]"
+    sRecordValue1 = "'" & sRecordValue1 & "'"
+    If DCount(SFdName1, sTbName1, SFdName1 & " = " & sRecordValue1) > 0 Then
+        RecordExists1 = True
+    End If
+End Function

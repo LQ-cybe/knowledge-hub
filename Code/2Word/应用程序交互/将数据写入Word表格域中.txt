@@ -1,0 +1,73 @@
+﻿Sub ExportDataToWord()
+    '变量声明
+    Dim objWord As Object, docWord As Object
+    Dim wb As Workbook
+    Dim xlName As Name
+    Dim Path As String
+    Dim lLastRow As Long
+    Dim i As Long
+    '下面两个变量可修改为实际工作簿和路径
+    '设置数据所在工作簿
+    Set wb = ActiveWorkbook
+    '要输入数据的Word模板
+    Path = wb.Path & "\CSCRS.docx"
+    '错误处理
+    On Error GoTo ErrorHandler
+    '工作簿工作表中最后数据行行号
+    lLastRow = wb.Worksheets("Sheet1").Range("A" & Rows.Count).End(xlUp).Row
+    '遍历工作表数据行
+    '从中取出数据填充Word文档
+    For i = 2 To lLastRow
+        '命名名称
+        With wb.Worksheets("Sheet1")
+           .Range("A" & i).Name = Range("A1").Value
+           .Range("B" & i).Name = Range("B1").Value
+           .Range("C" & i).Name = Range("C1").Value
+           .Range("D" & i).Name = Range("D1").Value
+        End With
+        '创建新的Word实例
+        Set objWord = CreateObject("Word.Application")
+        '错误处理
+        On Error GoTo ErrorHandler
+        '打开Word文档
+        Set docWord = objWord.Documents.Add(Path)
+        '遍历当前工作簿中的名称
+        For Each xlName In wb.Names
+            '如果在Word文档中存在与名称相同的书签
+            If docWord.Bookmarks.Exists(xlName.Name) Then
+                '将工作表名称的值放入书签所在位置
+               docWord.Bookmarks(xlName.Name).Range.Text = Range(xlName.Value)
+            End If
+        Next xlName
+        With objWord
+            '激活并显示Word文档
+            .Visible = True
+           .ActiveWindow.WindowState = 0
+            .Activate
+            '以列A中相应单元格中的数据命名并保存Word文档
+           .ActiveDocument.SaveAs wb.Path & "\" & Range("A" & i).Value & ".docx"
+            '退出Word
+            .Application.Quit
+        End With
+        '释放对象
+        Set objWord = Nothing
+        '删除名称
+       Names(Range("A1").Value).Delete
+       Names(Range("B1").Value).Delete
+       Names(Range("C1").Value).Delete
+       Names(Range("D1").Value).Delete
+    Next i
+     '释放Word对象并退出过程
+ErrorExit:
+    Set objWord = Nothing
+    Exit Sub
+    '错误处理
+ErrorHandler:
+    If Err Then
+        MsgBox "错误号: " & Err.Number & "; 出问题了."
+        If Not objWord Is Nothing Then
+            objWord.QuitFalse
+        End If
+        Resume ErrorExit
+    End If
+End Sub

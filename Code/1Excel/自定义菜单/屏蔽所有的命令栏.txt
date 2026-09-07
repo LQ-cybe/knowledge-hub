@@ -1,0 +1,14 @@
+﻿'屏蔽 Excel 中所有的命令栏
+Sub Shielding_1()
+    Dim i As Integer
+    For i = 1 To Application.CommandBars.Count
+        Application.CommandBars(i).Enabled = True
+    Next
+End Sub
+
+Sub Shielding_2()
+    Dim Cmd As CommandBar
+    For Each Cmd In Application.CommandBars
+        Cmd.Enabled = False
+    Next
+End Sub

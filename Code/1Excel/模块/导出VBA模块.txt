@@ -1,0 +1,49 @@
+﻿'导出所有可导出的VBA模块
+Sub OPEN_导出所有模块(control As IRibbonControl)
+    Dim vbc As VBComponent
+    Dim strPath As String
+    Dim strFileName As String
+    Dim fso As Object
+    Dim exportCount As Integer    ' 统计成功导出数量
+
+    ' 1. 修正路径获取（去掉Desktop后的反斜杠，手动拼接）
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    strPath = fso.BuildPath(CreateObject("WScript.Shell").SpecialFolders("Desktop"), "")    ' 桌面路径
+'    Debug.Print "导出路径：" & strPath
+
+    ' 2. 检查路径是否可写
+    If Not fso.FolderExists(strPath) Then
+        MsgBox "导出路径不存在：" & strPath, vbCritical
+        Exit Sub
+    End If
+
+    exportCount = 0
+    On Error Resume Next    ' 捕获单个组件导出错误
+
+    ' 3. 遍历VBA组件，仅导出可导出的类型
+    For Each vbc In ThisWorkbook.VBProject.VBComponents
+        Select Case vbc.Type
+            ' 仅导出标准模块、类模块（排除工作表/工作簿/窗体）
+        Case vbext_ct_StdModule, vbext_ct_ClassModule
+            ' 处理非法文件名（替换特殊字符）
+            strFileName = fso.BuildPath(strPath, Replace(vbc.Name, "/\*?|<>", "_") & ".bas")
+            ' 导出模块
+            vbc.Export strFileName
+            If err.Number = 0 Then
+                exportCount = exportCount + 1
+            Else
+                Debug.Print "导出失败：" & vbc.Name & "，错误：" & err.Description
+                err.Clear
+            End If
+        End Select
+    Next vbc
+
+    ' 4. 导出结果提示
+    If exportCount > 0 Then
+        MsgBox "成功导出 " & exportCount & " 个VBA模块到：" & vbCrLf & strPath, vbInformation
+    Else
+        MsgBox "未导出任何模块，可能无可用的标准模块/类模块", vbExclamation
+    End If
+
+    Set fso = Nothing
+End Sub

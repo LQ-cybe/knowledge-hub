@@ -1,0 +1,9 @@
+﻿Sub GetUserAge()
+   Dim userAge As Double
+   userAge = Val(InputBox("请输入方格列(行)数：", "输入整数"))
+   If userAge > 0 Then
+'       MsgBox "您输入的年龄是：" & userAge
+   Else
+       MsgBox "请输入有效的正数。"
+   End If
+End Sub

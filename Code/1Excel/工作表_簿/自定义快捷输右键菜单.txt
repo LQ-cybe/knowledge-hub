@@ -1,0 +1,27 @@
+﻿'自定义快捷输右键菜单
+Sub Mycell()
+    Dim arr As Variant
+    Dim i As Integer
+    Dim Mycell As CommandBar
+    On Error Resume Next
+    Application.CommandBars("Mycell").Delete
+    arr = Array("经理室", "办公室", "生技科", "财务科", "营业部")
+    Set Mycell = Application.CommandBars.Add("Mycell", 5)
+    For i = 0 To 4
+        With Mycell.Controls.Add(1)
+            .Caption = arr(i)
+            .OnAction = "MyOnAction"
+        End With
+    Next
+End Sub
+Sub MyOnAction()
+    ActiveCell = Application.CommandBars.ActionControl.Caption
+End Sub
+'工作表代码
+Private Sub Worksheet_BeforeRightClick(ByVal Target As Range, Cancel As Boolean)
+    If Target.Column = 2 Then
+        Call Mycell
+        Application.CommandBars("Mycell").ShowPopup
+        Cancel = True
+    End If
+End Sub

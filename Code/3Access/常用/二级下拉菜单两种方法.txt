@@ -1,0 +1,31 @@
+﻿    '    Dim strSQL As String
+    '    ' 构建筛选名称b的SQL语句
+    '    strSQL = "SELECT tbl_月份对照表.月份, tbl_月份对照表.月份码 FROM tbl_月份对照表 WHERE (( tbl_月份对照表.类别名称)='" & ME.Monthly_code_type.Value & "' AND ((tbl_月份对照表.月份)=5)));"
+    '    ME.Monthly_code.RowSource = strSQL ' 设置名称b组合框的行来源
+    '    ME.Monthly_code.Value = Null
+    '    ME.Monthly_code.SetFocus
+    '    ME.Monthly_code.Dropdown ' 自动下拉显示新选项
+    
+    
+        Dim strSQL As String
+        ' 假设 ME.Monthly_code_type.Value 是一个字符串值
+    '    strSQL = "SELECT tbl_月份对照表.月份, tbl_月份对照表.月份码 " & _
+     '             "FROM tbl_月份对照表 " & _
+     '             "WHERE tbl_月份对照表.类别名称 = '" & Replace(ME.Monthly_code_type.Value, "'", "''") & "';"
+    
+        strSQL = "SELECT tbl_月份对照表.类别名称, tbl_月份对照表.月份码 " & _
+                      "FROM tbl_月份对照表 " & _
+                      "GROUP BY tbl_月份对照表.类别名称, tbl_月份对照表.月份, tbl_月份对照表.月份码 " & _
+                      "HAVING (((tbl_月份对照表.类别名称)= '" & Me.Monthly_code_type.Value & "' ) AND ((tbl_月份对照表.月份)=" & Me.RQM.Value & "));"
+    
+        ' 清空组合框的值
+    '    ME.Monthly_code.Value = Null
+        ' 设置组合框的 RowSource 属性为新的 SQL 语句
+        Me.Monthly_code.RowSource = strSQL
+        ' 获取焦点
+    '    ME.Monthly_code.SetFocus
+        ' 自动下拉显示新选项
+    '    ME.Monthly_code.Dropdown
+    
+    Me.YDM.Value = Me.Monthly_code.ItemData(0)
+    End Sub

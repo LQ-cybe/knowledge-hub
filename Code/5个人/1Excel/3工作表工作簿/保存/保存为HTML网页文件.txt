@@ -1,0 +1,6 @@
+﻿Sub FourthOne()
+'将工作簿、工作表、图表、区域、查询表、数据透视表、打印区域或自动筛选区域保存到网页中
+ActiveWorkbook.SaveAs _
+    Filename:="D:\LQ\myfile.htm", _
+    FileFormat:=xlHtml
+End Sub

@@ -1,0 +1,12 @@
+﻿1.破解工作簿密码
+Sub 工作簿密码破解()
+    ActiveWorkbook.Sheets.Copy        For Each sh In ActiveWorkbook.Sheets        sh.Visible = True
+    Next
+End Sub2.破解工作表密码
+
+Sub pj()
+    Dim sht As Worksheet
+    For Each sht In Worksheets
+        sht.Protect AllowFiltering:=True
+        sht.Unprotect
+    NextEnd Sub

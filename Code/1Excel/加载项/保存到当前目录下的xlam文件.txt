@@ -1,0 +1,21 @@
+'保存到当前目录下的xlam文件
+Sub SaveAsXLAM_SameFolder()
+    On Error GoTo ErrHandle
+    Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    
+    Dim savePath As String
+    ' 同目录，文件名同当前文件，后缀 .xlam
+    savePath = Replace(ThisWorkbook.FullName, "." & ThisWorkbook.FileFormat, ".xlam")
+    
+    ThisWorkbook.SaveAs fileName:=savePath, FileFormat:=xlOpenXMLAddIn
+    
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+    Exit Sub
+
+ErrHandle:
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+    MsgBox "保存失败：" & err.Description, vbCritical
+End Sub

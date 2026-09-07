@@ -1,0 +1,14 @@
+'打印当前工作表
+Sub PrintToAdobePDF()
+    Dim ws As Worksheet
+    Dim originalPrinter As String
+    
+    Set ws = ActiveSheet
+    originalPrinter = Application.ActivePrinter
+    
+    On Error Resume Next
+ActiveSheet.ExportAsFixedFormat _
+    Type:=xlTypePDF, _
+    Filename:="C:\Output.pdf", _
+    Quality:=xlQualityStandard
+End Sub

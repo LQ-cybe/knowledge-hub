@@ -1,0 +1,117 @@
+' 极简高速排序函数
+Sub TurboSort(arr() As Variant, sortCol As Long, sortOrder As String)
+    ' 参数说明：
+    ' arr - 二维数组（自动跳过第1行标题）
+    ' sortCol - 排序列号（从1开始）
+    ' sortOrder - "ASC"或"DESC"
+
+    ' 检查有效数据行
+    If UBound(arr) < 2 Then Exit Sub
+
+    ' 检查sortCol是否超出数组列数范围
+    If sortCol > UBound(arr, 2) Then
+        MsgBox "排序列超出数组列数范围。"
+        Exit Sub
+    End If
+
+    ' 执行快速排序（跳过标题行）
+    Call QuickSortCore(arr, 2, UBound(arr), sortCol, UCase(Trim(sortOrder)))
+End Sub
+
+' 核心快速排序算法
+Private Sub QuickSortCore(arr() As Variant, ByVal low As Long, ByVal high As Long, _
+                         ByVal sortCol As Long, ByVal sortOrder As String)
+    If low < high Then
+        Dim pivotVal As Variant
+        Dim i As Long, j As Long, k As Long
+        pivotVal = arr(high, sortCol)
+        i = low - 1
+        j = high
+        k = low - 1
+
+        Dim isDateAll As Boolean, isNumericAll As Boolean
+        isDateAll = True
+        isNumericAll = True
+
+        '预先判断数据类型
+        For k = low To high
+            If Not IsDate(arr(k, sortCol)) Then
+                isDateAll = False
+            End If
+            If Not IsNumeric(arr(k, sortCol)) Then
+                isNumericAll = False
+            End If
+        Next k
+
+        Do While True
+            Do
+                i = i + 1
+                If isDateAll Then
+                    If sortOrder = "ASC" And CDate(arr(i, sortCol)) > CDate(pivotVal) Then Exit Do
+                    If sortOrder = "DESC" And CDate(arr(i, sortCol)) < CDate(pivotVal) Then Exit Do
+                ElseIf isNumericAll Then
+                    If sortOrder = "ASC" And CDbl(arr(i, sortCol)) > CDbl(pivotVal) Then Exit Do
+                    If sortOrder = "DESC" And CDbl(arr(i, sortCol)) < CDbl(pivotVal) Then Exit Do
+                Else
+                    If sortOrder = "ASC" And StrComp(CStr(arr(i, sortCol)), CStr(pivotVal), vbTextCompare) > 0 Then Exit Do
+                    If sortOrder = "DESC" And StrComp(CStr(arr(i, sortCol)), CStr(pivotVal), vbTextCompare) < 0 Then Exit Do
+                End If
+            Loop
+
+            Do
+                j = j - 1
+                If j = low Then Exit Do
+                If isDateAll Then
+                    If sortOrder = "ASC" And CDate(arr(j, sortCol)) < CDate(pivotVal) Then Exit Do
+                    If sortOrder = "DESC" And CDate(arr(j, sortCol)) > CDate(pivotVal) Then Exit Do
+                ElseIf isNumericAll Then
+                    If sortOrder = "ASC" And CDbl(arr(j, sortCol)) < CDbl(pivotVal) Then Exit Do
+                    If sortOrder = "DESC" And CDbl(arr(j, sortCol)) > CDbl(pivotVal) Then Exit Do
+                Else
+                    If sortOrder = "ASC" And StrComp(CStr(arr(j, sortCol)), CStr(pivotVal), vbTextCompare) < 0 Then Exit Do
+                    If sortOrder = "DESC" And StrComp(CStr(arr(j, sortCol)), CStr(pivotVal), vbTextCompare) > 0 Then Exit Do
+                End If
+            Loop
+
+            If i >= j Then Exit Do
+            SwapArrayRows arr, i, j
+            If arr(i, sortCol) = pivotVal Then
+                k = k + 1
+                SwapArrayRows arr, k, i
+            End If
+        Loop
+
+        SwapArrayRows arr, i, high
+        j = i - 1
+        For k = low To j
+            If arr(k, sortCol) = pivotVal Then
+                j = j - 1
+                SwapArrayRows arr, k, j
+                k = k - 1
+            End If
+        Next k
+
+        QuickSortCore arr, low, j, sortCol, sortOrder
+        QuickSortCore arr, i + 1, high, sortCol, sortOrder
+    End If
+End Sub
+' 极速行交换
+Private Sub SwapArrayRows(arr() As Variant, ByVal row1 As Long, ByVal row2 As Long)
+    If row1 = row2 Then Exit Sub
+
+    Dim tempRow() As Variant
+    ReDim tempRow(LBound(arr, 2) To UBound(arr, 2))
+
+    Dim col As Long
+    For col = LBound(arr, 2) To UBound(arr, 2)
+        tempRow(col) = arr(row1, col)
+    Next col
+
+    For col = LBound(arr, 2) To UBound(arr, 2)
+        arr(row1, col) = arr(row2, col)
+    Next col
+
+    For col = LBound(arr, 2) To UBound(arr, 2)
+        arr(row2, col) = tempRow(col)
+    Next col
+End Sub

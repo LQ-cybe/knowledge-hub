@@ -1,0 +1,32 @@
+﻿'JSX脚本步骤1
+' 2.在标题3行首插入{//字符的过程
+Sub InsertPrefixToTitle3()
+Application.ScreenUpdating = False
+    Dim wordApp As Word.Application
+    Dim wordDoc As Word.Document
+    Dim para As Word.Paragraph
+    Dim prefix As String
+   '定义要插入的字符变量
+    prefix = "{"
+    On Error Resume Next
+   '尝试获取已打开的Word应用程序实例
+    Set wordApp = GetObject(, "Word.Application")
+    If wordApp Is Nothing Then
+       '如果未找到，则创建一个新的Word应用程序实例
+        Set wordApp = New Word.Application
+    End If
+    On Error GoTo 0
+   '假设当前活动文档为目标文档
+    Set wordDoc = wordApp.ActiveDocument
+    For Each para In wordDoc.Paragraphs
+        If para.Style.NameLocal = "标题 3" Then
+           '在标题3行首插入字符
+            para.Range.InsertBefore prefix
+        End If
+    Next para
+    '这里不关闭文档和退出应用程序，因为是当前活动文档，避免影响用户正在进行的操作
+    Set para = Nothing
+    Set wordDoc = Nothing
+    Set wordApp = Nothing
+    Application.ScreenUpdating = True
+End Sub

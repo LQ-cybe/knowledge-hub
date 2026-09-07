@@ -1,0 +1,46 @@
+Sub ListFileInfo()
+    Dim fso As New FileSystemObject
+    Dim folder As Folder
+    Dim file As File
+    Dim folderPath As String
+    
+   '设置要遍历的文件夹路径
+    folderPath = "C:\Your\Folder\Path"
+    
+    Set folder = fso.GetFolder(folderPath)
+    
+    For Each file In folder.Files
+        Debug.Print "文件名: " & file.Name
+        Debug.Print "路径: " & file.Path
+        Debug.Print "文件夹路径: " & file.ParentFolder.Path
+        Debug.Print "文件大小（字节）: " & file.Size
+        Debug.Print "创建日期: " & file.DateCreated
+        Debug.Print "最后修改日期: " & file.DateLastModified
+        Debug.Print "最后访问日期: " & file.DateLastAccessed
+        
+        If (file.Attributes And vbReadOnly) <> 0 Then
+            Debug.Print "文件是只读的"
+        Else
+            Debug.Print "文件不是只读的"
+        End If
+        
+        If (file.Attributes And vbHidden) <> 0 Then
+            Debug.Print "文件是隐藏的"
+        Else
+            Debug.Print "文件不是隐藏的"
+        End If
+        
+        If (file.Attributes And vbSystem) <> 0 Then
+            Debug.Print "文件是系统文件"
+        Else
+            Debug.Print "文件不是系统文件"
+        End If
+        
+        Debug.Print "扩展名: " & fso.GetExtensionName(file.Path)
+        Debug.Print "-------------------------"
+    Next file
+    
+    Set file = Nothing
+    Set folder = Nothing
+    Set fso = Nothing
+End Sub

@@ -1,0 +1,10 @@
+﻿'复制文本到剪贴板
+Private Sub SetCB(ByVal text As String)
+  With CreateObject("Forms.TextBox.1")
+    .MultiLine = True
+    .text = text
+    .SelStart = 0
+    .SelLength = .TextLength
+    .Copy
+  End With
+End Sub

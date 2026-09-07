@@ -1,0 +1,11 @@
+'打开分割窗体中某个字段的链接地址
+Dim currentValue As Variant
+Dim folderPath As String
+ If Me.RecordsetClone.BOF = False And Me.RecordsetClone.EOF = False Then
+ '移动到当前记录
+ Me.RecordsetClone.Bookmark = Me.Bookmark
+currentValue = Me.RecordsetClone.Fields("服务器共享盘地址").value
+'MsgBox currentValue'这里以消息框显示值，可按需处理
+folderPath = currentValue
+Shell "explorer.exe " & folderPath, vbNormalFocus
+End If

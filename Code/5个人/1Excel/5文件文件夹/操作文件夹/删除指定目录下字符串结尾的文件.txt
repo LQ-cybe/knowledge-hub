@@ -1,0 +1,46 @@
+'删除A列地址下指定字符串结尾的文件
+Sub DeleteFilesBySuffix()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim i As Long
+    Dim folderPath As String
+    Dim filePattern As String
+    Dim fileName As String
+    Dim deletedCount As Long
+    Dim errorCount As Long
+    
+    Set ws = ActiveSheet
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    deletedCount = 0
+    errorCount = 0
+    
+    Const FILE_SUFFIX As String = "_进制码生成器.xlsm"
+    
+    For i = 2 To lastRow
+        folderPath = ws.Cells(i, "A").Value
+        folderPath = Replace(folderPath, "/", "\")
+    
+        If folderPath <> "" Then
+            If Dir(folderPath, vbDirectory) <> "" Then
+                filePattern = "*" & FILE_SUFFIX
+                fileName = Dir(folderPath & "\" & filePattern)
+    
+                Do While fileName <> ""
+                    On Error Resume Next
+                    Kill folderPath & "\" & fileName
+                    If Err.Number = 0 Then
+                        deletedCount = deletedCount + 1
+                    Else
+                        errorCount = errorCount + 1
+                    End If
+                    On Error GoTo 0
+                    fileName = Dir
+                Loop
+            Else
+                errorCount = errorCount + 1
+            End If
+        Else
+            errorCount = errorCount + 1
+        End If
+    Next i
+End Sub

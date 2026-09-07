@@ -1,0 +1,20 @@
+Function getpath(Optional FileStyle$ = "*.txt")
+    '//自定义函数的作用：弹出对话框，让用户选择一个txt文件，函数返回一个数组，里面存储txt的路径
+    Dim Fd As FileDialog, vrtSelectedItem
+    Dim xrr() As String, X&
+    Set Fd = Application.FileDialog(msoFileDialogFilePicker)   '弹出选择对话框
+    With Fd
+        .AllowMultiSelect = False                              '不允许多选
+        .InitialFileName = ActiveDocument.Path                 '初始路径是当前文档的路径
+        .Filters.Add "SelectFile", FileStyle, 1                '展示的后缀筛选
+        '.FilterIndex = 2
+        If .Show <> -1 Then Exit Function
+        For Each vrtSelectedItem In .SelectedItems
+            X = X + 1
+            ReDim Preserve xrr(1 To X)
+            xrr(X) = vrtSelectedItem
+        Next
+    End With
+    Set Fd = Nothing                                           '清空对象
+    If X > 0 Then getpath = xrr
+End Function

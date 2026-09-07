@@ -1,0 +1,14 @@
+    '切换视图，定位到筛选后的数据
+Sub ScrollDownFromA1()
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.ActiveSheet
+    Dim targetCell As Range
+    '定位到A1
+    Set targetCell = ws.Range("A1")
+    targetCell.Activate
+    '下移一行
+    Set targetCell = targetCell.Offset(1, 0)
+    targetCell.Activate
+    '滚动窗口使目标单元格可见
+    Application.Goto targetCell, True
+End Sub

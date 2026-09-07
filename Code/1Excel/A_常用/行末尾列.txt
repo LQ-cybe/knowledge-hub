@@ -1,0 +1,2 @@
+'行列末尾列
+Application.CountA(ActiveSheet.Range("1:1"))

@@ -1,0 +1,47 @@
+﻿'获取文件夹下的文件信息并写入表中对应的字段
+Sub GetFileDates()
+    Dim fso As Object
+    Dim folder As Object
+    Dim file As Object
+    Dim folderPath As String
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    
+    ' 设置要操作的文件夹路径
+    folderPath = "D:\LQ\SMDA\1207XY.S.0032"          ' 请替换为实际的文件夹路径
+    
+    ' 打开当前数据库
+    Set db = CurrentDb()
+    
+    ' 打开要插入数据的表，假设表名为 "FileDates"
+    Set rs = db.OpenRecordset("FileDates", dbOpenDynaset)
+    
+    On Error Resume Next
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    Set folder = fso.GetFolder(folderPath)
+    If folder Is Nothing Then
+        MsgBox "指定的文件夹不存在或您没有访问权限。"
+        Exit Sub
+    End If
+    On Error GoTo 0
+            Dim dotPos As Integer
+
+    For Each file In folder.Files
+        rs.AddNew
+        rs.Fields("FileName").Value = file.Name         '文件名
+        rs.Fields("DateCreated").Value = file.DateCreated           '创建日期
+        rs.Fields("DateLastModified").Value = file.DateLastModified         '修改日期
+        rs.Fields("DateLastAccessed").Value = file.DateLastAccessed     '最后访问日期
+        rs.Fields("文件路径").Value = folderPath            '文件路径
+                dotPos = InStrRev(file.Name, ".")
+        rs.Fields("文件格式").Value = Mid(file.Name, dotPos + 1)            '文件格式
+        rs.Update
+    Next file
+    
+    rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    Set file = Nothing
+    Set folder = Nothing
+    Set fso = Nothing
+End Sub

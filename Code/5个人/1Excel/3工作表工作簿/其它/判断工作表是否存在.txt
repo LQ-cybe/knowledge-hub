@@ -1,0 +1,10 @@
+﻿Sub CheckSheetExist()
+  Dim X As Integer
+  For X = 1 To Sheets.Count
+    If Sheets(X).Name = "A" Then
+      MsgBox "A工作表存在"
+      Exit Sub
+    End If
+  Next
+  MsgBox "A工作表不存在"
+End Sub

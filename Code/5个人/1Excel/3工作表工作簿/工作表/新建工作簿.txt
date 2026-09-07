@@ -1,0 +1,8 @@
+﻿Sub AddNew()    '创建工作簿
+Set NewBook = Workbooks.Add
+    With NewBook
+        .Title = "All Sales"
+        .Subject = "Sales"
+        .SaveAs Filename:="Allsales.xls"    '工作簿的名称
+    End With
+End Sub

@@ -1,0 +1,73 @@
+Public Enum shpType
+    startOrEnd
+    inputOrOutput
+    process
+    judge
+End Enum
+Sub shpAdd(shp As Shape, shpType1 As shpType, strText, iLeft, iTop, iWidth, iHeight)
+    Dim shpT
+    Select Case shpType1
+    Case 0
+        shpT = msoShapeFlowchartTerminator
+    Case 1
+        shpT = msoShapeFlowchartData
+    Case 2
+        shpT = msoShapeFlowchartProcess
+    Case 3
+        shpT = msoShapeFlowchartDecision
+    End Select
+    Set shp = ThisWorkbook.Sheets("流程图").Shapes.AddShape(shpT, iLeft, iTop, iWidth, iHeight)
+    With shp.TextFrame2
+        .TextRange.Text = strText
+        .TextRange.ParagraphFormat.Alignment = msoAlignCenter
+        .VerticalAnchor = msoAnchorMiddle
+        .TextRange.Font.Size = 11
+        .TextRange.Font.Bold = True
+        .TextRange.Font.name = "微软雅黑"
+    End With
+    Set addShp = shp
+End Sub
+
+Sub TEST()
+Dim shp As Shape, arr, shp1 As Shape, shp2 As Shape
+arr = ThisWorkbook.Sheets("数据").Range("A1").CurrentRegion.Value
+ThisWorkbook.Sheets("流程图").DrawingObjects.Delete
+For j = 1 To UBound(arr, 2)
+    Set shp1 = Nothing
+    Set shp = Nothing
+    For i = 1 To UBound(arr)
+        If arr(i, j) <> "" Then
+            If i <> 1 Then Set shp1 = shp
+            If InStr(1, arr(i, j), "开始") Or InStr(1, arr(i, j), "结束") Then
+                shpAdd shp, startOrEnd, arr(i, j), 150 * j - 50, i * 60 - 30, 100, 40
+            ElseIf InStr(1, arr(i, j), "输入") Or InStr(1, arr(i, j), "输出") Then
+                shpAdd shp, inputOrOutput, arr(i, j), 150 * j - 50, i * 60 - 30, 100, 40
+            ElseIf InStr(1, arr(i, j), "如果") Or InStr(1, arr(i, j), "循环") Then
+                shpAdd shp, judge, arr(i, j), 150 * j - 50 - 15, i * 60 - 30, 130, 40
+            Else
+                shpAdd shp, process, arr(i, j), 150 * j - 50, i * 60 - 30, 100, 40
+            End If
+        End If
+        If Not shp1 Is Nothing Then Set shp2 = connAdd(1, 1, shp1, 3, shp, 1)
+    Next i
+Next j
+End Sub
+
+Function connAdd(sType, shType, shp1 As Shape, icol, shp2 As Shape, jcol) As Shape
+If shType = 1 Then shpT = msoConnectorStraight
+Dim shp As Shape
+Set shp = ThisWorkbook.Sheets("流程图").Shapes.AddConnector(shpT, 100, 100, 100, 100)
+With shp
+    .Line.EndArrowheadStyle = msoArrowheadTriangle
+    .ConnectorFormat.BeginConnect shp1, icol
+    .ConnectorFormat.EndConnect shp2, jcol
+    If sType Then shp2.RerouteConnections
+End With
+Set connAdd = shp
+End Function
+
+'删除所有控件、形状、对象等
+Sub 删除当前工作表的所有对象()
+    ActiveSheet.DrawingObjects.Select
+    Selection.Delete
+End Sub

@@ -1,0 +1,1 @@
+﻿DoCmd.OpenTable "tblyg", acViewDesign        '打开表设计视图

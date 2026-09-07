@@ -1,0 +1,8 @@
+'控件展开单元格的组合框列表
+Sub ExpandComboBox()
+    Dim targetCell As Range
+    '假设组合框在Sheet1的A1单元格，根据实际情况修改
+    Set targetCell = ThisWorkbook.Sheets("序列号").Range("B6")
+    targetCell.Select
+    Application.SendKeys "%{DOWN}"
+End Sub

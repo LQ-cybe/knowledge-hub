@@ -1,0 +1,6 @@
+﻿'单元格更新后触发
+Private Sub Worksheet_Change(ByVal Target As Range)
+    If Target.Address = "$A$1" Then
+                MsgBox "A1单元格已更新。"
+    End If
+End Sub

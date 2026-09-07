@@ -1,0 +1,63 @@
+    '根据模板批量创建文档
+Sub WriteToTemplateAndSave()
+    Dim ws As Worksheet
+    Dim templatePath As String
+    Dim wbTemplate As Workbook
+    Dim lastRow As Long
+    Dim i As Long
+    Dim folderPath As String
+    Dim newFileName As String
+    Dim targetCell As String
+    Application.ScreenUpdating = False
+    ' 设置当前工作表
+    Set ws = ActiveSheet
+    ' 模板文件路径，根据实际修改
+    templatePath = "D:\LQ\其它\序列号\进制码生成器.xlsm"
+    ' 获取当前工作表数据最后一行行号
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    
+    ' 遍历数据行（从第2行开始，第1行是表头）
+    For i = 2 To lastRow
+        ' 检查模板文件是否存在
+        If Dir(templatePath) = "" Then
+            MsgBox "模板文件不存在：" & templatePath, vbCritical
+            Exit Sub
+        End If
+    
+        ' 打开模板工作簿
+        Set wbTemplate = Workbooks.Open(templatePath, ReadOnly:=False)
+    
+        ' 遍历 D 到 M 列（列号 4 到 13 ）
+        For col = 4 To 12
+            ' 获取第一行对应列的目标单元格地址（如 D1 单元格的值是目标地址 ）
+            targetCell = ws.Cells(1, col).Value
+            If targetCell <> "" Then
+                ' 将当前行对应列的值写入模板文件的目标单元格
+                wbTemplate.Worksheets(1).Range(targetCell).Value = ws.Cells(i, col).Value
+            End If
+        Next col
+    
+        ' 获取文件夹路径（A列）和新文件名前缀（C列）
+        folderPath = ws.Cells(i, "A").Value
+        newFileName = ws.Cells(i, "C").Value & "_进制码生成器.xlsm"
+    
+        ' 检查文件夹路径是否存在
+        If Dir(folderPath, vbDirectory) = "" Then
+            MsgBox "文件夹路径不存在：" & folderPath, vbCritical
+            wbTemplate.Close SaveChanges:=False
+            Exit Sub
+        End If
+        Dim name As String
+        name = folderPath & "/" & newFileName
+        name = Replace(name, "/", "\")
+        '        Debug.Print name
+        ' 另存为新文件
+        wbTemplate.SaveAs fileName:=name
+    
+        ' 关闭模板工作簿
+        wbTemplate.Close SaveChanges:=False
+    Next i
+    
+    '    MsgBox "操作完成！", vbInformation
+    Application.ScreenUpdating = True
+End Sub

@@ -1,0 +1,1 @@
+﻿wsTranspose.Range("A1").Select       '定位到A1单元格 ，无需手动滚动

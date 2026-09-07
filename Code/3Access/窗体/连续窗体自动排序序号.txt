@@ -1,0 +1,43 @@
+Private Sub btnDelete_Click()   '删除按钮daima
+    On Error Resume Next
+    If Not Me.NewRecord Then
+        DoCmd.SetWarnings False   '屏弊系统的警告
+        RunCommand acCmdDeleteRecord   '删除当前记录
+        DoCmd.SetWarnings True    '取消屏弊系统的警告
+    End If
+    Exit Sub
+End Sub
+Private Sub Form_AfterUpdate()   '窗体更新后事件    RefreshSerialNumber '调用
+End Sub
+Private Sub Form_AfterDelConfirm(Status As Integer)      '窗体确认删除后事件
+    RefreshSerialNumber '调用
+End Sub
+Private Sub RefreshSerialNumber()    '自定义函数
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim strSQL As String
+    Dim i As Integer
+    ' 打开当前数据库
+    Set db = CurrentDb
+    ' 打开数据表
+    Set rs = db.OpenRecordset("TMP_表名")
+    ' 检查记录集是否成功打开
+    If rs.EOF And rs.BOF Then
+        MsgBox "未找到数据表或数据表为空。"
+        Exit Sub
+    End If
+    ' 更新编码字段和补充断号
+    rs.MoveFirst
+    i = 1
+    While Not rs.EOF
+        rs.Edit
+        rs.Fields("编码").Value = i
+        rs.Update
+        i = i + 1
+        rs.MoveNext
+    Wend
+    ' 关闭记录集和数据库对象
+    rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+End Sub

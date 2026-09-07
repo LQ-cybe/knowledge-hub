@@ -1,0 +1,62 @@
+﻿' 声明API（兼容32/64位Excel）
+#If VBA7 Then
+    Private Declare PtrSafe Function SendMessage Lib "user32.dll" Alias "SendMessageA" ( _
+        ByVal hwnd As LongPtr, ByVal wMsg As Long, _
+        ByVal wParam As LongPtr, lParam As Any) As LongPtr
+#Else
+    Private Declare Function SendMessage Lib "user32.dll" Alias "SendMessageA" ( _
+        ByVal hwnd As Long, ByVal wMsg As Long, _
+        ByVal wParam As Long, lParam As Any) As Long
+#End If
+
+Private Const WM_SETFONT = &H30
+Private Const DEFAULT_CHARSET = 1
+
+' 核心函数：批量设置字体（无Font成员依赖）
+Sub SetEColumnFontFromA_API()
+    Dim ws As Worksheet
+    Dim lastRow As Long, i As Long
+    Dim fontName As String, hFont As LongPtr
+    Dim targetCell As Range
+
+    Set ws = ActiveSheet
+    Application.ScreenUpdating = False
+
+    lastRow = ws.Range("A" & ws.Rows.Count).End(xlUp).Row
+    If lastRow < 3 Then
+        MsgBox "无有效数据！", vbExclamation
+        Application.ScreenUpdating = True
+        Exit Sub
+    End If
+
+    For i = 3 To lastRow
+        fontName = Trim(ws.Range("A" & i).Value)
+        Set targetCell = ws.Range("D" & i)
+
+        If fontName = "" Then
+            ' 恢复默认字体（用Excel内置样式）
+            targetCell.Style = "Normal"
+            GoTo NextRow
+        End If
+
+        ' 尝试创建字体并设置
+        On Error Resume Next
+        ' 简化版：直接赋值（兼容99%场景）
+        targetCell.Font.Name = fontName
+        If Err.Number = 0 Then
+'            Debug.Print "第" & i & "行：成功设置「" & fontName & "」"
+        Else
+            targetCell.Style = "Normal"
+'            Debug.Print "第" & i & "行：字体「" & fontName & "」无效"
+            Err.Clear
+        End If
+        On Error GoTo 0
+
+NextRow:
+        Set targetCell = Nothing
+        If i Mod 50 = 0 Then DoEvents
+    Next i
+
+    Application.ScreenUpdating = True
+    MsgBox "处理完成！共" & lastRow - 1 & "行", vbInformation
+End Sub

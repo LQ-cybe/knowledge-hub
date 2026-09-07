@@ -1,0 +1,9 @@
+﻿'二级下拉菜单实现方法
+    Dim strSQL As String
+    ' 构建筛选名称b的SQL语句
+    strSQL = "SELECT tbl_月份对照表.月份, tbl_月份对照表.月份码 FROM tbl_月份对照表 WHERE ((( tbl_月份对照表.类别名称)='" & Me.A.Value & "' ));"
+    Me.B.RowSource = strSQL ' 设置名称b组合框的行来源
+    Me.B.Value = Null
+    Me.B.SetFocus
+    Me.B.Dropdown ' 自动下拉显示新选项
+

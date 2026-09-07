@@ -1,0 +1,34 @@
+﻿'连续序号，在删除中间行后保持连续的序号
+Sub Serial_number()
+    Dim currentRow As Integer
+    Dim i As Integer
+    Dim rs As DAO.Recordset
+    
+   '获取当前行号
+    currentRow = Me.CurrentRecord
+    
+    If MsgBox("确定要删除当前行数据吗？", vbYesNo + vbQuestion) = vbYes Then
+       '删除当前记录
+        Me.Recordset.Delete
+        
+       '重新编号
+        Set rs = Me.RecordsetClone
+        rs.MoveFirst
+        i = 1
+        Do While Not rs.EOF
+            rs.Edit
+            rs!序号 = i
+            rs.Update
+            rs.MoveNext
+            i = i + 1
+        Loop
+        rs.Close
+        Set rs = Nothing
+        
+        If currentRow > 1 Then
+            Me.Recordset.Move currentRow - 1
+        Else
+            Me.Recordset.MoveFirst
+        End If
+    End If
+    End Sub

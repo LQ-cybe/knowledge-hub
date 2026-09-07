@@ -1,0 +1,2 @@
+﻿Selection.GoTo wdGoToPage, wdGoToFirst, 5
+

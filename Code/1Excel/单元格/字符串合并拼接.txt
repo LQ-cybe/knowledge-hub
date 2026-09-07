@@ -1,0 +1,56 @@
+'字符串合并拼接
+Sub MergeCells(source As Range, target As Range)
+    Dim current As Range
+    Dim start As Integer
+    '遍历原始单元格区域的每一个单元格
+    For Each current In source
+        '拼接单元格的所有内容内容
+        target.Value = target.Value & current.Text
+    Next
+    '遍历原始单元格区域内每一个单元格
+    '标识目标单元格当前文本的开始位置
+    start = 1
+    For Each current In source
+        '设置目标单元格每一段内容的字体样式
+        '设置目标单元格新拼接内容的字体样式
+        With target.Characters(start, Len(current.Text)).Font
+            .Name = current.Font.Name
+            .FontStyle = current.Font.FontStyle
+            .Size = current.Font.Size
+            .Strikethrough = current.Font.Strikethrough
+            .Superscript = current.Font.Superscript
+            .Subscript = current.Font.Subscript
+            .OutlineFont = current.Font.OutlineFont
+            .Shadow = current.Font.Shadow
+            .Underline = current.Font.Underline
+            .ColorIndex = current.Font.ColorIndex
+        End With
+        '重置目标单元格的文本开始位置
+        start = start + Len(current.Text)
+    Next
+End Sub
+
+'原格式合并字符串
+Sub MergeCellsTest()
+    Dim source As Range
+    Dim target As Range
+    Set source = Application.InputBox("选择需要拼接的单元格:", , xAddress, , , , , 8)
+    Set target = Application.InputBox("选择要写入的单元格:", , xAddress, , , , , 8)
+    MergeCells source, target
+End Sub
+
+'多行版：原格式合并字符串
+Sub MergeCellAreaTest()
+    Dim source As Range
+    Dim target As Range
+    Dim rowIndex As Integer
+    Dim columnIndex As Integer
+    Set source = Application.InputBox("选择需要拼接的单元格:", "拼接区域", xAddress, , , , , 8)
+    Set target = Application.InputBox("选择要写入的单元格:", "存放区域", xAddress, , , , , 8)
+    '遍历原始单元格的每一行
+    For rowIndex = 1 To source.Rows.Count
+        '设置新的目标单元格
+        Set target = target.Offset(rowIndex - 1, 0)
+        MergeCells source.Range(source.Cells(rowIndex, 1), source.Cells(rowIndex, source.Columns.Count)), target
+    Next
+End Sub

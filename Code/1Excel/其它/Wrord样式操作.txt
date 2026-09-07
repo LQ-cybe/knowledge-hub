@@ -1,0 +1,52 @@
+Sub CreateHeading3AfterReset()
+    Dim doc As Document
+    Dim style As Style
+    Dim styleNames As New Collection
+    Dim newStyle As Style
+
+    Set doc = ActiveDocument
+
+    ' 备份样式名称
+    For Each style In doc.Styles
+        If style.NameLocal <> "标题 3" Then
+            styleNames.Add style.NameLocal
+        End If
+    Next style
+
+    ' 清空样式库
+    For Each style In doc.Styles
+        If style.BuiltIn = False Then
+            style.Delete
+        End If
+    Next style
+
+    ' 创建标题 3 样式
+    On Error Resume Next
+    Set newStyle = doc.Styles.Add(Name:="标题 3")
+    On Error GoTo 0
+
+    If newStyle Is Nothing Then
+        MsgBox "创建标题 3 样式失败，请手动检查。"
+    Else
+        MsgBox "标题 3 样式创建成功。"
+    End If
+
+    ' 恢复其他样式
+    Dim styleName As Variant
+    For Each styleName In styleNames
+        doc.Styles.Add styleName
+    Next styleName
+End Sub
+
+重置样式库
+Sub ResetStylesAndCreateHeading3()
+    On Error Resume Next
+    ActiveDocument.Styles("标题 3").Delete
+    On Error GoTo 0
+    ActiveDocument.UpdateStyles
+    Dim styleObj As Style
+    Set styleObj = ActiveDocument.Styles.Add(Name:="标题 3")
+    If styleObj Is Nothing Then
+        MsgBox "仍然无法创建标题 3 样式，请手动检查样式库。"
+    End If
+End Sub

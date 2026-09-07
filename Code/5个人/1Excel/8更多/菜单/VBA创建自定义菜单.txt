@@ -1,0 +1,82 @@
+' 当工作簿打开时执行此过程
+Private Sub Workbook_Open()
+    ' 声明用于操作Excel命令栏的对象
+    Dim menuBar As CommandBar
+    ' 声明用于创建自定义弹出菜单的对象
+    Dim newMenu As CommandBarPopup
+    ' 声明用于创建自定义按钮的对象
+    Dim newButton As CommandBarButton
+
+    ' 获取Excel的工作表菜单栏
+    Set menuBar = Application.CommandBars("Worksheet Menu Bar")
+    ' 在菜单栏的第一个位置添加一个自定义弹出菜单
+    Set newMenu = menuBar.Controls.Add(Type:=msoControlPopup, Before:=1)
+    ' 设置自定义弹出菜单的标题为"我的收藏"
+    newMenu.Caption = "我的收藏"
+
+    ' 添加第一个文件按钮
+    Set newButton = newMenu.Controls.Add(Type:=msoControlButton)
+    ' 设置按钮的标题为"数码印刷流水号数据 登记表"
+    newButton.Caption = "数码印刷流水号数据 登记表"
+    ' 设置点击按钮时执行的过程为OpenFile1
+    newButton.OnAction = "OpenFile1"
+
+    ' 添加第二个文件按钮
+    Set newButton = newMenu.Controls.Add(Type:=msoControlButton)
+    ' 设置按钮的标题为"序列号流水码生成器"
+    newButton.Caption = "序列号流水码生成器"
+    ' 设置点击按钮时执行的过程为OpenFile2
+    newButton.OnAction = "OpenFile2"
+
+    ' 添加第三个文件按钮
+    Set newButton = newMenu.Controls.Add(Type:=msoControlButton)
+    ' 设置按钮的标题为"进制流水码生成器"
+    newButton.Caption = "进制流水码生成器"
+    ' 设置点击按钮时执行的过程为OpenFile3
+    newButton.OnAction = "OpenFile3"
+
+    ' 添加第四个文件按钮
+    Set newButton = newMenu.Controls.Add(Type:=msoControlButton)
+    ' 设置按钮的标题为"自定义菜单.xls"
+    newButton.Caption = "拆分列"
+    ' 设置点击按钮时执行的过程为OpenFile4
+    newButton.OnAction = "OpenFile4"
+
+    ' 添加第5个文件按钮
+    Set newButton = newMenu.Controls.Add(Type:=msoControlButton)
+    ' 设置按钮的标题为"自定义菜单.xls"
+    newButton.Caption = "备份数码文件到共享盘"
+    ' 设置点击按钮时执行的过程为OpenFile5
+    newButton.OnAction = "OpenFile5"
+
+End Sub
+
+' 过程用于打开"数码印刷流水号数据 登记表"文件
+Sub OpenFile1()
+    ' 打开指定路径下的Excel文件
+    Workbooks.Open "\\192.168.0.254\公共文件可修改\共享E盘\流水码记录表\数码印刷流水号数据 登记表.xlsx"
+End Sub
+
+' 过程用于打开"序列号流水码生成器"文件
+Sub OpenFile2()
+    ' 打开指定路径下的Excel文件
+    Workbooks.Open "\\192.168.0.254\公共文件可修改\共享F盘\F盘\流水码序列号生成器.\序列号流水码生成器.xls"
+End Sub
+
+' 过程用于打开"进制流水码批量生成(16_34_36进制)"文件
+Sub OpenFile3()
+    ' 打开指定路径下的Excel文件
+    Workbooks.Open "\\192.168.0.254\公共文件可修改\共享F盘\F盘\流水码序列号生成器.\进制流水码批量生成(16_34_36进制).xlsm"
+End Sub
+
+' 过程用于打开"自定义菜单.xls"文件
+Sub OpenFile4()
+    ' 打开指定路径下的Excel文件
+    Workbooks.Open "D:\LQ\其它\序列号\拆分列.xls"
+End Sub
+' 过程用于打开"自定义菜单.xls"文件
+
+Sub OpenFile5()
+    ' 打开指定路径下的Excel文件
+    Workbooks.Open "D:\LQ\SMDA\备份所有变码文件到共享盘.xlsm"
+End Sub

@@ -1,0 +1,10 @@
+'name=复制为值
+'officetype=excel,et,wps
+'category=个人常用
+'description=将选区复制为值（粘贴到原位置，去除公式）
+
+Public Sub CopyAsValues()
+    Selection.Copy
+    Selection.PasteSpecial Paste:=xlPasteValues
+    Application.CutCopyMode = False
+End Sub

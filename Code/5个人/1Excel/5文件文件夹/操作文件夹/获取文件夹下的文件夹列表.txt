@@ -1,0 +1,21 @@
+﻿获取指定文件夹下的文件夹列表
+Sub ListSubFolders()
+    Dim fso As Object
+    Dim fld As Object
+    Dim subFld As Object
+    Dim i As Long
+    
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    '这里修改为你实际想要获取子文件夹列表的文件夹路径
+    Set fld = fso.GetFolder("D:\LQ\SMDA")
+    
+    i = 1
+    For Each subFld In fld.SubFolders
+        Cells(1 + i, 1).Value = subFld.Name
+        i = i + 1
+    Next subFld
+    
+    Set fso = Nothing
+    Set fld = Nothing
+    Set subFld = Nothing
+End Sub

@@ -1,0 +1,11 @@
+﻿Dim Query1 As QueryDef '（如需删除表，将代码中所有的Query替换成Table即可）
+
+CurrentDb.QueryDefs.Refresh
+For Each Query1 In CurrentDb.QueryDefs
+    If Mid(Query1.Name, 1, 4) = "*销售订单" Then    '筛选出满足条件的查询
+        CurrentDb.QueryDefs.Delete Query1.Name '删除该查询
+End If
+Debug.Print Query1.Name
+Next Query1
+
+RefreshDatabaseWindow '删除查询后及时刷新数据窗口

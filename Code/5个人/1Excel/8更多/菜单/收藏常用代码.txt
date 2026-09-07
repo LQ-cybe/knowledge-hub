@@ -1,0 +1,13 @@
+﻿'https://www.cnblogs.com/guangzhiruijie/p/16005932.html
+Sub cs()
+'Application.CommandBars("Worksheet Menu Bar").Enabled = True
+'Application.CommandBars("Cell").Enabled = False '禁用单元格快捷菜单(即在单元格中右击后出现的菜单)
+Application.DisplayFormulaBar = False   '隐藏公式编辑栏
+Application.DisplayStatusBar = False   '隐藏状态栏
+Application.OnKey "^c", ""  '禁用ctrl+C快捷键
+Application.OnKey "^c"   '启用ctrl+C快捷键
+    ActiveWindow.DisplayGridlines = False   '关闭网格线的显示
+    ActiveWindow.DisplayHeadings = False    '关闭标题栏
+
+Application.CommandBars("Toolbar List").Enabled = True '禁用工作表菜单栏和其它工具栏上的右击键
+End Sub

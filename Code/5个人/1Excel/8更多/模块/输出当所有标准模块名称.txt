@@ -1,0 +1,27 @@
+'输出当前工作簿所有模块名称
+Sub ListStandardModuleNames()
+    Dim wb As Workbook
+    Dim comp As VBComponent
+    Dim moduleNames As String
+    
+   '设置当前工作簿
+    Set wb = ThisWorkbook
+    
+    For Each comp In wb.VBProject.VBComponents
+       '检查是否为标准模块
+        If comp.Type = vbext_ct_StdModule Then
+           '将标准模块名称添加到字符串中，每个名称后添加换行符
+            moduleNames = moduleNames & comp.Name & vbCrLf
+        End If
+    Next comp
+    
+   '弹出消息框显示所有标准模块名称
+    If moduleNames <> "" Then
+        Debug.Print "当前工作簿中的所有标准模块名称如下：" & vbCrLf & moduleNames
+    Else
+        MsgBox "当前工作簿中没有标准模块。"
+    End If
+    
+    Set comp = Nothing
+    Set wb = Nothing
+End Sub

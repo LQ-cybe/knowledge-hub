@@ -1,0 +1,104 @@
+﻿    Application.CommandBars("ply").Enabled = False             '禁用工作表右键菜单
+    Application.CommandBars("Worksheet Menu Bar").Enabled = True    '禁用工作表菜单栏03~10版本有效
+    Application.CommandBars("Cell").Enabled = False            '禁用单元格右键菜单
+      Application.CommandBars("Toolbar List").Enabled = False    '禁用工作表菜单栏和其它工具栏上的右击键03~10版本有效
+
+  Application.OnKey "^c", ""                                 '禁用ctrl+C快捷键
+    Application.OnKey "^c"                                     '启用ctrl+C快捷键
+
+Application.Calculation = xlManual  	' 将Excel的计算模式设置为手动
+Application.Calculation = xlAutomatic  	' 将Excel的计算模式设置为自动
+
+  Application.Interactive = False                            '禁用鼠标和键盘交互
+    Application.Interactive = True                             '启用鼠标和键盘交互
+
+    With ActiveWindow
+        .SplitColumn = 0           '冻结列
+        .SplitRow = 1               '冻结行
+    End With
+ActiveWindow.FreezePanes = False           '冻结拆分的行列
+
+    With ActiveWindow
+        .DisplayHorizontalScrollBar = False             '隐藏水平滚动条
+        .DisplayVerticalScrollBar = False                  '隐藏垂直滚动条
+        .DisplayWorkbookTabs = False                     '隐藏工作表标签
+        .DisplayGridlines = False                                '隐藏网格线
+        .DisplayHeadings = False                            '隐藏标题栏
+	ActiveSheet.DisplayPageBreaks = False		'隐藏分页符和网格线
+    End With
+
+Sub a()
+    AAA = True
+    Application.DisplayAlerts = False                          ' 关闭提示框
+    Application.ScreenUpdating = False                         ' 关闭屏幕更新
+    Application.AskToUpdateLinks = False                       ' 关闭自动询问是否更新链接的功能
+    ActiveWindow.DisplayHorizontalScrollBar = AAA              '隐藏水平滚动条
+    ActiveWindow.DisplayVerticalScrollBar = AAA                '隐藏垂直滚动条
+    Application.DisplayFormulaBar = AAA                        '隐藏编辑栏
+    ActiveWindow.DisplayHeadings = AAA                         '隐藏标题栏
+    ActiveWindow.DisplayGridlines = AAA                        '隐藏网格线
+    Application.DisplayStatusBar = AAA                         '隐藏状态栏
+    
+    ActiveSheet.ScrollArea = "$A$1:$F$20"                      '将工作表的滚动区域限制在A1:F20
+    ActiveSheet.ScrollArea = ""                                             '取消工作表的滚动限制
+End Sub
+
+'这段代码先关闭所有警告提示
+       Application.DisplayAlerts = False
+       ActiveWorkbook.CheckCompatibility = False
+       Application.DisplayAlerts = True
+
+Application.CutCopyMode = False '取消复制选区
+
+Sub aaa()
+Dim aa, bb As Boolean
+aa = True
+bb = False
+Application.CommandBars("ply").Enabled = aa
+'右键点工作表标签是否可用
+Application.CommandBars("cell").Enabled = aa
+'右键点单元格是否可用
+Application.CommandBars("toolbar list").Enabled = aa
+'右键点工具栏及“视图”－“工具栏”是否可用
+Application.CommandBars("autocalculate").Enabled = aa
+'右键点状态栏是否可用
+Application.CommandBars("worksheet menu bar").Enabled = aa
+Application.CommandBars(1).Enabled = aa
+'以上两句的作用都是把菜单取消
+Application.CommandBars(2).Enabled = aa
+'暂时未知
+Application.CommandBars(3).Enabled = aa
+'常用工具栏是否可用
+Application.CommandBars(3).Controls(3).Enabled = aa
+'使常用工具栏中第三个“保存”是否可用
+Application.CommandBars(4).Enabled = aa
+'格式工具栏是否可用
+Application.CommandBars(5).Enabled = aa
+'暂时未知
+Application.CommandBars(1).Enabled = aa
+'恢复菜单可用
+Application.CommandBars(1).Controls(1).Enabled = aa
+'使菜单中的“文件”是否可用
+'Application.CommandBars("file").Controls("页面设置(&U)...").Enabled = aa
+'菜单中的“文件”中的“页面设置”是否可用
+Application.CommandBars(1).Controls(4).Enabled = aa
+'菜单中的第四个“插入”是否可用
+Application.CommandBars(1).Controls(4).Caption = "victor"
+'更改名称
+Application.CommandBars(1).Reset
+'恢复菜单
+Application.DisplayFormulaBar = aa
+'编辑栏是否显示
+Application.DisplayStatusBar = aa
+'状态栏是否显示
+ActiveWindow.DisplayHeadings = aa
+'行号列标是否显示
+ActiveWindow.DisplayWorkbookTabs = aa
+'工作表标签是否显示
+ActiveWindow.DisplayHorizontalScrollBar = aa
+'水平滚动条是否显示
+ActiveWindow.DisplayVerticalScrollBar = aa
+'垂直滚动条是否显示
+Application.Caption = "工资统计系统"
+'标题栏中的“Microsoft Excel”更换为“工资统计系统”
+End Sub

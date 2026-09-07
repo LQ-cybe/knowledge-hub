@@ -1,0 +1,13 @@
+Public Function APP(TF As Boolean)
+    If TF Then
+        Application.ScreenUpdating = True
+        Application.EnableEvents = True
+        Application.DisplayAlerts = True
+        Application.Calculation = xlCalculationAutomatic
+    Else
+        Application.ScreenUpdating = False
+        Application.EnableEvents = False
+        Application.DisplayAlerts = False
+        Application.Calculation = xlCalculationManual
+    End If
+End Function

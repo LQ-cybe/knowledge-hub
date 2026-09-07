@@ -1,0 +1,15 @@
+﻿Sub AddWorksheetAfterLast()'新建工作表
+ On Error Resume Next
+ Worksheets.Add(After:=Worksheets(Worksheets.Count)).Name = "工作表2"
+ End Sub
+
+Private Function SheetExists(sname) As Boolean
+'   Returns TRUE if sheet exists in the active workbook
+    Dim x As Object
+    On Error Resume Next
+    Set x = ActiveWorkbook.Sheets(sname)
+    If Err = 0 Then SheetExists = True _
+        Else SheetExists = False
+End Function
+ 
+

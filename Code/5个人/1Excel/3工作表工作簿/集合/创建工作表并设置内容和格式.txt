@@ -1,0 +1,9 @@
+﻿Sub 创建工作表()    '从集合返回一个对象
+ActiveWorkbook.Worksheets.Add.Name = "A"    '创建工作表A
+    With Worksheets("A")    '激活工作表
+        .Range("A5:A10").Formula = "=RAND()"    '在活动工作表单元格区域输入值
+    End With
+    Worksheets("A").Range("A10"). _
+    Borders.Item(xlEdgeBottom).LineStyle = xlDouble
+    '将工作表A的A10单元格设置为下侧双线边框
+End Sub

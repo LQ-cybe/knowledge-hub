@@ -1,0 +1,43 @@
+'提取A列目录下xlsm扩展名文件的数量
+Sub CountExcelFilesInFolders()
+    Dim lastRow As Long
+    Dim i As Long
+    Dim folderPath As String
+    Dim fileCount As Integer
+    Dim fso As Object
+    Dim folder As Object
+    Dim file As Object
+
+   '获取A列最后一个有数据的行号
+    lastRow = Cells(Rows.Count, 1).End(xlUp).Row
+
+   '创建文件系统对象
+    Set fso = CreateObject("Scripting.FileSystemObject")
+
+    For i = 1 To lastRow
+        folderPath = Cells(i, 1).Value
+        fileCount = 0
+
+       '检查文件夹路径是否有效
+        If fso.FolderExists(folderPath) Then
+            Set folder = fso.GetFolder(folderPath)
+           '遍历文件夹中的文件
+            For Each file In folder.Files
+               '检查文件是否为隐藏或系统文件
+                If (file.Attributes And 2) = 0 And (file.Attributes And 4) = 0 Then
+                    If LCase(Right(file.Name, 5)) = ".xlsm" Then
+                        fileCount = fileCount + 1
+                    End If
+                End If
+            Next file
+        End If
+
+       '将文件数量写入B列
+        Cells(i, 2).Value = fileCount
+    Next i
+
+   '释放对象
+    Set file = Nothing
+    Set folder = Nothing
+    Set fso = Nothing
+End Sub

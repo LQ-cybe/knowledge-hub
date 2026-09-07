@@ -1,0 +1,33 @@
+'遍历输出所有模块的名称和类型
+Sub OutputAllVbaModules()
+    Dim vbaPro As Object
+    Dim vbaComp As Object
+    Dim ws As Worksheet
+    Dim rowNum As Long
+
+    Set vbaPro = ThisWorkbook.VBProject
+    Set ws = ActiveSheet
+    Application.ScreenUpdating = False
+
+    '清空A2往下原有内容
+    ws.range("A2:B" & ws.Rows.count).ClearContents
+    rowNum = 2
+
+    For Each vbaComp In vbaPro.VBComponents
+        '只保留标准模块、类模块，过滤窗体、工作表模块
+        Select Case vbaComp.Type
+            Case 1, 2
+                ws.Cells(rowNum, 1).value = vbaComp.NAME
+                If vbaComp.Type = 1 Then
+                    ws.Cells(rowNum, 2).value = "标准模块"
+                Else
+                    ws.Cells(rowNum, 2).value = "类模块"
+                End If
+                rowNum = rowNum + 1
+        End Select
+    Next vbaComp
+
+    ws.Columns("A:B").AutoFit
+    Application.ScreenUpdating = True
+    MsgBox "模块信息输出完成，共 " & rowNum - 2 & " 个模块", vbInformation
+End Sub

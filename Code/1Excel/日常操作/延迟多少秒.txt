@@ -1,0 +1,4 @@
+﻿    MsgBox "准备延迟50秒"
+    waitTime = TimeSerial(Hour(Now()), Minute(Now()), Second(Now()) + 50)   '延迟50秒
+    Application.Wait waitTime
+    MsgBox "延迟结束"

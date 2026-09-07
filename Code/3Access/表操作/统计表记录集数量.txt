@@ -1,0 +1,4 @@
+﻿    Dim recordCount As Long
+    ' 统计名为"tbl_流水码"表的记录数，不设筛选条件
+    recordCount = DCount("*", "tbl_流水码")
+    MsgBox "表中的记录数为: " & recordCount

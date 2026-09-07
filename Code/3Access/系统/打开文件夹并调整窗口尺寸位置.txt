@@ -1,0 +1,21 @@
+'打开文件夹地址，并调整窗口的位置和尺寸
+Public Sub ControlExternalAppWindow()
+    Dim hwnd As LongPtr
+    Dim appTitle As String
+    Dim AA As String
+    
+    ChangeCurrentformPosition = "C:\Users"
+    Shell "explorer.exe " & ChangeCurrentformPosition, vbNormalFocus
+    
+    时间延迟.Delay 1			'必须延迟1秒以上
+    appTitle = ChangeCurrentformPosition
+    hwnd = FindWindow(vbNullString, appTitle)
+    
+    If hwnd <> 0 Then
+        ' 设置窗口位置和大小（x, y, 宽度, 高度）左上角为基准
+        SetWindowPos hwnd, HWND_TOP, 50, 0, 500, 500, SWP_SHOWWINDOW
+    Else
+        msgbox "未找到指定窗口!", vbExclamation
+    End If
+    hwnd = 0
+End Sub

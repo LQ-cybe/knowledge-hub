@@ -1,0 +1,18 @@
+'单元格内容去重
+Function CellQc(ByVal str$, Optional Separator$ = "")
+    If Separator = "" Then
+        Separator = "♂"
+        x = Separator
+        For i = 1 To Len(str)
+            If InStr(x, Separator & Mid$(str, i, 1) & Separator) = 0 Then x = x & Mid$(str, i, 1) & Separator
+        Next
+        CellQc = VBA.Replace(x, Separator, "")
+    Else
+        br = Split(str, Separator)
+        x = Separator
+        For j = 0 To UBound(br)
+            If InStr(x, Separator & br(j) & Separator) = 0 Then x = x & br(j) & Separator
+        Next
+        CellQc = VBA.Mid$(x, 2, Len(x) - 2)
+    End If
+End Function

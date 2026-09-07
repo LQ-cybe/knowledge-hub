@@ -1,0 +1,10 @@
+'发当前工作簿的指定工作表到多人
+Sub SendMail3() '将指定工作表转换为工作簿发送
+Dim aName, aShtName, strTit As String
+aName = Array("Excel@qq.com", "测试@qq.com")
+strTit = "你好，这是测试邮件"
+aShtName = Array("看见星光", "老祝")
+Worksheets(aShtName).Copy
+ActiveWorkbook.SendMail aName, strTit
+ActiveWorkbook.Close False
+End Sub

@@ -1,0 +1,47 @@
+'提取PPT中每页备注的
+Sub ExportNotesToText()
+    On Error GoTo ErrorHandler
+    Dim pptPres As Presentation
+    Dim sldSlide As Slide
+    Dim notesText As String
+    Dim outputStr As String
+    Dim filePath As String
+    Dim fileNumber As Integer
+    Dim slideCounter As Long
+    ' 设置输出文件路径（修改为你需要的路径）
+    filePath = "C:\PPT_Notes_Export.txt"
+    ' 获取当前演示文稿
+    Set pptPres = ActivePresentation
+    ' 初始化计数器
+    slideCounter = 0
+    outputStr = "PPT备注提取报告" & vbCrLf & "生成时间：" & Now() & vbCrLf & vbCrLf
+    ' 遍历所有幻灯片
+    For Each sldSlide In pptPres.Slides
+        slideCounter = slideCounter + 1
+        notesText = ""
+        ' 检查备注页是否有内容
+        If sldSlide.NotesPage.Shapes.Count >= 2 Then
+            ' 通常备注文本在第二个Shape（索引2）
+            With sldSlide.NotesPage.Shapes(2).TextFrame
+                If .HasText Then
+                    notesText = .TextRange.Text
+                End If
+            End With
+        End If
+        ' 构建输出字符串
+        outputStr = outputStr & "=== 第 " & slideCounter & " 页 ===" & vbCrLf
+        outputStr = outputStr & IIf(notesText = "", "[无备注内容]", notesText)
+        outputStr = outputStr & vbCrLf & vbCrLf
+    Next sldSlide
+    ' 写入文本文件
+    fileNumber = FreeFile()
+    Open filePath For Output As #fileNumber
+    Print #fileNumber, outputStr
+    Close #fileNumber
+    ' 完成提示
+    MsgBox "成功导出 " & slideCounter & " 页备注到：" & vbCrLf & filePath, vbInformation
+    Exit Sub
+ErrorHandler:
+    MsgBox "错误 " & Err.Number & ": " & Err.Description, vbCritical
+    Close #fileNumber
+End Sub

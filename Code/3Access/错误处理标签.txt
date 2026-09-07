@@ -1,0 +1,13 @@
+'错误处理
+Sub ErrorHandlingExample()
+    On Error GoTo ErrorHandler
+    
+    ' 可能出错的代码
+    Dim result As Integer
+    result = 10 / "一" ' 除以零错误
+    Exit Sub
+    
+ErrorHandler:
+    msgbox "发生错误: " & Err.Description
+    
+End Sub

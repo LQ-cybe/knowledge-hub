@@ -1,0 +1,1 @@
+﻿ Set d= CreateObject("scripting.dictionary")

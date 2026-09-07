@@ -1,0 +1,9 @@
+﻿'从剪贴板取出文本
+Private Sub GetCB(ByRef text As String)
+  With CreateObject("Forms.TextBox.1")
+    .MultiLine = True
+    If .CanPaste = True Then .Paste
+    Str = .text
+  End With
+End Sub
+Application.CutCopyMode = False                        '    释放剪贴板内存

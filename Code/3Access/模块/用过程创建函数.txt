@@ -1,0 +1,23 @@
+﻿'使用VBA代码创建自定义的函数过程
+Sub CreateNewFunction()
+    Dim vbProj As VBProject
+    Dim vbComp As VBComponent
+    Dim codeMod As CodeModule
+    Dim lineNum As Long
+
+    Set vbProj = Application.VBE.ActiveVBProject    ' 获取当前的 VBA 项目
+    ' 获取当前模块（这里假设是当前代码所在的模块）
+    Set vbComp = vbProj.VBComponents("进制反向转换") ' 修改为你要添加代码的模块名称
+    Set codeMod = vbComp.CodeModule
+    
+    lineNum = codeMod.CountOfLines + 1    ' 找到模块的最后一行
+    
+    Dim newFunctionCode As String    ' 要插入的新函数代码
+'    双引号中间的内容就是要插入的新函数过程代码
+    newFunctionCode = "Function NewCustomFunction(inputValue As Integer) As Integer" & vbCrLf
+    newFunctionCode = newFunctionCode & "    NewCustomFunction = inputValue * 2" & vbCrLf
+    newFunctionCode = newFunctionCode & "End Function"
+    
+    codeMod.InsertLines lineNum, newFunctionCode    ' 在模块的最后插入新函数代码
+    MsgBox "新的自定义函数已创建！"
+End Sub

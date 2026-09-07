@@ -1,0 +1,122 @@
+﻿    Option Explicit
+    ' 定义全局变量，用于存储文件夹路径、文件名和 Word 文档中的表格数量
+    Dim MyPath, MyName As String
+    Dim tableCount As Integer
+    Dim Wordwjm As String
+    ' 提取 Word 文档中表格的数量
+Sub ReadWordTableCount()
+    ' 声明 Word 应用程序对象和文档对象
+    Dim wordApp As Object
+    Dim wordDoc As Object
+    Dim filePath As String
+    filePath = MyPath & MyName
+    ' 输出文件路径用于调试，方便确认路径是否正确
+    '    Debug.Print "文件路径: " & filePath
+    ' 尝试创建 Word 应用程序对象
+    On Error Resume Next
+    Set wordApp = CreateObject("Word.Application")
+    ' 检查是否创建成功，如果失败则弹出错误消息并退出子程序
+    If Err.Number <> 0 Then
+        MsgBox "无法创建 Word 应用程序对象，错误信息: " & Err.Description
+        Err.Clear
+        Exit Sub
+    End If
+    On Error GoTo 0
+    ' 设置 Word 应用程序不可见，在后台运行
+    wordApp.Visible = False
+    On Error Resume Next
+    Set wordDoc = wordApp.Documents.Open(filePath)
+    ' 检查是否打开成功，如果失败则弹出错误消息并退出子程序
+    If Err.Number <> 0 Then
+        MsgBox "无法打开文件: " & filePath & vbCrLf & "错误信息: " & Err.Description
+        Err.Clear
+        wordApp.Quit
+        Exit Sub
+    End If
+    On Error GoTo 0
+    tableCount = wordDoc.Tables.Count                          ' 获取 Word 文档中的表格数量
+    wordDoc.Close                                              ' 关闭 Word 文档
+    wordApp.Quit                                               ' 退出 Word 应用程序
+End Sub
+    ' 提取 Word 文档中所有表格指定字段的数据
+Sub ReadFromWord()
+    Dim startTime As Double
+    Dim endTime As Double
+    startTime = Timer
+    Wordwjm = "汇聚2025"                                         ' 设置要处理的 Word 文档文件名，不含后缀名
+    Dim oWordApp As Object, oDoc As Object                     ' 声明 Word 应用程序对象和文档对象
+    ' 声明循环计数器 k 和用于存储提取数据的二维数组 Result
+    Dim k%, Result(1 To 3000, 1 To 50)
+    Range("A:M").ClearContents                                 ' 清除 Excel 工作表中 A 列到 M 列的所有内容
+    MyPath = ThisWorkbook.Path & "\"                           ' 获取当前 Excel 工作簿所在的文件夹路径
+    MyName = Dir(MyPath & Wordwjm & ".docx")                   ' 获取指定文件名的 Word 文档
+    ' 输出文件夹路径和文件名用于调试，方便确认文件是否存在
+    '    Debug.Print "文件夹路径: " & MyPath
+    '    Debug.Print "文件名: " & MyName
+    ' 检查是否找到指定的 Word 文档，如果未找到则弹出消息并退出子程序
+    If MyName = "" Then
+        MsgBox "未找到文件: " & MyPath & Wordwjm & ".docx"
+        Exit Sub
+    End If
+    ' 调用 ReadWordTableCount 子程序获取 Word 文档中的表格数量
+    ReadWordTableCount                                         ' 尝试创建 Word 应用程序对象
+    On Error Resume Next
+    Set oWordApp = CreateObject("Word.Application")
+    ' 检查是否创建成功，如果失败则弹出错误消息并退出子程序
+    If Err.Number <> 0 Then
+        MsgBox "无法创建 Word 应用程序对象，错误信息: " & Err.Description
+        Err.Clear
+        Exit Sub
+    End If
+    On Error GoTo 0
+    oWordApp.Visible = False                                   ' 设置 Word 应用程序不可见，在后台运行
+    Do While MyName <> ""                                      ' 循环处理找到的 Word 文档
+        On Error Resume Next                                   ' 尝试打开当前的 Word 文档
+        Set oDoc = oWordApp.Documents.Open(MyPath & MyName)
+        ' 检查是否打开成功，如果失败则弹出错误消息并处理下一个文件
+        If Err.Number <> 0 Then
+            MsgBox "无法打开文件: " & MyPath & MyName & vbCrLf & "错误信息: " & Err.Description
+            Err.Clear
+            MyName = Dir
+            GoTo NextIteration
+        End If
+        On Error GoTo 0
+        ' 循环遍历 Word 文档中的每个表格
+        Dim i As Integer
+        For i = 1 To tableCount
+            ' 使用 With 语句简化对当前表格的操作
+            With oDoc.Tables(i)
+                ' 输出当前处理的表格序号用于调试
+                '                Debug.Print "处理表格: " & i
+                ' 循环计数器加 1
+                k = k + 1
+                ' 将文档序号存储到数组中
+                Result(k, 1) = k
+                ' 输出订单数量单元格的内容用于调试
+                'Debug.Print "订单数量: " & .Cell(1, 3).Range.Text
+                Result(k, 2) = Application.Clean(.Cell(1, 3).Range.Text)
+                Result(k, 3) = Application.Clean(.Cell(1, 5).Range.Text)
+                Result(k, 4) = Application.Clean(.Cell(1, 7).Range.Text)
+                Result(k, 5) = Application.Clean(.Cell(2, 5).Range.Text)
+                Result(k, 6) = Application.Clean(.Cell(5, 2).Range.Text)
+                Result(k, 7) = Application.Clean(.Cell(5, 3).Range.Text)
+                Result(k, 8) = Application.Clean(.Cell(6, 2).Range.Text)
+                Result(k, 9) = Application.Clean(.Cell(6, 3).Range.Text)
+                Result(k, 10) = Application.Clean(.Cell(7, 2).Range.Text)
+                Result(k, 11) = Application.Clean(.Cell(7, 3).Range.Text)
+                Result(k, 12) = Application.Clean(.Cell(10, 2).Range.Text)
+            End With
+        Next i
+        ' 关闭当前的 Word 文档
+        oDoc.Close True
+NextIteration:
+        ' 获取下一个符合条件的 Word 文档
+        MyName = Dir
+    Loop
+    ' 将提取的数据数组写入 Excel 工作表，从 A2 单元格开始
+    Range("A2").Resize(k, 20) = Result
+    oWordApp.Quit                                              ' 退出 Word 应用程序
+    Set oWordApp = Nothing                                     ' 释放 Word 应用程序对象占用的内存
+    endTime = Timer                                            ' 记录结束时间
+    MsgBox "操作完成！共提取" & tableCount & "条记录，耗时：" & (endTime - startTime) & "秒"
+End Sub

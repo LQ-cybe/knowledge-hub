@@ -1,0 +1,20 @@
+Attribute VB_Name = "Ä£¿é1"
+Option Explicit
+Sub TOEXCL()
+    Dim TBL As Table, DOC As Document, EXCELAPP As Object, I&, WB
+    Set EXCELAPP = CreateObject("EXCEL.APPLICATION")
+    EXCELAPP.Visible = True
+    Set WB = EXCELAPP.WORKBOOKS.Add
+    Set DOC = ThisDocument
+    For Each TBL In DOC.Tables
+        WB.SHEETS.Add After:=WB.SHEETS(WB.SHEETS.Count)
+        TBL.Range.Copy
+        With WB.SHEETS(WB.SHEETS.Count)
+            .Range("A:B").NumberFormatLocal = "@"
+            .Range("A1").Select
+            .PasteSpecial Format:="ÎÄ±¾", Link:=False, DisplayAsIcon:=False
+            .Name = Left(TBL.Cell(4, 2).Range.Text, Len(TBL.Cell(4, 2).Range.Text) - 1)
+        End With
+    Next TBL
+End Sub
+

@@ -1,0 +1,18 @@
+﻿'获取VBE组件列表和代码行数
+Sub 获取VBE组件列表和代码行数()
+   Dim oVC As VBComponent
+   Dim oCM As CodeModule
+   Set oVC = Excel.Application.VBE.SelectedVBComponent
+   '如果选中的是有效的组件
+   If Not (oVC Is Nothing) Then
+    With oVC
+        '输出当前组件的名称
+         Debug.Print .Name
+         Set oCM = .CodeModule
+         With oCM
+             '输出总的声明代码行数和总的代码行数
+             Debug.Print .CountOfDeclarationLines, .CountOfLines
+         End With
+    End With
+   End If
+End Sub

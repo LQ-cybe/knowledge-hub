@@ -1,0 +1,4 @@
+    DoCmd.SetWarnings False                                    '屏蔽系统警告
+    Dim strSQL As String
+    strSQL = "DELETE tbl_流水码.*FROM tbl_流水码;"      '删除tbl_流水码表的所有数据
+    DoCmd.RunSQL strSQL

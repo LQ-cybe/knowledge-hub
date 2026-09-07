@@ -1,0 +1,16 @@
+'切换复选框状态
+Sub aa()
+Dim ws As Worksheet
+Dim chk As Object
+Set ws = Worksheets("打印")
+    Set chk = ws.Shapes("CheckBox1").ControlFormat
+    If Err.Number = 0 Then
+'        Debug.Print "找到表单控件"
+        If chk.Value = xlOn Then
+            chk.Value = xlOff
+        Else
+            chk.Value = xlOn
+        End If
+        Exit Sub
+    End If
+End Sub

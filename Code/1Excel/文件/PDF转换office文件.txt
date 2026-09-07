@@ -1,0 +1,104 @@
+﻿Sub PDF转Excel()
+    Dim cnn As Object, rs As Object
+    Dim cns As String, brr, c As Integer, path As String
+    Set cnn = CreateObject("adodb.Connection")
+    Set rs = CreateObject("ADODB.Recordset")
+    path = ThisWorkbook.path
+    Sql = "select * from abc.dbf"
+    cns = "Provider = Microsoft.ace.Oledb.12.0;Extended Properties =dBASE IV;Data Source =" & path
+    cnn.ConnectionString = cns
+    cnn.Open
+    rs.Open Sql, cnn, 1, 3
+    ReDim brr(1 To 1, 1 To rs.Fields.Count)
+    For c = 1 To rs.Fields.Count
+        brr(1, c) = rs.Fields(c - 1).name
+    Next c
+    ActiveSheet.UsedRange.Clear
+    Range("A1").Resize(1, UBound(brr, 2)) = brr
+    Range("A2").CopyFromRecordset rs
+    rs.Close
+    cnn.Close
+    Set rs = Nothing
+    Set cnn = Nothing
+End Sub
+
+'PDF转Excel
+Sub pdfToExcel()
+Dim acroapp As Object, acroAVDoc As Object, acroPDDoc As Object, jsobj As Object
+Dim filePath, savePath As String
+Dim fso As Object, objFile As Object
+Set fso = CreateObject("scripting.filesystemobject")
+Set acroapp = CreateObject("AcroExch.App")
+Set acroAVDoc = CreateObject("AcroExch.AVDoc")
+filePath = Application.GetOpenFilename("文件(*.pdf),*.pdf;*.PDF", , "请选择文件", , True)
+For i = LBound(filePath) To UBound(filePath)
+    Set objFile = fso.Getfile(filePath(i))
+    savePath = Replace(objFile.path, ".pdf", ".xlsx", , , vbTextCompare)
+    If acroAVDoc.Open(filePath(i), "") Then
+        Set acroPDDoc = acroAVDoc.GetPDDoc
+        Set jsobj = acroPDDoc.GetJSObject
+        jsobj.SaveAs savePath, "com.adobe.acrobat.xlsx"
+        acroAVDoc.Close True
+    End If
+Next i
+End Sub
+'PDF转PPT
+Sub pdfToPPT()
+Dim acroapp As Object, acroAVDoc As Object, acroPDDoc As Object, jsobj As Object
+Dim filePath, savePath As String
+Dim fso As Object, objFile As Object
+Set fso = CreateObject("scripting.filesystemobject")
+Set acroapp = CreateObject("AcroExch.App")
+Set acroAVDoc = CreateObject("AcroExch.AVDoc")
+filePath = Application.GetOpenFilename("文件(*.pdf),*.pdf;*.PDF", , "请选择文件", , True)
+For i = LBound(filePath) To UBound(filePath)
+    Set objFile = fso.Getfile(filePath(i))
+    savePath = Replace(objFile.path, ".pdf", ".pptx", , , vbTextCompare)
+    If acroAVDoc.Open(filePath(i), "") Then
+        Set acroPDDoc = acroAVDoc.GetPDDoc
+        Set jsobj = acroPDDoc.GetJSObject
+        jsobj.SaveAs savePath, "com.adobe.acrobat.pptx"
+        acroAVDoc.Close True
+    End If
+Next i
+End Sub
+'PDF转JPG
+Sub pdfToJPG()
+Dim acroapp As Object, acroAVDoc As Object, acroPDDoc As Object, jsobj As Object
+Dim filePath, savePath As String
+Dim fso As Object, objFile As Object
+Set fso = CreateObject("scripting.filesystemobject")
+Set acroapp = CreateObject("AcroExch.App")
+Set acroAVDoc = CreateObject("AcroExch.AVDoc")
+filePath = Application.GetOpenFilename("文件(*.pdf),*.pdf;*.PDF", , "请选择文件", , True)
+For i = LBound(filePath) To UBound(filePath)
+    Set objFile = fso.Getfile(filePath(i))
+    savePath = Replace(objFile.path, ".pdf", ".jpg", , , vbTextCompare)
+    If acroAVDoc.Open(filePath(i), "") Then
+        Set acroPDDoc = acroAVDoc.GetPDDoc
+        Set jsobj = acroPDDoc.GetJSObject
+        jsobj.SaveAs savePath, "com.adobe.acrobat.jpeg"
+        acroAVDoc.Close True
+    End If
+Next i
+End Sub
+'PDF转TXT
+Sub pdfToText()
+Dim acroapp As Object, acroAVDoc As Object, acroPDDoc As Object, jsobj As Object
+Dim filePath, savePath As String
+Dim fso As Object, objFile As Object
+Set fso = CreateObject("scripting.filesystemobject")
+Set acroapp = CreateObject("AcroExch.App")
+Set acroAVDoc = CreateObject("AcroExch.AVDoc")
+filePath = Application.GetOpenFilename("文件(*.pdf),*.pdf;*.PDF", , "请选择文件", , True)
+For i = LBound(filePath) To UBound(filePath)
+    Set objFile = fso.Getfile(filePath(i))
+    savePath = Replace(objFile.path, ".pdf", ".txt", , , vbTextCompare)
+    If acroAVDoc.Open(filePath(i), "") Then
+        Set acroPDDoc = acroAVDoc.GetPDDoc
+        Set jsobj = acroPDDoc.GetJSObject
+        jsobj.SaveAs savePath, "com.adobe.acrobat.plain-text"
+        acroAVDoc.Close True
+    End If
+Next i
+End Sub

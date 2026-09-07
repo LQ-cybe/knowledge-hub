@@ -1,0 +1,23 @@
+﻿'在表中添加记录
+Sub AddRecordUsingDAO()
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim YourTableName As String
+    YourTableName = "A"
+   ' 获取当前数据库
+    Set db = CurrentDb
+   ' 打开要操作的表的记录集，这里假设表名为 "Y`ourTableName"
+    Set rs = db.OpenRecordset(YourTableName, dbOpenDynaset)
+    
+    ' 添加新记录
+    rs.AddNew
+    rs!AttachmentName = "111"
+    rs!名称 = "2222"
+    rs!SID = "333"
+    ' 保存新记录
+    rs.Update
+    
+    rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+End Sub

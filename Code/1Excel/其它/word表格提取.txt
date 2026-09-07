@@ -1,0 +1,68 @@
+Sub GetWordTable()
+    Dim WdApp As Object
+    Dim objTable As Object
+    Dim objDoc As Object
+    Dim strPath As String
+    Dim shtEach As Worksheet
+    Dim shtSelect As Worksheet
+    Dim i As Long
+    Dim j As Long
+    Dim x As Long
+    Dim y As Long
+    Dim k As Long
+    Dim brr As Variant
+    Set WdApp = CreateObject("Word.Application")
+    With Application.FileDialog(msoFileDialogFilePicker)
+        .Filters.Add "Word文件", "*.doc*", 1
+        '只显示word文件
+        .AllowMultiSelect = False
+        '禁止多选文件
+        If .Show Then strPath = .SelectedItems(1) Else Exit Sub
+    End With
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    Set shtSelect = ActiveSheet
+    '当前表赋值变量shtSelect，方便代码运行完成后叶落归根回到开始的地方
+    For Each shtEach In Worksheets
+    '删除当前工作表以外的所有工作表
+        If shtEach.Name <> shtSelect.Name Then shtEach.Delete
+    Next
+    shtSelect.Name = "EH看见星光"
+    '这句代码不是无聊，作用在于……你猜……
+    '……其实是避免下面的程序工作表名称重复
+    Set objDoc = WdApp.documents.Open(strPath)
+    '后台打开用户选定的word文档
+    For Each objTable In objDoc.tables
+    '遍历文档中的每个表格
+        k = k + 1
+        Worksheets.Add after:=Worksheets(Worksheets.Count)
+        '新建工作表
+        ActiveSheet.Name = k & "表"
+        x = objTable.Rows.Count
+        'table的行数
+        y = objTable.Columns.Count
+        'table的列数
+        ReDim brr(1 To x, 1 To y)
+        '以下遍历行列，数据写入数组brr
+        For i = 1 To x
+            For j = 1 To y
+                brr(i, j) = "'" & Application.Clean(objTable.cell(i, j).Range.Text)
+                'Clean函数清除制表符等
+                '半角单引号将数据统一转换为文本格式，避免身份证等数值变形
+            Next
+        Next
+        With [a1].Resize(x, y)
+            .Value = brr
+            '数据写入Excel工作表
+            .Borders.LineStyle = 1
+            '添加边框线
+        End With
+    Next
+    shtSelect.Select
+    objDoc.Close: WdApp.Quit
+    Application.ScreenUpdating = True
+    Application.DisplayAlerts = True
+    Set objDoc = Nothing
+    Set WdApp = Nothing
+    MsgBox "共获取：" & k & "张表格的数据。"
+End Sub

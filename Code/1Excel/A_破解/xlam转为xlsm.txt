@@ -1,0 +1,338 @@
+' xlam 转 .xlsm 转换工具
+' 修复内容：
+' 1. 修复 BatchConvertXlamToXlsm 中 SelectedItems 错误450
+' 2. 修复主过程无提示问题
+' 3. 修复模块复制失败问题
+' 4. 添加完整的错误处理和调试信息
+
+Option Explicit
+
+' 主转换过程
+Sub ConvertXlamToXlsm()
+    Dim xlamPath As String
+    Dim xlsmPath As String
+    Dim sourceWB As Workbook
+    Dim targetWB As Workbook
+    Dim ws As Worksheet
+    Dim comp As Object
+    Dim codeModule As Object
+    Dim newModule As Object
+    Dim logMsg As String
+    Dim errorOccurred As Boolean
+    
+    On Error GoTo ErrorHandler
+    
+    ' 选择源xlam文件
+    xlamPath = SelectFile("请选择要转换的ASAP Utilities.xlam文件", "加载宏文件 (*.xlam)", "*.xlam")
+    If xlamPath = "" Then
+        MsgBox "未选择文件，操作取消", vbInformation
+        Exit Sub
+    End If
+    
+    ' 设置目标文件路径
+    xlsmPath = Left(xlamPath, InStrRev(xlamPath, ".")) & "xlsm"
+    
+    ' 检查目标文件是否存在
+    If Dir(xlsmPath) <> "" Then
+        If MsgBox("目标文件已存在，是否覆盖？", vbYesNo, "文件已存在") = vbNo Then
+            Exit Sub
+        End If
+    End If
+    
+    ' 禁用屏幕更新
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    
+    logMsg = "=== Xlam 转 Xlsm 转换日志 ===" & vbCrLf
+    logMsg = logMsg & "开始时间: " & Now() & vbCrLf
+    logMsg = logMsg & "源文件: " & xlamPath & vbCrLf
+    logMsg = logMsg & "目标文件: " & xlsmPath & vbCrLf & vbCrLf
+    
+    ' 打开源加载宏文件
+    logMsg = logMsg & "[步骤1] 打开源文件..." & vbCrLf
+    Set sourceWB = Workbooks.Open(Filename:=xlamPath, ReadOnly:=True, IgnoreReadOnlyRecommended:=True)
+    logMsg = logMsg & "  ? 源文件打开成功" & vbCrLf
+    logMsg = logMsg & "  工作表数量: " & sourceWB.Worksheets.Count & vbCrLf
+    
+    ' 创建新的工作簿
+    logMsg = logMsg & vbCrLf & "[步骤2] 创建新工作簿..." & vbCrLf
+    Set targetWB = Workbooks.Add
+    logMsg = logMsg & "  ? 新工作簿创建成功" & vbCrLf
+    
+    ' 复制所有工作表
+    logMsg = logMsg & vbCrLf & "[步骤3] 复制工作表..." & vbCrLf
+    Dim wsCount As Integer
+    wsCount = 0
+    For Each ws In sourceWB.Worksheets
+        ws.Copy After:=targetWB.Worksheets(targetWB.Worksheets.Count)
+        wsCount = wsCount + 1
+    Next ws
+    logMsg = logMsg & "  ? 已复制 " & wsCount & " 个工作表" & vbCrLf
+    
+    ' 删除默认工作表
+    logMsg = logMsg & vbCrLf & "[步骤4] 清理默认工作表..." & vbCrLf
+    On Error Resume Next
+    targetWB.Worksheets("Sheet1").Delete
+    targetWB.Worksheets("Sheet2").Delete
+    targetWB.Worksheets("Sheet3").Delete
+    On Error GoTo ErrorHandler
+    logMsg = logMsg & "  ? 默认工作表已删除" & vbCrLf
+    
+    ' 复制所有VBA模块
+    logMsg = logMsg & vbCrLf & "[步骤5] 复制VBA模块..." & vbCrLf
+    Dim moduleCount As Integer, skipCount As Integer
+    moduleCount = 0
+    skipCount = 0
+    
+    ' 检查是否可以访问VBProject
+    On Error Resume Next
+    Dim test As Object
+    Set test = sourceWB.VBProject
+    If Err.Number <> 0 Then
+        logMsg = logMsg & "  ? 无法访问VBProject！请检查宏安全设置" & vbCrLf
+        errorOccurred = True
+        GoTo Finalize
+    End If
+    On Error GoTo ErrorHandler
+    
+    ' 复制模块
+    For Each comp In sourceWB.VBProject.VBComponents
+        ' 排除工作表和图表
+        If comp.Type <> 100 And comp.Type <> 101 Then ' vbext_ct_Worksheet = 100, vbext_ct_Chart = 101
+            On Error Resume Next
+            Set newModule = targetWB.VBProject.VBComponents.Add(comp.Type)
+            If Err.Number <> 0 Then
+                logMsg = logMsg & "  ? 跳过模块 '" & comp.Name & "' (添加失败: " & Err.Description & ")" & vbCrLf
+                Err.Clear
+                skipCount = skipCount + 1
+                GoTo NextComp
+            End If
+            On Error GoTo ErrorHandler
+            
+            newModule.Name = comp.Name
+            
+            ' 复制代码
+            Set codeModule = comp.codeModule
+            With newModule.codeModule
+                If codeModule.CountOfLines > 0 Then
+                    .AddFromString codeModule.Lines(1, codeModule.CountOfLines)
+                End If
+            End With
+            
+            moduleCount = moduleCount + 1
+            logMsg = logMsg & "  ? 已复制模块: " & comp.Name & " (" & codeModule.CountOfLines & " 行)" & vbCrLf
+        End If
+NextComp:
+    Next comp
+    
+    logMsg = logMsg & vbCrLf & "  总计: 成功 " & moduleCount & " 个, 跳过 " & skipCount & " 个" & vbCrLf
+    
+    ' 保存文件
+    logMsg = logMsg & vbCrLf & "[步骤6] 保存文件..." & vbCrLf
+    targetWB.SaveAs Filename:=xlsmPath, FileFormat:=xlOpenXMLWorkbookMacroEnabled
+    logMsg = logMsg & "  ? 文件保存成功" & vbCrLf
+    
+    ' 关闭文件
+    sourceWB.Close SaveChanges:=False
+    targetWB.Close SaveChanges:=False
+    
+    ' 完成
+    logMsg = logMsg & vbCrLf & "=== 转换完成 ===" & vbCrLf
+    logMsg = logMsg & "目标文件: " & xlsmPath & vbCrLf
+    logMsg = logMsg & "完成时间: " & Now()
+    
+    MsgBox logMsg, vbInformation, "转换成功"
+    Exit Sub
+
+ErrorHandler:
+    logMsg = logMsg & vbCrLf & "=== 发生错误 ===" & vbCrLf
+    logMsg = logMsg & "错误号: " & Err.Number & vbCrLf
+    logMsg = logMsg & "错误描述: " & Err.Description & vbCrLf
+    logMsg = logMsg & "错误位置: " & Err.Source
+    
+    ' 清理
+    If Not sourceWB Is Nothing Then
+        On Error Resume Next
+        sourceWB.Close SaveChanges:=False
+        On Error GoTo 0
+    End If
+    If Not targetWB Is Nothing Then
+        On Error Resume Next
+        targetWB.Close SaveChanges:=False
+        On Error GoTo 0
+    End If
+    
+    MsgBox logMsg, vbCritical, "转换失败"
+    
+Finalize:
+    Application.ScreenUpdating = True
+    Application.DisplayAlerts = True
+End Sub
+
+' 批量转换多个xlam文件
+Sub BatchConvertXlamToXlsm()
+    Dim fd As Object ' 使用Object避免引用问题
+    Dim selectedItems As Variant
+    Dim i As Integer
+    Dim xlamPath As String
+    Dim xlsmPath As String
+    Dim sourceWB As Workbook
+    Dim targetWB As Workbook
+    Dim comp As Object
+    Dim codeModule As Object
+    Dim newModule As Object
+    Dim successCount As Integer
+    Dim failCount As Integer
+    Dim logMsg As String
+    
+    ' 创建文件对话框
+    On Error Resume Next
+    Set fd = Application.FileDialog(msoFileDialogFilePicker)
+    If Err.Number <> 0 Then
+        MsgBox "无法创建文件对话框！错误: " & Err.Description, vbCritical
+        Exit Sub
+    End If
+    On Error GoTo 0
+    
+    With fd
+        .title = "请选择要转换的xlam文件（可多选）"
+        .Filters.Clear
+        .Filters.Add "加载宏文件 (*.xlam)", "*.xlam"
+        .AllowMultiSelect = True
+        
+        ' 显示对话框
+        If .Show <> -1 Then
+            MsgBox "未选择文件，操作取消", vbInformation
+            Exit Sub
+        End If
+        
+        ' 修复：正确获取选中的文件（使用数组方式）
+        ReDim selectedItems(1 To .selectedItems.Count)
+        For i = 1 To .selectedItems.Count
+            selectedItems(i) = .selectedItems(i)
+        Next i
+    End With
+    Set fd = Nothing
+    
+    ' 检查是否选择了文件
+    If UBound(selectedItems) < 1 Then
+        MsgBox "未选择任何文件", vbInformation
+        Exit Sub
+    End If
+    
+    ' 初始化计数器
+    successCount = 0
+    failCount = 0
+    logMsg = "=== 批量转换日志 ===" & vbCrLf
+    logMsg = logMsg & "开始时间: " & Now() & vbCrLf
+    logMsg = logMsg & "文件数量: " & UBound(selectedItems) & vbCrLf & vbCrLf
+    
+    ' 禁用屏幕更新
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    
+    ' 遍历选择的文件
+    For i = LBound(selectedItems) To UBound(selectedItems)
+        xlamPath = selectedItems(i)
+        xlsmPath = Left(xlamPath, InStrRev(xlamPath, ".")) & "xlsm"
+        
+        On Error Resume Next
+        
+        ' 打开源文件
+        Set sourceWB = Workbooks.Open(Filename:=xlamPath, ReadOnly:=True)
+        If Err.Number <> 0 Then
+            logMsg = logMsg & "? 失败: " & xlamPath & vbCrLf
+            logMsg = logMsg & "  原因: " & Err.Description & vbCrLf & vbCrLf
+            failCount = failCount + 1
+            Err.Clear
+            GoTo NextFile
+        End If
+        
+        ' 创建新工作簿
+        Set targetWB = Workbooks.Add
+        
+        ' 复制工作表
+        For Each comp In sourceWB.Worksheets
+            comp.Copy After:=targetWB.Worksheets(targetWB.Worksheets.Count)
+        Next comp
+        
+        ' 删除默认工作表
+        On Error Resume Next
+        targetWB.Worksheets("Sheet1").Delete
+        targetWB.Worksheets("Sheet2").Delete
+        targetWB.Worksheets("Sheet3").Delete
+        On Error GoTo 0
+        
+        ' 复制VBA模块
+        On Error Resume Next
+        For Each comp In sourceWB.VBProject.VBComponents
+            If comp.Type <> 100 And comp.Type <> 101 Then
+                Set newModule = targetWB.VBProject.VBComponents.Add(comp.Type)
+                If Err.Number = 0 Then
+                    newModule.Name = comp.Name
+                    Set codeModule = comp.codeModule
+                    If codeModule.CountOfLines > 0 Then
+                        newModule.codeModule.AddFromString codeModule.Lines(1, codeModule.CountOfLines)
+                    End If
+                End If
+                Err.Clear
+            End If
+        Next comp
+        On Error GoTo 0
+        
+        ' 保存
+        targetWB.SaveAs Filename:=xlsmPath, FileFormat:=xlOpenXMLWorkbookMacroEnabled
+        
+        ' 关闭
+        sourceWB.Close SaveChanges:=False
+        targetWB.Close SaveChanges:=False
+        
+        successCount = successCount + 1
+        logMsg = logMsg & "? 成功: " & xlsmPath & vbCrLf & vbCrLf
+        
+NextFile:
+        On Error GoTo 0
+    Next i
+    
+    ' 恢复设置
+    Application.ScreenUpdating = True
+    Application.DisplayAlerts = True
+    
+    ' 显示结果
+    logMsg = logMsg & "=== 批量转换完成 ===" & vbCrLf
+    logMsg = logMsg & "成功: " & successCount & " 个" & vbCrLf
+    logMsg = logMsg & "失败: " & failCount & " 个" & vbCrLf
+    logMsg = logMsg & "完成时间: " & Now()
+    
+    MsgBox logMsg, vbInformation, "批量转换结果"
+End Sub
+
+' 选择文件函数
+Private Function SelectFile(title As String, filterDesc As String, filterExt As String) As String
+    Dim fd As Object
+    Set fd = Application.FileDialog(msoFileDialogFilePicker)
+    
+    With fd
+        .title = title
+        .Filters.Clear
+        .Filters.Add filterDesc, filterExt
+        .Filters.Add "所有文件", "*.*"
+        
+        If .Show = -1 Then
+            SelectFile = .selectedItems(1)
+        Else
+            SelectFile = ""
+        End If
+    End With
+    
+    Set fd = Nothing
+End Function
+
+' 检查宏安全设置
+Sub CheckMacroSecurity()
+    MsgBox "转换前请确保已启用以下设置:" & vbCrLf & _
+           "1. 打开 Excel" & vbCrLf & _
+           "2. 文件 > 选项 > 信任中心 > 信任中心设置" & vbCrLf & _
+           "3. 勾选「信任对VBA工程对象模型的访问」" & vbCrLf & vbCrLf & _
+           "4. 重启 Excel 使设置生效", vbInformation, "宏安全设置"
+End Sub

@@ -1,0 +1,10 @@
+﻿'多条件判断   
+ If n <= result Then
+        Select Case Range("B6").Value
+            Case "16进制"
+                GenerateBase16SerialNumbers
+            Case "34进制"
+                GenerateBase34SerialNumbers
+            Case "36进制"
+                GenerateBase36SerialNumbers
+        End Select

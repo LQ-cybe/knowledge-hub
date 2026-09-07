@@ -1,0 +1,18 @@
+﻿'删除多工作表的第N行
+Sub DeleteRowSixInSheets()
+    Dim ws As Worksheet
+    Dim sheetName As String
+    Dim i As Integer
+
+    '循环遍历工作表名称范围
+    For i = 1 To 10
+        sheetName = "4434" & Format(i, "00")
+        On Error Resume Next
+        Set ws = ThisWorkbook.Sheets(sheetName)
+        If Not ws Is Nothing Then
+            '删除第6行
+            ws.Rows(6).Delete
+        End If
+        On Error GoTo 0
+    Next i
+End Sub

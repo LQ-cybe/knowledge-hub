@@ -1,0 +1,11 @@
+﻿'对话框指定范围内的数字
+Sub GetLimitedInput()
+    Dim userInput As Integer
+    Do
+        userInput = CInt(InputBox("请输入一个1到100之间的整数："))
+        If userInput < 1 Or userInput > 100 Then
+            MsgBox "输入的数字不在1到100之间，请重新输入。"
+        End If
+    Loop While userInput < 1 Or userInput > 100
+    MsgBox "您输入的有效数字是：" & userInput
+End Sub

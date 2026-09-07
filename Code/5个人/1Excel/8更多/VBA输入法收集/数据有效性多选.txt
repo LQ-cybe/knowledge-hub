@@ -1,0 +1,38 @@
+Private Sub Worksheet_Change(ByVal Target As Range)
+
+    Dim rngDV As Range
+    Dim oldVal As String
+    Dim newVal As String
+    Dim fenGeFu As String
+
+    If Target.CountLarge > 1 Then Exit Sub
+    fenGeFu = "," '规定用逗号分隔
+
+    On Error Resume Next
+    Set rngDV = Cells.SpecialCells(xlCellTypeAllValidation)
+
+    If rngDV Is Nothing Then Exit Sub
+    If Intersect(Target, rngDV) Is Nothing Then Exit Sub
+
+    Application.EnableEvents = False
+    newVal = Target.Value
+    Application.Undo
+    oldVal = Target.Value
+    Target.Value = newVal
+
+    If oldVal <> "" Then
+        If newVal <> "" Then
+            If InStr(fenGeFu & oldVal & fenGeFu, fenGeFu & newVal & fenGeFu) > 0 Then
+                If InStrRev(oldVal, newVal) + Len(newVal) - 1 = Len(oldVal) Then
+                    Target.Value = Replace(oldVal, fenGeFu & newVal, "")
+                Else
+                    Target.Value = Replace(oldVal, newVal & fenGeFu, "")
+                End If
+            Else
+                Target.Value = oldVal & fenGeFu & newVal
+            End If
+        End If
+    End If
+
+    Application.EnableEvents = True
+End Sub

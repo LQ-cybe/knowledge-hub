@@ -1,0 +1,7 @@
+﻿Public Sub CheckEnvironment()
+    MsgBox "Excel版本: " & Application.Version & vbCrLf & _
+           "操作系统: " & Application.OperatingSystem & vbCrLf & _
+           "是否64位: " & IIf(Application.VBE.ActiveVBProject Is Nothing, "未知", val(Application.Version) >= 15) & vbCrLf & _
+           "当前工作簿: " & ThisWorkbook.name & vbCrLf & _
+           "VBA信任状态: " & IIf(Application.VBE.ActiveVBProject Is Nothing, "未信任", "已信任")
+End Sub

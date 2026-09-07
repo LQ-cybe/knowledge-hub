@@ -1,0 +1,17 @@
+﻿'先在窗体上添加一个图像控件，并在属性Picture中设置ICO图标，必须是ICO格式
+    Private Declare PtrSafe Function SendMessage Lib "user32" Alias "SendMessageA" (ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, lParam As Any) As Long
+    Private Declare PtrSafe Function DrawMenuBar Lib "user32" (ByVal hWnd As Long) As Long
+    Private Declare PtrSafe Function FindWindow Lib "user32" Alias "FindWindowA" (ByVal lpClassName As String, ByVal lpWindowName As String) As Long
+    Private Const WM_SETICON = &H80
+    Private Const ICON_SMALL = 0&
+    Private Const ICON_BIG = 1&
+Sub ChangeIcon(ByVal hWnd As Long, Optional ByVal hIcon As Long = 0&)
+    SendMessage hWnd, WM_SETICON, ICON_SMALL, ByVal hIcon
+    SendMessage hWnd, WM_SETICON, ICON_BIG, ByVal hIcon
+    DrawMenuBar hWnd
+End Sub
+Private Sub UserForm_Initialize()
+    Dim hWnd As Long
+    hWnd = FindWindow(vbNullString, Me.Caption)
+    Call ChangeIcon(hWnd, Image1.Picture.Handle)
+End Sub

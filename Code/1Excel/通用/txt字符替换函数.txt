@@ -1,0 +1,24 @@
+﻿'txt字符替换函数
+Sub RemoveQuotesFromTextFile(filePath As String, Symbol1 As String, Symbol2 As String)
+    Dim fileSystem As Object
+    Set fileSystem = CreateObject("Scripting.FileSystemObject")
+    Dim file As Object
+    Set file = fileSystem.OpenTextFile(filePath, 1, False, -2) '以二进制读取模式打开文件，参数 -2表示自动检测文件编码格式
+    
+    Dim fileContent As String
+    fileContent = file.ReadAll                                 '读取文件全部内容
+    file.Close                                                 '关闭文件
+    
+    On Error Resume Next                                       '开启错误处理，忽略运行时错误（后续可检查Err对象判断是否删除成功）
+    Kill filePath
+    
+    fileContent = Replace(fileContent, Symbol1, Symbol2)       '替换指定字符
+    
+    Set file = fileSystem.CreateTextFile(filePath, True)    '创建新文本文件
+    file.Write fileContent                                     '将处理后的内容写入新文件
+    file.Close                                                 '关闭新文件
+    On Error GoTo 0
+    If Err.Number <> 0 Then
+        MsgBox "文件操作出现错误: " & Err.Description
+    End If
+End Sub

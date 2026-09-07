@@ -1,0 +1,33 @@
+'必须引用：Microsoft Visual Basic for Applications Extensibility 引用
+'遍历所有模块，查找字符串出现的模块和行数，可间接与模块定位功能结合
+Sub CheckModuleDependencies(ModuleName As String)
+    Dim vbComp As VBComponent
+    Dim lineNum As Long
+    Dim lineText As String
+    Dim found As Boolean
+    
+    found = False
+    
+    ' 遍历所有模块
+    For Each vbComp In Application.VBE.ActiveVBProject.VBComponents
+        With vbComp.CodeModule
+            For lineNum = 1 To .CountOfLines
+                lineText = .Lines(lineNum, 1)
+                
+                ' 检查是否引用了该模块名
+                If InStr(1, lineText, ModuleName, vbTextCompare) > 0 Then
+                    Debug.Print "依赖发现：" & vbComp.Name & " (行 " & lineNum & "): " & lineText
+                    found = True
+                End If
+            Next
+        End With
+    Next
+    
+    If Not found Then
+        MsgBox "未找到对模块 '" & ModuleName & "' 的显式引用。", vbInformation
+    End If
+End Sub
+'调用示例
+Sub ss()
+CheckModuleDependencies "ModuleName"
+End Sub

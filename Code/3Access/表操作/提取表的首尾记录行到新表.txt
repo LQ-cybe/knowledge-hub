@@ -1,0 +1,44 @@
+﻿    '    提取表的第一条记录和最后一条记录，追加到另外一个表中
+Sub CopyFirstAndLastRecords()
+    Dim db As DAO.Database
+    Dim sourceTable As DAO.Recordset
+    Dim destTable As DAO.Recordset
+    Dim currentDateTime As Date
+    Dim fieldName, YPDH As String
+    fieldName = "导出日期"                                         ' 增加的列-导出时间
+    YPDH = "样品单号"
+    Set db = CurrentDb                                         ' 设置数据库对象
+    Set sourceTable = db.OpenRecordset(Serialnumberdata, dbOpenDynaset)    ' 打开源表记录集
+    If sourceTable.recordCount = 0 Then                        ' 检查源表是否为空
+        MsgBox Serialnumberdata & "表为空，没有记录可复制。"
+        sourceTable.Close
+        Set sourceTable = Nothing
+        Set db = Nothing
+        Exit Sub
+    End If
+    currentDateTime = Now()                                    ' 获取当前日期时间
+    sourceTable.MoveFirst                                      ' 移动到第一条记录
+    Set destTable = db.OpenRecordset(Serialnumberdata & "_导出记录", dbOpenDynaset)    ' 打开目标表记录集
+    destTable.AddNew                                           ' 追加第一条记录
+    Dim field As DAO.field
+    For Each field In sourceTable.Fields
+        destTable.Fields(field.Name).Value = sourceTable.Fields(field.Name).Value
+    Next field
+    destTable.Fields(fieldName).Value = currentDateTime        ' 在 N 列写入追加日期时间
+    destTable.Fields(YPDH).Value = yangpingdanhaoID
+    destTable.Update
+    sourceTable.MoveLast                                       ' 移动到最后一条记录
+    destTable.AddNew                                           ' 追加最后一条记录
+    For Each field In sourceTable.Fields
+        destTable.Fields(field.Name).Value = sourceTable.Fields(field.Name).Value
+    Next field
+    destTable.Fields(fieldName).Value = currentDateTime        '在 N 列写入追加日期时间
+    destTable.Fields(YPDH).Value = yangpingdanhaoID
+    destTable.Update
+    sourceTable.Close                                          ' 关闭记录集和数据库对象
+    destTable.Close
+    Set sourceTable = Nothing
+    Set destTable = Nothing
+    Set db = Nothing
+    '    MsgBox "操作完成。"
+End Sub

@@ -1,0 +1,27 @@
+﻿'方法二 用api函数Sleep暂停程序的运行，代码如下：
+#If VBA7 Then
+    Declare PtrSafe Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As LongPtr)
+#Else
+    Declare Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
+#End If
+Sub 让vba暂停几毫秒()
+    Dim i
+    For i = 1 To 10
+        '主程序
+'********************
+        '每次暂停程序500毫秒再继续执行下一个for 循环
+        Sleep 500
+    Next i
+End Sub
+'方法一 用Application对象的Wait方法让程序暂停运行，代码如下：
+
+Sub 让vba暂停几秒()
+    Dim i
+    For i = 1 To 100
+        '主程序
+        '********************
+        '每次暂停程序5秒再继续执行下一个for 循环
+        Application.Wait Now + TimeValue("0:00:02")
+Debug.Print "已暂停"
+    Next i
+End Sub

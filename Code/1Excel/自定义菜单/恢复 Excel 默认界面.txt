@@ -1,0 +1,21 @@
+﻿'恢复 Excel 默认界面 
+Sub DelNowBar()
+    On Error Resume Next       ' 出错时跳过，不弹报错（防止菜单不存在时报错）
+    With Application
+        ' 1. 显示【标准工具栏】（老版Excel顶部那排：打开、保存、打印等）
+        .CommandBars("Standard").Visible = True
+        ' 2. 显示【格式工具栏】（字体、字号、颜色、居中那排）
+        .CommandBars("Formatting").Visible = True
+        ' 3. 显示【停止录制】工具栏（录制宏时出现）
+        .CommandBars("Stop Recording").Visible = True
+        ' 4. 启用“工具栏列表”（老版Excel右键工具栏出现的菜单）
+        .CommandBars("toolbar list").Enabled = True
+        ' 5. 开启右上角“Office 助手搜索框”（极老版本才有，现在无效）
+        .CommandBars.DisableAskAQuestionDropdown = False
+        ' 6. 显示编辑栏（就是输入公式那一条）
+        .DisplayFormulaBar = True
+        ' 7. ? 核心：删除你自定义的工具栏 NewBar
+        .CommandBars("NewBar").Delete
+    End With
+End Sub
+

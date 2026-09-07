@@ -1,0 +1,8 @@
+    Dim startTime As Double
+    Dim endTime As Double
+    startTime = Timer
+    ' 执行代码
+
+
+    endTime = Timer
+    MsgBox "操作完成，代码执行时间:" &fprmat( (endTime - startTime) ,"000")& "秒"

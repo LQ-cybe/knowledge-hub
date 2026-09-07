@@ -1,0 +1,44 @@
+Sub PrintAllControlNames()                  '遍历窗体上的所有控件，输出名称和类型
+    Dim frm As Form
+    Dim ctl As Control
+    
+    ' 获取当前活动窗体
+    Set frm = Screen.ActiveForm
+    
+    If frm Is Nothing Then
+        MsgBox "没有活动窗体!", vbExclamation
+        Exit Sub
+    End If
+    
+    ' 输出窗体名称
+    Debug.Print "窗体: " & frm.Name
+    
+    ' 遍历窗体上的所有控件
+    For Each ctl In frm.Controls
+        PrintControlName ctl, 1
+    Next ctl
+End Sub
+
+' 递归函数：输出控件名称及其子控件（如果有）
+Private Sub PrintControlName(ctl As Control, level As Integer)
+    Dim i As Integer
+    Dim indent As String
+    
+    ' 生成缩进，用于表示控件层级
+    For i = 1 To level
+        indent = indent & "  "
+    Next i
+    
+    ' 输出控件名称和类型
+    Debug.Print indent & ctl.Name & "-" & TypeName(ctl)
+    
+    ' 如果控件是容器（如 Frame、TabStrip 等），递归遍历其子控件
+    On Error Resume Next  ' 防止某些控件不支持 Controls 集合
+    If ctl.Controls.count > 0 Then
+        Dim subCtl As Control
+        For Each subCtl In ctl.Controls
+            PrintControlName subCtl, level + 1
+        Next subCtl
+    End If
+    On Error GoTo 0
+End Sub

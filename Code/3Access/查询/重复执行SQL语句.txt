@@ -1,0 +1,22 @@
+﻿Sub ExecuteMultipleSQL()
+    Dim strSQL1 As String
+    Dim strSQL2 As String
+    Dim strSQL3 As String
+    
+    '创建表的SQL语句
+    strSQL1 = "CREATE TABLE TestTable (ID INT PRIMARY KEY, Name TEXT);"
+    '插入数据的SQL语句
+    strSQL2 = "INSERT INTO TestTable (ID, Name) VALUES (1, 'John'); " & _
+              "INSERT INTO TestTable (ID, Name) VALUES (2, 'Alice');"
+    '更新数据的SQL语句
+    strSQL3 = "UPDATE TestTable SET Name = 'Bob' WHERE ID = 1;"
+    
+    '执行SQL语句
+    On Error Resume Next
+    DoCmd.RunSQL strSQL1
+    DoCmd.RunSQL strSQL2
+    DoCmd.RunSQL strSQL3
+    On Error GoTo 0
+    
+    MsgBox "SQL语句执行完成！"
+End Sub

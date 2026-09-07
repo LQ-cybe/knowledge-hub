@@ -1,0 +1,24 @@
+﻿Sub QuickSort(ByRef arr, ByRef nLeft&, ByRef nRight&)
+  Dim i&, j&, vKey, vSwap
+  If nLeft >= nRight Then Exit Sub
+  vKey = arr(nLeft)
+  i = nLeft + 1:j = nRight
+  Do
+    Do While i <= nRight
+      If arr(i) > vKey Then Exit Do
+      i = i + 1
+    Loop
+    Do While j > nLeft
+      If arr(j) < vKey Then Exit Do
+      j = j - 1
+    Loop
+    If i >= j Then Exit Do
+    vSwap = arr(i): arr(i) = arr(j): arr(j) = vSwap
+  Loop
+  If nLeft <> j Then
+    vSwap = arr(nLeft): arr(nLeft) = arr(j): arr(j) = vSwap
+  End If
+  If nLeft < j Then Call QuickSort(arr, nLeft, j)
+  If j + 1 < nRight Then Call QuickSort(arr, j + 1, nRight)
+End Sub
+

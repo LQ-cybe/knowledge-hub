@@ -1,0 +1,187 @@
+﻿' 自定义函数：删除指定工作表中某列的空值和0值行
+' 参数说明：
+'   sheetName   - 工作表名称（字符串）
+'   columnLetter - 列字母，如 "B", "C", "AA" 等（字符串）
+'   checkZero    - 是否检查0值，默认为True（可选参数）
+'   checkEmpty   - 是否检查空值，默认为True（可选参数）
+' 返回值：
+'   删除的行数
+Function DeleteBlankAndZeroRows(ByVal sheetName As String, ByVal columnLetter As String, _
+                                 Optional ByVal checkZero As Boolean = True, _
+                                 Optional ByVal checkEmpty As Boolean = True) As Long
+    
+    On Error GoTo ErrorHandler
+    
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim i As Long
+    Dim deleteCount As Long
+    Dim cellValue As Variant
+    
+    ' 检查工作表是否存在
+    On Error Resume Next
+    Set ws = ThisWorkbook.Worksheets(sheetName)
+    On Error GoTo ErrorHandler
+    
+    If ws Is Nothing Then
+        MsgBox "工作表 '" & sheetName & "' 不存在！", vbExclamation
+        DeleteBlankAndZeroRows = -1
+        Exit Function
+    End If
+    
+    ' 获取指定列的最后一行
+    With ws
+        lastRow = .Cells(.Rows.Count, columnLetter).End(xlUp).Row
+    End With
+    
+    If lastRow < 1 Then
+        DeleteBlankAndZeroRows = 0
+        Exit Function
+    End If
+    
+    ' 关闭屏幕更新和事件，提高性能
+    Application.ScreenUpdating = False
+    Application.Calculation = xlCalculationManual
+    Application.EnableEvents = False
+    
+    deleteCount = 0
+    
+    ' 从下往上遍历，删除符合条件的行
+    For i = lastRow To 1 Step -1
+        cellValue = ws.Cells(i, columnLetter).Value
+        
+        ' 判断是否需要删除
+        If ShouldDeleteRow(cellValue, checkZero, checkEmpty) Then
+            ws.Rows(i).Delete
+            deleteCount = deleteCount + 1
+        End If
+    Next i
+    
+    ' 恢复设置
+    Application.EnableEvents = True
+    Application.ScreenUpdating = True
+    Application.Calculation = xlCalculationAutomatic
+    
+    DeleteBlankAndZeroRows = deleteCount
+    
+    Exit Function
+    
+ErrorHandler:
+    Application.EnableEvents = True
+    Application.ScreenUpdating = True
+    Application.Calculation = xlCalculationAutomatic
+    
+    MsgBox "删除时发生错误：" & Err.Description & vbCrLf & _
+           "错误号：" & Err.Number & vbCrLf & _
+           "工作表：" & sheetName & vbCrLf & _
+           "列：" & columnLetter & vbCrLf & _
+           "行号：" & i, vbCritical
+    DeleteBlankAndZeroRows = -1
+End Function
+
+' 辅助函数：判断某行是否应该删除
+Private Function ShouldDeleteRow(ByVal cellValue As Variant, ByVal checkZero As Boolean, ByVal checkEmpty As Boolean) As Boolean
+    Dim isEmptyOrSpace As Boolean
+    Dim isZero As Boolean
+    
+    ' 检查空值
+    If checkEmpty Then
+        ' 判断是否为真正的空值或空字符串
+        If IsEmpty(cellValue) Then
+            isEmptyOrSpace = True
+        ElseIf VarType(cellValue) = vbString Then
+            ' 字符串类型：空字符串或只有空格
+            If cellValue = "" Or Trim(cellValue) = "" Then
+                isEmptyOrSpace = True
+            End If
+        ElseIf cellValue = Null Then
+            isEmptyOrSpace = True
+        End If
+    End If
+    
+    ' 检查零值
+    If checkZero Then
+        ' 数值0或文本"0"
+        If VarType(cellValue) = vbString Then
+            If Trim(cellValue) = "0" Or Trim(cellValue) = "零" Then
+                isZero = True
+            End If
+        Else
+            ' 数值类型：等于0
+            If IsNumeric(cellValue) And cellValue = 0 Then
+                isZero = True
+            End If
+        End If
+    End If
+    
+    ShouldDeleteRow = isEmptyOrSpace Or isZero
+End Function
+
+' 原功能：清理汇总表B列的示例调用
+Sub CleanSummaryColumnB()
+    Dim deletedRows As Long
+    
+    ' 调用自定义函数，删除汇总表中C列的空值和0值行
+    deletedRows = DeleteBlankAndZeroRows("汇总_转置", "B", True, True)
+    
+    If deletedRows >= 0 Then
+        If deletedRows > 0 Then
+            MsgBox "删除完成！共删除 " & deletedRows & " 个空行和零值行。", vbInformation
+        Else
+            ' MsgBox "没有需要删除的空行或零值行。", vbInformation
+        End If
+    End If
+End Sub
+
+' 示例2：只删除空值，不删除0值
+Sub CleanEmptyOnly()
+    Dim deletedRows As Long
+    ' checkZero = False, checkEmpty = True
+    deletedRows = DeleteBlankAndZeroRows("汇总", "B", False, True)
+    MsgBox "删除了 " & deletedRows & " 个空行"
+End Sub
+
+' 示例3：只删除0值，不删除空值
+Sub CleanZeroOnly()
+    Dim deletedRows As Long
+    ' checkZero = True, checkEmpty = False
+    deletedRows = DeleteBlankAndZeroRows("汇总", "C", True, False)
+    MsgBox "删除了 " & deletedRows & " 个0值行"
+End Sub
+
+' 示例4：删除多个列中任意列为空的行（扩展功能）
+Sub CleanMultipleColumns()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim i As Long
+    Dim deleteCount As Long
+    Dim columnsToCheck As Variant
+    Dim j As Integer
+    Dim shouldDelete As Boolean
+    
+    Set ws = ThisWorkbook.Worksheets("汇总")
+    lastRow = ws.Cells(ws.Rows.Count, "B").End(xlUp).Row
+    
+    columnsToCheck = Array("B", "C") ' 检查B列和C列
+    
+    Application.ScreenUpdating = False
+    
+    For i = lastRow To 1 Step -1
+        shouldDelete = False
+        For j = LBound(columnsToCheck) To UBound(columnsToCheck)
+            If ShouldDeleteRow(ws.Cells(i, columnsToCheck(j)).Value, True, True) Then
+                shouldDelete = True
+                Exit For
+            End If
+        Next j
+        
+        If shouldDelete Then
+            ws.Rows(i).Delete
+            deleteCount = deleteCount + 1
+        End If
+    Next i
+    
+    Application.ScreenUpdating = True
+    MsgBox "共删除 " & deleteCount & " 行"
+End Sub
+

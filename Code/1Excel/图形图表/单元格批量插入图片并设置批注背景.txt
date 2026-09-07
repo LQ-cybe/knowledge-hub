@@ -1,0 +1,44 @@
+'Excel单元格批量插入图片。并支持鼠标滑过预览（通过修改批注背景为图片实现预览效果）
+Sub BatchInsertImgsWithPreview(start As Range, folderPath As String)
+    Dim imgPath As String
+    Dim imgIndex As Integer
+    Dim current As Range
+    Dim imgWidth As Integer
+    Dim imgHeight As Integer
+    imgIndex = 0
+    imgName = Dir(folderPath & "\*" & ".jpg")
+    '遍历指定文件夹下所有的jpg图片
+    Do While Len(imgName) > 0
+        imgPath = folderPath & imgName
+        Debug.Print imgPath
+        '当前图片插入的单元格
+        Set current = start.Offset(imgIndex, 0)
+        '将当前图片插入到Excel单元格内
+        With ActiveSheet.Pictures.Insert(imgPath)
+            With .ShapeRange
+                .LockAspectRatio = msoFalse 'msoFalse表示不锁定横纵比，图片填充整个单元格, msoTrue表示锁定横纵比，图片可能不完全填充单元格
+                imgWidth = .Width
+                imgHeight = .Height
+                .Width = current.Width
+                .Height = current.Height
+            End With
+            '设置图片左上角的位置
+            .Left = current.Left
+            .Top = current.Top
+            .Placement = 1
+            .PrintObject = True
+        End With
+        '设置单元格备注以显示图片
+        current.AddComment
+        current.Comment.Visible = False
+        current.Comment.Shape.Fill.UserPicture imgPath
+        current.Comment.Shape.Width = imgWidth
+        current.Comment.Shape.Height = imgHeight
+        '设置下一个图片
+        imgName = Dir
+        imgIndex = imgIndex + 1
+    Loop
+End Sub
+Sub BatchInsertImgsWithPreviewTest()
+    BatchInsertImgsWithPreview Range("A1"), "D:\Pictures\Camera Roll\"
+End Sub

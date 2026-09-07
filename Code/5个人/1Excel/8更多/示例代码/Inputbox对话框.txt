@@ -1,0 +1,15 @@
+﻿'Inputbox对话框
+Sub GetUserInputWithTitleAndDefault()
+    Dim userInput As String
+    userInput = InputBox("请输入您的年龄：", "年龄输入", 44)
+    If userInput = "" Then
+    
+     '取消按钮
+            MsgBox "操作已取消！"
+        Exit Sub
+    ElseIf IsNumeric(userInput) Then
+        MsgBox "您输入的年龄是：" & userInput
+    Else
+        MsgBox "您输入的不是有效的数字。"
+    End If
+End Sub

@@ -1,0 +1,63 @@
+Attribute VB_Name = "正则表达式"
+'查找长度为5个字符的单词
+Sub UseRegex()
+    With Selection.Find
+        .ClearFormatting
+        .Text = "\b\w{5}\b"    ' 正则表达式示例：匹配长度为5的单词
+        .MatchWildcards = True
+        .Execute
+    End With
+End Sub
+
+'替换文档中的所有旧样式为新样式
+Sub BatchReplaceStyle()
+    Dim oRange As Range
+    Set oRange = ActiveDocument.Range
+    With oRange.Find
+        .ClearFormatting
+        .Format = True
+        .Forward = True
+        .Wrap = wdFindStop
+        .Style = ActiveDocument.Styles("OldStyle")    ' 旧样式
+        With .Replacement
+            .ClearFormatting
+            .InsertReplace = False
+            .Format = True
+            .Style = ActiveDocument.Styles("NewStyle")    ' 新样式
+        End With
+        .Execute Replace:=wdReplaceAll
+    End With
+End Sub
+
+'查找和替换
+Sub ReplaceText()
+    With Selection.Find
+        .ClearFormatting
+        .Text = "oldText"    ' 要查找的文本
+        .Replacement.ClearFormatting
+        .Replacement.Text = "newText"    ' 替换文本
+        .Forward = True
+        .Wrap = wdFindContinue
+        .Format = False
+        .MatchCase = False
+        .MatchWholeWord = True
+        .MatchWildcards = False
+        .MatchSoundsLike = False
+        .MatchAllWordForms = False
+        .Execute Replace:=wdReplaceAll    ' 执行替换操作
+    End With
+End Sub
+
+
+Sub 自动话报告()
+' 示例代码：使用Pixysoft.Office生成Word报告
+' 1. 创建文档实例
+    Dim doc As New Word.Document
+    ' 2. 添加标题
+    doc.AddTitle ("自动化报告标题")
+    ' 3. 插入段落
+    Dim para As Word.Paragraph = doc.AddParagraph()
+    para.Range.Text = "这是一个自动化生成的报告段落。"
+    ' 4. 保存文档
+    doc.SaveAs ("报告生成示例.docx")
+End Sub

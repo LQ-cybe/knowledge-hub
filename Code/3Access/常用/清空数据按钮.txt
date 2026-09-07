@@ -1,0 +1,7 @@
+'清空列表数据
+On Error Resume Next
+    If MsgBoxEx("确定要清空当前列表中的所有商品吗？", vbQuestion + vbOKCancel) = vbOK Then
+        CurrentDb.Execute "DELETE * FROM TMP_tbl入库明细"      '删除该表全部数据
+        '通过重新加载子窗体源对象的方式来刷新数据
+        Forms!frm入库_Edit.sfrDetail.SourceObject = "frm入库_Edit_Detail"
+        End If

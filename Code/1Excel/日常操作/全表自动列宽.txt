@@ -1,0 +1,14 @@
+'name=全表自动列宽
+'officetype=excel,et
+'category=个人常用
+'description=对当前工作簿所有工作表自动调整列宽
+
+Public Sub AutoFitAllSheets()
+    Dim sh As Worksheet
+    Application.ScreenUpdating = False
+    For Each sh In ThisWorkbook.Worksheets
+        sh.Cells.Columns.AutoFit
+    Next sh
+    Application.ScreenUpdating = True
+    MsgBox "已对全部工作表自动列宽", vbInformation
+End Sub

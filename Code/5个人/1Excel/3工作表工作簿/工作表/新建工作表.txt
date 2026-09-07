@@ -1,0 +1,7 @@
+﻿'新建工作表并修改工作表名称为模板，在A1单元格输入100
+Sub s2()
+  Dim sh As Worksheet
+  Set sh = Sheets.Add
+  sh.Name = "模板"
+  sh.Range("a1") = 100
+End Sub

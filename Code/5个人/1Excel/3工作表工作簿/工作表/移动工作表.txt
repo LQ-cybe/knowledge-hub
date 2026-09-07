@@ -1,0 +1,5 @@
+﻿'移动工作表
+Sub s4()
+  Sheets("Sheet2").Move before:=Sheets("sheet1")   'sheet2移动到sheet1前面
+  Sheets("Sheet1").Move after:=Sheets(Sheets.Count)   'sheet1移动到所有工作表的最后面
+End Sub

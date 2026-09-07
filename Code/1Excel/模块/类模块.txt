@@ -1,0 +1,26 @@
+﻿''ModuleName="ClsOne2Many"
+Public Name As String
+Public id As String
+Public idx As Long
+
+Private data()
+
+Public Sub RedimData(ByVal l As Long, ByVal r As Long)
+  ReDim data(l To r)
+End Sub
+
+Public Sub InputData(ByVal Str As String, ByVal i As Long)
+  data(i) = Str
+End Sub
+
+Public Property Get Outputdata() As Variant
+  Outputdata = data
+End Property
+
+Private Sub Class_Initialize()
+  
+End Sub
+
+Private Sub Class_Terminate()
+  Erase data
+End Sub

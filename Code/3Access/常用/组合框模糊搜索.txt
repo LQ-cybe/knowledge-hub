@@ -1,0 +1,21 @@
+    Dim cf As Boolean
+Private Sub 产品料号_Change()
+    If Not cf Then Exit Sub
+    Dim txt As String
+    txt = Trim(Me.产品料号.Text)
+    Me.产品料号.RowSource = "SELECT 产品料号, 尺寸 FROM tbl_产品信息 " & _
+            "WHERE 产品料号 LIKE '*" & txt & "*' " & _
+            "AND 已停用 = False " & _
+            "ORDER BY 产品ID;"
+    Me.产品料号.Dropdown
+End Sub
+Private Sub 产品料号_KeyDown(KeyCode As Integer, Shift As Integer)
+    cf = Not (KeyCode = vbKeyUp Or KeyCode = vbKeyDown)
+End Sub
+Private Sub Form_Load()
+    cf = True
+    Me.产品料号.AutoExpand = False
+    Me.产品料号.RowSource = "SELECT 产品料号, 尺寸 FROM tbl_产品信息 " & _
+            "WHERE 已停用 = False " & _
+            "ORDER BY 产品ID;"
+End Sub

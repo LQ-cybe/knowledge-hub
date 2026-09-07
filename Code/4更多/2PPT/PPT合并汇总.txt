@@ -1,0 +1,38 @@
+'PPT合并汇总
+Sub MergePPTFiles()
+    DimobjPPTAsObject
+    DimobjNewPresentationAsObject
+    DimobjPresentationAsObject
+    DimstrFolderPathAsString
+    DimstrFileNameAsString
+    DimstrFileExtAsString
+    DimiAsInteger
+    '设置文件夹路径
+    strFolderPath = "C:\Your\Folder\Path\"                     '修改为你的文件夹路径
+    '创建新的 PPT 应用程序对象
+    SetobjPPT = CreateObject("PowerPoint.Application")
+    objPPT.Visible = True                                      '设置为 True 以便查看过程
+    '创建一个新的演示文稿
+    SetobjNewPresentation = objPPT.Presentations.Add
+    '获取文件夹中的文件
+    strFileName = Dir(strFolderPath & "*.pptx")                '获取文件夹中的第一个 PPT 文件
+    Do While strFileName <> ""
+        '打开当前 PPT 文件
+        SetobjPresentation = objPPT.Presentations.Open(strFolderPath & strFileName)
+        '将当前 PPT 文件的所有幻灯片复制到新的演示文稿中
+        For i = 1 To objPresentation.Slides.count
+            objPresentation.Slides(i).Copy
+            objNewPresentation.Slides.Paste
+            Nexti
+            '关闭当前 PPT 文件
+            objPresentation.Close
+            '获取下一个 PPT 文件
+            strFileName = Dir
+        Loop
+        '保存新的演示文稿
+        objNewPresentation.SaveAsstrFolderPath& "MergedPresentation.pptx"
+        '释放对象
+        SetobjNewPresentation = Nothing
+        SetobjPPT = Nothing
+        MsgBox "PPT 文件合并完成！"
+End Sub

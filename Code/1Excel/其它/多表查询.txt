@@ -1,0 +1,13 @@
+'多表查找
+'Dlookup（工作表名称,查找值,查找列数,返回值列数）
+
+Function Dlookup(arr, A, R1, R2)
+  Dim arr1
+  Dim m
+  arr1 = arr
+  For x = 1 To UBound(arr1)
+   If Application.CountIf(Sheets(arr1(x)).Columns(R1), A) > 0 Then
+    Dlookup = Sheets(arr1(x)).Cells(Application.Match(A, Sheets(arr1(x)).Columns(R1), 0), R2)
+   End If
+  Next x
+End Function

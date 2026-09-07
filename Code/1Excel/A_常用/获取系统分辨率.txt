@@ -1,0 +1,15 @@
+﻿Declare PtrSafe Function GetDC Lib "user32" (ByVal hWnd As Long) As Long
+Declare PtrSafe Function ReleaseDC Lib "user32" (ByVal hWnd As Long, ByVal hDC As Long) As Long
+Declare PtrSafe Function GetDeviceCaps Lib "Gdi32" (ByVal hDC As Long, ByVal index As Long) As Long
+Const HORZRES = 8
+Const VERTRES = 10
+'获取系统分辨率
+Sub SystemScreenResolution()
+    Dim hDC As Long
+    hDC = GetDC(0)
+    Dim X, Y
+    X = GetDeviceCaps(hDC, HORZRES)
+    Y = GetDeviceCaps(hDC, VERTRES)
+    MsgBox "当前系统的屏幕分辨率为" & X & "X" & Y
+    ReleaseDC 0, hDC
+End Sub

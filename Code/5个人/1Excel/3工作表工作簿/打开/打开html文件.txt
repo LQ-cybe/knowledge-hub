@@ -1,0 +1,4 @@
+﻿Sub FourthOne()
+'在 Excel 中编辑 HTML 文档，请首先使用 Open 方法打开文档
+Workbooks.Open Filename:="D:\LQ\myfile.htm"
+End Sub

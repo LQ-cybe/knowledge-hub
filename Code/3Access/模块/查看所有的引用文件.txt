@@ -1,0 +1,16 @@
+﻿'查看所有引用文件目录
+Function ReferenceInfo()
+   Dim strMessage As String
+   Dim strTitle As String
+   Dim refItem As Reference
+   On Error Resume Next
+   For Each refItem In References
+      If refItem.IsBroken Then
+         strMessage = "Missing Reference/损坏的引用:" & vbCrLf & refItem.FullPath
+      Else
+         strMessage = "Reference/名称: " & refItem.Name & vbCrLf _
+            & "Location/引用文件路径: " & refItem.FullPath
+      End If
+      Debug.Print strMessage
+   Next refItem
+End Function

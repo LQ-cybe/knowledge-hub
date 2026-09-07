@@ -1,0 +1,7 @@
+﻿Private Sub Workbook_Open()
+'注册快捷键
+Application.OnKey "^r", "abs2rel_button_onAction"
+Application.OnKey "^e", "a12r1c1_button_onAction"
+Application.OnKey "^q", "merge_unmerge"
+Application.OnKey "^g", "searchButton_onAction"
+End Sub

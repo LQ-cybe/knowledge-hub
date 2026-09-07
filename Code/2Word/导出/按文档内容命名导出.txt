@@ -1,0 +1,102 @@
+'提取表格指定行列的内容
+Function GetWordTableContent(targetRow As Integer, targetCol As Integer) As String
+    Dim wdTable As Table
+    Dim rowCount As Integer, colCount As Integer
+    Dim cellText As String
+    
+    GetWordTableContent = ""
+    If ActiveDocument.Tables.Count = 0 Then
+        GetWordTableContent = "当前激活文档中无表格（或表格在形状/页眉页脚中）"
+        Exit Function
+    End If
+    
+    Set wdTable = ActiveDocument.Tables(1)
+    rowCount = wdTable.Rows.Count
+    colCount = wdTable.Columns.Count
+    
+    If targetRow > rowCount Then
+        GetWordTableContent = "行号超出范围（总行数：" & rowCount & "）"
+        Exit Function
+    End If
+    If targetCol > colCount Then
+        GetWordTableContent = "列号超出范围（总列数：" & colCount & "）"
+        Exit Function
+    End If
+    
+    '获取单元格文本并清理所有特殊字符
+    cellText = wdTable.cell(targetRow, targetCol).Range.Text
+    '移除单元格结束标记 Chr(13) + Chr(7) 和所有换行符
+    cellText = Replace(cellText, Chr(13) & Chr(7), "")
+    cellText = Replace(cellText, Chr(13), "")  '移除回车符
+    cellText = Replace(cellText, Chr(10), "")  '移除换行符
+    cellText = Replace(cellText, Chr(7), "")   '移除单元格结束标记
+    
+    GetWordTableContent = Trim(cellText)
+    
+    Set wdTable = Nothing
+End Function
+
+'出货报告保存为PDF
+Sub 出货报告保存为PDF()
+    Dim wjmname As String
+    Dim part1 As String, part2 As String, part3 As String
+    
+    '分别获取各部分内容并清理
+    part1 = GetWordTableContent(1, 6)
+    part2 = GetWordTableContent(2, 2)
+    part3 = GetWordTableContent(2, 4)
+    
+    '拼接文件名
+    wjmname = part1 & " " & part2 & "+" & part3 & "+出货检验报告"
+    
+    '再次确保没有换行符
+    wjmname = Replace(wjmname, vbCrLf, "")
+    wjmname = Replace(wjmname, vbCr, "")
+    wjmname = Replace(wjmname, vbLf, "")
+    wjmname = Trim(wjmname)
+    
+    ChangeFileOpenDirectory ActiveDocument.path
+    With Dialogs(wdDialogFileSaveAs)
+        .Name = wjmname & ".pdf"
+        .Format = wdFormatPDF
+        .Show
+    End With
+End Sub
+
+'提取两个字符串之间的内容
+Function ExtractStrBetween(sourceStr As String, startMark As String, endMark As String) As String
+    Dim startPos As Integer, endPos As Integer
+    ExtractStrBetween = ""
+    If sourceStr = "" Or startMark = "" Or endMark = "" Then Exit Function
+    startPos = InStr(1, sourceStr, startMark, vbTextCompare)
+    If startPos = 0 Then Exit Function
+    endPos = InStr(startPos + Len(startMark), sourceStr, endMark, vbTextCompare)
+    If endPos = 0 Then Exit Function
+    ExtractStrBetween = Trim(Mid(sourceStr, startPos + Len(startMark), endPos - (startPos + Len(startMark))))
+    '清理提取内容中的换行符
+    ExtractStrBetween = Replace(ExtractStrBetween, vbCrLf, "")
+    ExtractStrBetween = Replace(ExtractStrBetween, vbCr, "")
+    ExtractStrBetween = Replace(ExtractStrBetween, vbLf, "")
+    ExtractStrBetween = Trim(ExtractStrBetween)
+End Function
+
+'COC报告保存为PDF
+Sub COC报告保存为PDF()
+    Dim wjmname As String
+    Dim docText As String, result As String
+    docText = ActiveDocument.Content.Text
+    wjmname = ExtractStrBetween(docText, "产品型号:", "系列") & "祥企印刷COC"
+    
+    '清理文件名中的换行符
+    wjmname = Replace(wjmname, vbCrLf, "")
+    wjmname = Replace(wjmname, vbCr, "")
+    wjmname = Replace(wjmname, vbLf, "")
+    wjmname = Trim(wjmname)
+    
+    ChangeFileOpenDirectory ActiveDocument.path
+    With Dialogs(wdDialogFileSaveAs)
+        .Name = wjmname & ".pdf"
+        .Format = wdFormatPDF
+        .Show
+    End With
+End Sub

@@ -1,0 +1,10 @@
+﻿'获取桌面文件夹的路径
+Sub GetThePathOfTheDesktopFolder()
+    Dim oWShell
+    Set oWShell = CreateObject("WScript.Shell")
+    With oWShell
+        sDesktopPath = .SpecialFolders("Desktop")
+        MsgBox sDesktopPath
+    End With
+End Sub
+

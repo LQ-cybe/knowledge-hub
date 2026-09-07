@@ -1,0 +1,27 @@
+'保存指定目录下的xlam文件
+Sub SaveAsXLAM()
+    On Error GoTo ErrHandle
+    
+    ' 关闭弹窗提示
+    Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    
+    ' 指定保存路径（可自行修改）
+    Dim savePath As String
+    savePath = "C:\Users\LQ\AppData\Roaming\Microsoft\AddIns\我的插件l.xlam"   ' 改成你要的路径
+    
+    ' 另存为加载宏
+    ThisWorkbook.SaveAs fileName:=savePath, FileFormat:=xlOpenXMLAddIn
+    
+    ' 恢复显示
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+    
+    Exit Sub
+
+ErrHandle:
+    ' 出错也恢复
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+    MsgBox "保存失败：" & err.Description, vbCritical
+End Sub

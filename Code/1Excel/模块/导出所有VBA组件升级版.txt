@@ -1,0 +1,82 @@
+﻿'导出所有模块和窗体到桌面指定文件夹（【针对当前活动工作簿】不含工作表的代码）
+Sub OPEN_导出所有VBA组件(control As IRibbonControl)
+    Dim vbc As Object    ' 后期绑定，避免VBComponent类型报错
+    Dim strRootPath As String  ' 根文件夹路径
+    Dim strModulePath As String  ' 模块保存路径
+    Dim strFormPath As String    ' 窗体保存路径
+    Dim strFileName As String
+    Dim fso As Object    ' 文件系统对象（后期绑定）
+    Dim activeWB As Object    ' 当前活动工作簿对象
+    Dim exportCount As Integer    ' 统计导出数量
+
+    ' ===== 1. 基础校验 =====
+    ' 检查是否有活动工作簿
+    If ActiveWorkbook Is Nothing Then
+        MsgBox "未打开任何Excel工作簿！请先打开需要导出VBA组件的工作簿", vbCritical, "错误"
+        Exit Sub
+    End If
+    Set activeWB = ActiveWorkbook
+
+    ' 初始化文件系统对象
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    exportCount = 0
+    On Error Resume Next    ' 捕获导出/创建文件夹错误
+
+    ' ===== 2. 设置保存路径（桌面→VBA导出文件） =====
+    strRootPath = fso.BuildPath(CreateObject("WScript.Shell").SpecialFolders("Desktop"), "VBA导出文件\")
+    strModulePath = fso.BuildPath(strRootPath, "模块\")  ' 模块单独存放
+    strFormPath = fso.BuildPath(strRootPath, "窗体\")    ' 窗体单独存放
+
+    ' ===== 3. 自动创建文件夹（封装为内部函数，无需额外Call） =====
+    If Not fso.FolderExists(strRootPath) Then fso.CreateFolder (strRootPath)
+    If Not fso.FolderExists(strModulePath) Then fso.CreateFolder (strModulePath)
+    If Not fso.FolderExists(strFormPath) Then fso.CreateFolder (strFormPath)
+
+    ' ===== 4. 遍历【当前活动工作簿】的所有VBA组件 =====
+    For Each vbc In activeWB.VBProject.VBComponents
+        ' 用数值替代枚举常量（避免引用缺失报错）：
+        ' 1=标准模块(vbext_ct_StdModule)，2=类模块(vbext_ct_ClassModule)，3=用户窗体(vbext_ct_MSForm)
+        Select Case vbc.Type
+            ' 导出标准模块、类模块（保存为 .bas 文件）
+        Case 1, 2
+            strFileName = fso.BuildPath(strModulePath, vbc.Name & ".bas")
+            ' 处理非法文件名（替换特殊字符）
+            strFileName = fso.BuildPath(fso.GetParentFolderName(strFileName), Replace(fso.GetFileName(strFileName), "/\*?|<>", "_"))
+            vbc.Export strFileName
+            If err.Number = 0 Then exportCount = exportCount + 1
+            err.Clear
+
+            ' 导出用户窗体（保存为 .frm 主文件 + .frx 资源文件）
+        Case 3
+            strFileName = fso.BuildPath(strFormPath, vbc.Name & ".frm")
+            ' 处理非法文件名
+            strFileName = fso.BuildPath(fso.GetParentFolderName(strFileName), Replace(fso.GetFileName(strFileName), "/\*?|<>", "_"))
+            vbc.Export strFileName  ' 窗体导出会自动生成 .frm 和 .frx（如有图片等资源）
+            If err.Number = 0 Then exportCount = exportCount + 1
+            err.Clear
+        End Select
+    Next vbc
+
+    ' ===== 5. 导出结果提示 =====
+    If exportCount > 0 Then
+        MsgBox "导出完成！" & vbCrLf & _
+               "共导出 " & exportCount & " 个VBA组件" & vbCrLf & _
+               "模块路径：" & strModulePath & vbCrLf & _
+               "窗体路径：" & strFormPath, vbInformation
+    Else
+        MsgBox "未导出任何VBA组件！" & vbCrLf & _
+               "当前工作簿【" & activeWB.Name & "】无标准模块/类模块/用户窗体", vbExclamation
+    End If
+
+    ' ===== 6. 释放对象 =====
+    Set fso = Nothing
+    Set activeWB = Nothing
+    Set vbc = Nothing
+End Sub
+
+'辅助函数：如果文件夹不存在则创建
+Private Sub CreateFolderIfNotExist(strFolderPath As String)
+    If Dir(strFolderPath, vbDirectory) = "" Then
+        MkDir strFolderPath  ' 创建文件夹
+    End If
+End Sub

@@ -1,0 +1,173 @@
+﻿' 必须放在模块最顶部（所有过程之外）
+#If VBA7 Then
+    Private Declare PtrSafe Function ShowWindow Lib "user32.dll" (ByVal hwnd As LongPtr, ByVal nCmdShow As Long) As Long
+    Private Declare PtrSafe Function GetWindowThreadProcessId Lib "user32.dll" (ByVal hwnd As LongPtr, ByRef lpdwProcessId As LongPtr) As LongPtr
+    Private Declare PtrSafe Function EnumWindows Lib "user32.dll" (ByVal lpEnumFunc As LongPtr, ByVal lParam As LongPtr) As Long
+    Private Declare PtrSafe Function GetCurrentProcessId Lib "kernel32.dll" () As LongPtr
+    Private Declare PtrSafe Function IsWindowVisible Lib "user32.dll" (ByVal hwnd As LongPtr) As Long
+#Else
+    Private Declare Function ShowWindow Lib "user32.dll" (ByVal hwnd As Long, ByVal nCmdShow As Long) As Long
+    Private Declare Function GetWindowThreadProcessId Lib "user32.dll" (ByVal hwnd As Long, ByRef lpdwProcessId As Long) As Long
+    Private Declare Function EnumWindows Lib "user32.dll" (ByVal lpEnumFunc As Long, ByVal lParam As Long) As Long
+    Private Declare Function GetCurrentProcessId Lib "kernel32.dll" () As Long
+    Private Declare Function IsWindowVisible Lib "user32.dll" (ByVal hwnd As Long) As Long
+#End If
+
+' 全局变量：供枚举窗口回调函数使用
+#If VBA7 Then
+    Private targetPID As LongPtr
+    Private cdrHwnd As LongPtr
+#Else
+    Private targetPID As Long
+    Private cdrHwnd As Long
+#End If
+
+
+' 核心函数：最小化当前CorelDRAW窗口
+' 返回值：True=成功最小化，False=失败
+Private Function MinimizeCDRWindow() As Boolean
+    MinimizeCDRWindow = False ' 默认为失败
+    cdrHwnd = 0 ' 重置窗口句柄
+    
+    ' 获取当前CorelDRAW进程ID
+    targetPID = GetCurrentProcessId()
+    
+    ' 枚举所有窗口，找到当前进程的可见主窗口
+    EnumWindows AddressOf EnumWindowsProc, 0
+    
+    ' 执行最小化并返回结果
+    If cdrHwnd <> 0 Then
+        ShowWindow cdrHwnd, 6 ' 6=SW_MINIMIZE
+        MinimizeCDRWindow = True
+    End If
+End Function
+
+
+' 窗口枚举回调函数（内部使用）
+#If VBA7 Then
+    Private Function EnumWindowsProc(ByVal hwnd As LongPtr, ByVal lParam As LongPtr) As LongPtr
+#Else
+    Private Function EnumWindowsProc(ByVal hwnd As Long, ByVal lParam As Long) As Long
+#End If
+    Dim procId As Variant
+    GetWindowThreadProcessId hwnd, procId ' 获取窗口所属进程ID
+    
+    ' 匹配当前进程且窗口可见
+    If procId = targetPID And IsWindowVisible(hwnd) <> 0 Then
+        cdrHwnd = hwnd ' 记录窗口句柄
+        EnumWindowsProc = 0 ' 停止枚举
+    Else
+        EnumWindowsProc = 1 ' 继续枚举
+    End If
+End Function
+
+
+' 主导出函数
+Sub ExportToAI()
+    Dim expopt As StructExportOptions
+    Dim expflt As ExportFilter
+    Dim docName As String
+    Dim desktopPath As String
+    Dim exportPath As String
+
+    ' 检查活动文档
+    If ActiveDocument Is Nothing Then
+        MsgBox "请先打开一个文档", vbExclamation
+        Exit Sub
+    End If
+
+    ' 获取文档名和导出路径
+    docName = Left(ActiveDocument.Name, InStrRev(ActiveDocument.Name, ".") - 1)
+    desktopPath = Environ("USERPROFILE") & "\Desktop\"
+    exportPath = desktopPath & docName & ".ai"
+
+    ' 执行导出
+    Set expopt = CreateStructExportOptions
+    expopt.UseColorProfile = True
+    Set expflt = ActiveDocument.ExportEx(exportPath, cdrAI, cdrAllPages, expopt)
+    
+    With expflt
+        .Version = 9
+        .TextAsCurves = False
+        .PreserveTransparency = True
+        .Finish
+    End With
+
+    ' 调用封装的最小化函数（灵活调用点）
+    If Not MinimizeCDRWindow() Then
+        MsgBox "已导出到：" & vbCrLf & exportPath & vbCrLf & "但未找到窗口进行最小化", vbInformation
+    End If
+End Sub
+
+
+Sub ExportToPDF()
+' Recorded 2025/9/19
+    Dim docName As String
+    Dim desktopPath As String
+    docName = Left(ActiveDocument.Name, InStrRev(ActiveDocument.Name, ".") - 1)
+    With ActiveDocument.PDFSettings
+        .PublishRange = 0    ' CdrPDFVBA.pdfWholeDocument
+        .PageRange = "1"
+        .Author = "Administrator"
+        .Subject = ""
+        .Keywords = ""
+        .BitmapCompression = 2    ' CdrPDFVBA.pdfJPEG
+        .JPEGQualityFactor = 10
+        .TextAsCurves = False
+        .EmbedFonts = True
+        .EmbedBaseFonts = True
+        .TrueTypeToType1 = True
+        .SubsetFonts = True
+        .SubsetPct = 80
+        .CompressText = True
+        .Encoding = 1    ' CdrPDFVBA.pdfBinary
+        .DownsampleColor = True
+        .DownsampleGray = True
+        .DownsampleMono = True
+        .ColorResolution = 200
+        .MonoResolution = 600
+        .GrayResolution = 200
+        .Hyperlinks = True
+        .Bookmarks = True
+        .Thumbnails = False
+        .Startup = 0    ' CdrPDFVBA.pdfPageOnly
+        .ComplexFillsAsBitmaps = False
+        .Overprints = True
+        .Halftones = False
+        .MaintainOPILinks = False
+        .FountainSteps = 256
+        .EPSAs = 0    ' CdrPDFVBA.pdfPostscript
+        .pdfVersion = 0    ' CdrPDFVBA.pdfVersion12
+        .IncludeBleed = False
+        .Bleed = 31750
+        .Linearize = False
+        .CropMarks = False
+        .RegistrationMarks = False
+        .DensitometerScales = False
+        .FileInformation = False
+        .ColorMode = 3    ' CdrPDFVBA.pdfNative
+        '        .UseColorProfile = True
+        .ColorProfile = 1    ' CdrPDFVBA.pdfSeparationProfile
+        .EmbedFilename = ""
+        .EmbedFile = False
+        .JP2QualityFactor = 10
+        .TextExportMode = 0    ' CdrPDFVBA.pdfTextAsUnicode
+        .PrintPermissions = 0    ' CdrPDFVBA.pdfPrintPermissionNone
+        .EditPermissions = 0    ' CdrPDFVBA.pdfEditPermissionNone
+        .ContentCopyingAllowed = False
+        .OpenPassword = ""
+        .PermissionPassword = ""
+        .EncryptType = 2    ' CdrPDFVBA.pdfEncryptTypeAES
+        .OutputSpotColorsAs = 0    ' CdrPDFVBA.pdfSpotAsSpot
+        .OverprintBlackLimit = 95
+        .ProtectedTextAsCurves = True
+    End With
+    desktopPath = Environ("USERPROFILE") & "\Desktop\"
+    ActiveDocument.PublishToPDF desktopPath & docName & ".pdf"
+
+    ' 调用封装的最小化函数（灵活调用点）
+    If Not MinimizeCDRWindow() Then
+        MsgBox "已导出到：" & vbCrLf & exportPath & vbCrLf & "但未找到窗口进行最小化", vbInformation
+    End If
+End Sub
+

@@ -1,0 +1,15 @@
+﻿'将当前工作簿的所有工作表名称修改成A1单元格值的后面4个字符
+Sub RenameSheetsAccordingToA1()
+    Dim ws As Worksheet
+    For Each ws In ThisWorkbook.Worksheets                     '使用For Each循环遍历当前工作簿中的所有工作表
+        '判断当前工作表是否为隐藏状态，如果不是隐藏状态（即Visible属性不等于xlSheetHidden），则进入下面的代码块进行操作
+        If Not ws.Visible = xlSheetHidden Then
+            '定义一个字符串变量namePart，用于存放从当前工作表A1单元格内容中提取的最后4个字符
+            Dim namePart As String
+            '使用Right函数从当前工作表（由ws表示）的A1单元格（Range("A1")）内容中提取最后4个字符，并赋值给namePart变量
+            namePart = Right(ws.Range("A1").Value, 4)
+            '将当前非隐藏工作表（ws）的名称修改为提取出来的4个字符（namePart变量所存储的内容）
+            ws.Name = namePart
+        End If
+    Next ws
+End Sub

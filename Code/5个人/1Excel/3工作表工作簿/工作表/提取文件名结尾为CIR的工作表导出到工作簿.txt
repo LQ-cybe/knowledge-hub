@@ -1,0 +1,47 @@
+﻿'提取文件名结尾为CIR的工作表导出到工作簿
+Sub CopySheetsEndingWithCIR()
+    Dim wbSource As Workbook
+    Dim wbTarget As Workbook
+    Dim ws As Worksheet
+    Dim targetSheetNames() As String
+    Dim sheetCount As Integer
+    Dim i As Integer
+    Dim desktopPath As String
+    ' 设置源工作簿为当前工作簿
+    Set wbSource = ThisWorkbook
+    ' 初始化工作表计数器
+    sheetCount = 0
+    ' 遍历源工作簿的所有工作表，统计以 "CIR" 结尾的工作表数量
+    For Each ws In wbSource.Sheets
+        If Right(ws.Name, 3) = "CIR" Then
+            sheetCount = sheetCount + 1
+        End If
+    Next ws
+    ' 如果没有以 "CIR" 结尾的工作表，给出提示并退出过程
+    If sheetCount = 0 Then
+        MsgBox "当前工作簿中没有名称以 'CIR' 结尾的工作表。", vbInformation
+        Exit Sub
+    End If
+    ' 重新调整数组大小以存储符合条件的工作表名称
+    ReDim targetSheetNames(1 To sheetCount)
+    ' 再次遍历源工作簿的所有工作表，将以 "CIR" 结尾的工作表名称存入数组
+    i = 1
+    For Each ws In wbSource.Sheets
+        If Right(ws.Name, 3) = "CIR" Then
+            targetSheetNames(i) = ws.Name
+            i = i + 1
+        End If
+    Next ws
+    ' 复制符合条件的工作表到新工作簿
+    wbSource.Sheets(targetSheetNames).Copy
+    ' 获取新工作簿（复制后的工作簿）
+    Set wbTarget = ActiveWorkbook
+    ' 获取桌面路径
+    desktopPath = CreateObject("WScript.Shell").SpecialFolders("Desktop")
+    ' 保存新工作簿到桌面
+    wbTarget.SaveAs Filename:=desktopPath & "\CIR_Sheets.xlsx", FileFormat:=xlOpenXMLWorkbook
+    ' 关闭新工作簿
+    wbTarget.Close SaveChanges:=False
+    ' 提示操作完成
+    MsgBox "所有名称以 'CIR' 结尾的工作表已复制到新工作簿并保存到桌面。", vbInformation
+End Sub

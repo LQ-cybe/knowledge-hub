@@ -1,0 +1,60 @@
+'类别=个人常用
+'说明=无说明
+Option Explicit
+
+Sub 按颜色求和()
+On Error Resume Next
+Dim sRng As Range
+Dim cRng As Range
+Dim result As Range
+Dim r As Range
+Dim choice As Integer
+
+Set sRng = Selection
+Dim ncolor As Long
+Dim total As Double
+
+
+choice = Application.InputBox("选择统计方式，0 为按背景颜色统计， 1为按字体颜色统计", "统计方式", Default:=0, Type:=1)
+If choice = 0 Or choice = 1 Then
+
+Else
+    MsgBox "无效选项,必须为0 或者 1"
+Exit Sub
+
+End If
+
+Set cRng = Application.InputBox("选择需要统计的颜色的一个单元格(只需一个单元格)", "选择单元格", Type:=8)
+If cRng Is Nothing Then Exit Sub
+Set cRng = cRng.Cells(1, 1)
+
+If choice = 0 Then  '背景
+    ncolor = cRng.Interior.Color
+Else
+    ncolor = cRng.Font.Color
+End If
+
+
+
+total = 0
+For Each r In sRng
+    If IsNumeric(r.Value) Then
+    
+    If choice = 0 Then  '背景
+        If r.Interior.Color = ncolor Then
+         total = total + CDbl(r.Value)
+        End If
+    Else
+        If r.Font.Color = ncolor Then
+         total = total + CDbl(r.Value)
+        End If
+    End If
+   
+    End If
+Next
+
+Set result = Application.InputBox("选择结果存放位置", "选择单元格", Type:=8)
+If result Is Nothing Then Exit Sub
+result.Value = total
+
+End Sub

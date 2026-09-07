@@ -1,0 +1,34 @@
+﻿'    在当前模块中查找自定义函数过程，并返回是否存在
+Function IsFunctionExistsInCurrentModule(functionName As String) As Boolean
+    Dim codeMod As CodeModule
+    Dim lineCount As Long
+    Dim lineNum As Long
+    Dim lineText As String
+    
+    ' 获取当前模块的代码模块对象
+    Set codeMod = Application.VBE.ActiveCodePane.CodeModule
+    lineCount = codeMod.CountOfLines
+    
+    ' 遍历当前模块中的每一行代码
+    For lineNum = 1 To lineCount
+        lineText = Trim(codeMod.Lines(lineNum, 1))
+        ' 检查是否为函数定义行，并且包含指定的函数名
+        If InStr(1, UCase(lineText), "FUNCTION " & UCase(functionName), vbTextCompare) > 0 Then
+            IsFunctionExistsInCurrentModule = True
+            Exit Function
+        End If
+    Next lineNum
+    
+    IsFunctionExistsInCurrentModule = False
+End Function
+'    调用查找函数
+Sub TestIsFunctionExistsInCurrentModule()
+    Dim functionName As String
+    functionName = "Base34ToDecimal"                           ' 替换为你要检查的函数名
+    
+    If IsFunctionExistsInCurrentModule(functionName) Then
+        MsgBox "函数 " & functionName & " 在当前模块中存在。"
+    Else
+        MsgBox "函数 " & functionName & " 在当前模块中不存在。"
+    End If
+End Sub

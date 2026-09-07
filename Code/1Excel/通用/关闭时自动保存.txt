@@ -1,0 +1,5 @@
+'开启关闭时自动保存
+Sub Auto_Close()
+    ThisWorkbook.Save
+    ThisWorkbook.Saved = True
+End Sub

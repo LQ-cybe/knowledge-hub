@@ -1,0 +1,62 @@
+﻿'统一图表尺寸并导出图片: 含嵌入图表和独立图表
+Sub ExportAllChartsToImages()
+    Dim ws As Worksheet
+    Dim cht As Chart
+    Dim objChart As ChartObject
+    Dim folderPath As String
+    Dim chartCount As Integer
+    Dim totalCount As Integer
+    Dim sheetIndex As Integer
+    
+    '选择保存目录
+    With Application.FileDialog(msoFileDialogFolderPicker)
+        .Title = "请选择图片保存目录"
+        .InitialFileName = Environ("USERPROFILE") & "\Desktop\"
+        If .Show = -1 Then
+            folderPath = .SelectedItems(1)
+            If Right(folderPath, 1) <> "\" Then
+                folderPath = folderPath & "\"
+            End If
+        Else
+            MsgBox "未选择保存目录，操作取消！", vbExclamation
+            Exit Sub
+        End If
+    End With
+    
+    Application.ScreenUpdating = False
+    totalCount = 0
+    '第一部分：导出独立图表工作表
+    For Each cht In ThisWorkbook.Charts
+        chartCount = chartCount + 1
+        totalCount = totalCount + 1
+        cht.Export Filename:=folderPath & cht.Name & "_01.png", FilterName:="PNG"
+        Debug.Print "图表工作表【" & cht.Name & "】已导出"
+    Next cht
+    '第二部分：导出嵌入工作表的图表
+    For Each ws In ThisWorkbook.Worksheets
+        chartCount = 0
+        
+        For Each objChart In ws.ChartObjects
+            chartCount = chartCount + 1
+            
+            '调整图表尺寸后导出
+            With objChart.Chart
+                .Parent.Width = 400
+                .Parent.Height = 300
+                .Export Filename:=folderPath & ws.Name & "_" & Format(chartCount, "00") & ".png", _
+                        FilterName:="PNG"
+            End With
+            
+            totalCount = totalCount + 1
+        Next objChart
+    Next ws
+    
+    Application.ScreenUpdating = True
+    If totalCount > 0 Then
+        MsgBox "导出完成！" & vbCrLf & _
+               "共导出 " & totalCount & " 个图表" & vbCrLf & _
+               "保存位置：" & folderPath, vbInformation, "导出成功"
+    Else
+        MsgBox "未找到任何图表！", vbExclamation, "导出失败"
+    End If
+End Sub

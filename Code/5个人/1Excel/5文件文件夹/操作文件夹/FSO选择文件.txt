@@ -1,0 +1,7 @@
+﻿Set fso = CreateObject("Scripting.FileSystemObject")
+strfile = Application.InputBox("请输入文件的完整名称:", "请输入文件的完整名称:", , , , , , 2)
+If fso.fileexists(strfile) Then
+  MsgBox strfile & " :存在"
+Else
+  MsgBox strfile & " :不存在"
+End If

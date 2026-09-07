@@ -1,0 +1,18 @@
+﻿'此案例假设A2:B13中A列为姓名，B列为成绩，现在要按照B列的成绩升序排列
+Sub SortArray()
+    Dim arr, temp
+    arr = Range("a2:b13")
+    Dim i%, j%, k%
+    For i = 1 To UBound(arr)
+        For j = i + 1 To UBound(arr)
+            If arr(j, 2) < arr(i, 2) Then
+                For k = 1 To UBound(arr, 2)
+                    temp = arr(i, k)
+                    arr(i, k) = arr(j, k)
+                    arr(j, k) = temp
+                Next
+            End If
+        Next j
+    Next i
+    [A2].Resize(12, 2) = arr
+End Sub

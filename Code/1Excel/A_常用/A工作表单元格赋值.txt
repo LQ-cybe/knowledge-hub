@@ -1,0 +1,1 @@
+﻿ThisWorkbook.sheets("CSSZ").[A2] = CheckBox2.value

@@ -1,0 +1,79 @@
+Sub DCSJA()     '单序列号数据
+    Application.DisplayAlerts = False       '屏蔽提示窗口，比如保存时直接保存不弹出提示窗口直接保存
+    Application.ScreenUpdating = False     '关闭屏幕刷新
+'    Application.Calculation = xlAutomatic
+    Sheets("单变码").Unprotect Password:="123456"
+    '    解除工作表的保护状态，密码为123456
+'    ActiveSheet.ListObjects("SJBDM").Resize Range("$A$1:$A$5")
+    Range("A:A").ClearContents
+    ActiveSheet.ListObjects.Add(xlSrcRange, Range("$A$1:$A$" & 1 + Range("HHHH")), , xlYes).Name = "DSJ"
+'    创建表
+    Range("A1").Value = "A"
+    Range("A2").Value = "=$C$1&REPT(0,$I$1-LEN($F$3+(ROW()-1)))&$F$3+(ROW()-1)&$F$1"
+'    Range("B2").Value = "=$D$3&$D$2&REPT(0,$J$1-LEN($G$3+(ROW()-1)))&$G$3+(ROW()-1)&$G$1"
+    
+'    ActiveSheet.ListObjects("SJBDM").Resize Range("$A$1:$A$" & 1 + Range("HHHH"))
+'    '    动态调整表格的范围：将表格中自定义名称HHHH名称的值+1赋值给表格的行数值
+    Columns("A:A").Select
+    Selection.Copy
+    Workbooks.Add
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+    Application.CutCopyMode = False
+    ChDir "C:\Users\Administrator\Desktop"
+    ActiveWorkbook.SaveAs Filename:="C:\Users\Administrator\Desktop\单序列号数据.txt", _
+        FileFormat:=xlUnicodeText, CreateBackup:=False
+    Application.DisplayAlerts = False
+    ActiveWindow.Close
+    Application.DisplayAlerts = False
+    '    屏蔽提示窗口
+    Range("C1").Select
+    '    将光标定位到C1单元格
+    
+    Sheets("单变码").Protect Password:="123456"
+    '    将工作表设置为保护状态，密码为123456
+    Application.DisplayAlerts = True            '开启提示窗口，比如保存时弹出的提示窗口
+    Application.ScreenUpdating = True           '开启屏幕刷新
+    MsgBox "导出成功，数据已保存至桌面！"
+End Sub
+
+
+Sub DCSJ()      '双列序列号数据
+    Application.DisplayAlerts = False       '屏蔽提示窗口，比如保存时直接保存不弹出提示窗口直接保存
+    Application.ScreenUpdating = False     '关闭屏幕刷新
+'    Application.Calculation = xlAutomatic
+    Sheets("双变码").Unprotect Password:="123456"
+'    解除工作表的保护状态，密码为123456
+'    ActiveSheet.ListObjects("SJBSM").Resize Range("$A$1:$B$5")
+    Range("A:B").ClearContents
+    ActiveSheet.ListObjects.Add(xlSrcRange, Range("$A$1:$A$" & 1 + Range("HHHHF")), , xlYes).Name = "SSJ"
+'    创建表
+    Range("A1").Value = "A"
+    Range("B1").Value = "B"
+    Range("A2").Value = "=$D$1&REPT(0,$J$1-LEN($G$5+(ROW()-1)))&$G$5+(ROW()-1)&$G$1"
+    Range("B2").Value = "=$D$3&REPT(0,$J$1-LEN($G$5+(ROW()-1)))&$G$5+(ROW()-1)&$G$3"
+
+'    ActiveSheet.ListObjects("SJBSM").Resize Range("$A$1:$B$" & 1 + Range("HHHHF"))
+''    动态调整表格的范围：将表格中自定义面材HHHH名称的值+1赋值给表格的行数值
+    Columns("A:B").Select
+    Selection.Copy
+    Workbooks.Add
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+    Application.CutCopyMode = False
+    ChDir "C:\Users\Administrator\Desktop"
+    ActiveWorkbook.SaveAs Filename:="C:\Users\Administrator\Desktop\双序列号数据.txt", _
+        FileFormat:=xlUnicodeText, CreateBackup:=False
+        Application.DisplayAlerts = False
+    ActiveWindow.Close
+    Application.DisplayAlerts = False
+'    屏蔽提示窗口
+    Range("D1").Select
+'    将光标定位到D1单元格
+
+    Sheets("双变码").Protect Password:="123456"
+'    将工作表设置为保护状态，密码为123456
+    Application.DisplayAlerts = True            '开启提示窗口，比如保存时弹出的提示窗口
+    Application.ScreenUpdating = True           '开启屏幕刷新
+    MsgBox "导出成功，数据已保存至桌面！"
+End Sub

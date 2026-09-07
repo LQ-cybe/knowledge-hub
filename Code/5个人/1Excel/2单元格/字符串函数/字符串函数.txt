@@ -1,0 +1,11 @@
+﻿Trim(String) '去掉string左右两端空白
+LTrim(String) '去掉string左端空白
+RTrim(String) '去掉string右端空白
+Len(String) '计算string长度
+Left(String, x) '取string左段x个字符组成的字符串
+Right(String, x) '取string右段x个字符组成的字符串
+Mid(String, start, x) '取string从start位开始的x个字符组成的字符串
+UCase(String) '转换为大写
+LCase(String) '转换为小写
+Space(x) '返回x个空白的字符串
+Asc(String) '返回一个 integer，代表字符串中首字母的字符代码

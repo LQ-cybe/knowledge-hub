@@ -1,0 +1,7 @@
+Function IsJiaoJi(a1, a2, b1, b2) As Boolean
+    Dim qbegin, qend, qlen
+    If a1 < b1 Then qbegin = b1 Else qbegin = a1
+    If a2 < b2 Then qend = a2 Else qend = b2
+    qlen = qend - qbegin
+    If qlen > 0 Then IsJiaoJi = True
+End Function

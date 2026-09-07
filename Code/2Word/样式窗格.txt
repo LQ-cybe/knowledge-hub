@@ -1,0 +1,13 @@
+﻿'切换文字样式窗格的显示状态
+Sub OpenStylesPane_Simple()
+    On Error Resume Next
+    With Application.TaskPanes(wdTaskPaneFormatting)
+        If .Visible Then
+            .Visible = False    ' 打开→关闭
+        Else
+            .Visible = True    ' 关闭→打开
+            Application.CommandBars("Styles").Position = msoBarRight
+        End If
+    End With
+    On Error GoTo 0
+End Sub

@@ -1,0 +1,13 @@
+'name=批量保护工作表
+'officetype=excel,et
+'category=工作簿
+'description=批量保护当前工作簿中所有工作表（可选密码）
+
+Public Sub ProtectAllSheets()
+    Dim sh As Worksheet, pwd As String
+    pwd = InputBox("输入密码（留空则无密码）：", "保护工作表")
+    For Each sh In ThisWorkbook.Worksheets
+        sh.Protect Password:=pwd
+    Next sh
+    MsgBox "已保护全部工作表", vbInformation
+End Sub

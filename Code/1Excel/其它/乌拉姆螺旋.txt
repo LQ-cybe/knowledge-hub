@@ -1,0 +1,75 @@
+﻿Option Explicit
+
+' 主过程：生成乌拉姆螺旋（以选中单元格为中心，1-100）
+Sub GenerateUlamSpiral()
+' 1. 声明所有变量（核心修复：补充缺失的变量声明）
+    Dim centerCell As Range
+    Dim centerRow As Long, centerCol As Long
+    Dim currRow As Long, currCol As Long
+    Dim maxNum As Integer
+    Dim directions As Variant
+    Dim dirIndex As Integer, step As Integer, dirCount As Integer
+    Dim num As Integer
+    Dim i As Integer    ' 修复：声明循环变量i
+
+    ' 2. 校验选中的单元格（必须是单个单元格）
+    If Selection.Count <> 1 Then
+        MsgBox "请选中**单个单元格**作为螺旋的中心！", vbExclamation
+        Exit Sub
+    End If
+
+    ' 3. 初始化中心位置
+    Set centerCell = Selection
+    centerRow = centerCell.Row
+    centerCol = centerCell.Column
+    currRow = centerRow    ' 当前行（初始=中心行）
+    currCol = centerCol    ' 当前列（初始=中心列）
+
+    ' 4. 配置参数：终止数字（可修改）
+    maxNum = 300    ' 生成1到100的序号
+
+    ' 5. 填充中心数字1
+    Cells(currRow, currCol).Value = 1
+    Cells(currRow, currCol).Interior.ColorIndex = xlNone    ' 1不是质数，清空颜色
+
+    ' 6. 定义乌拉姆螺旋的方向（右→上→左→下，循环）
+    ' 格式：Array(行变化量, 列变化量)
+    directions = Array( _
+                     Array(0, 1), _
+                     Array(-1, 0), _
+                     Array(0, -1), _
+                     Array(1, 0))
+    dirIndex = 0    ' 初始方向：右
+    step = 1    ' 初始移动步数
+    dirCount = 0    ' 记录已走的方向数（每2个方向步数+1）
+    num = 2    ' 下一个要填充的数字
+
+    ' 7. 循环生成螺旋（容错：防止超出工作表范围）
+    On Error Resume Next
+    Do While num <= maxNum
+        ' 按当前方向走step步
+        For i = 1 To step
+            ' 更新当前位置
+            currRow = currRow + directions(dirIndex)(0)
+            currCol = currCol + directions(dirIndex)(1)
+
+            ' 填充数字
+            Cells(currRow, currCol).Value = num
+
+            num = num + 1
+            If num > maxNum Then Exit Do
+        Next i
+
+        ' 切换方向（循环右→上→左→下）
+        dirIndex = (dirIndex + 1) Mod 4
+        dirCount = dirCount + 1
+
+        ' 每走2个方向，移动步数+1（乌拉姆螺旋的核心规则）
+        If dirCount Mod 2 = 0 Then
+            step = step + 1
+        End If
+    Loop
+    On Error GoTo 0
+
+    MsgBox "乌拉姆螺旋已生成（1到" & maxNum & "）！质数已自动填充绿色。", vbInformation
+End Sub

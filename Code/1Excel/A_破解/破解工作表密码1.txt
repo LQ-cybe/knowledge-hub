@@ -1,0 +1,17 @@
+Sub UnProtct()
+    MsgBox "破解提示：当要求输入密码时请点击“取消”！"
+    Application.DisplayAlerts = False
+    On Error Resume Next
+    Dim sht As Worksheet
+    For Each sht In Worksheets
+        With sht
+            .Protect DrawingObjects:=True, Contents:=True, Scenarios:=True, AllowFiltering:=True, AllowUsingPivotTables:=True
+            .Protect DrawingObjects:=False, Contents:=True, Scenarios:=False, AllowFiltering:=True, AllowUsingPivotTables:=True
+            .Protect DrawingObjects:=True, Contents:=True, Scenarios:=False, AllowFiltering:=True, AllowUsingPivotTables:=True
+            .Protect DrawingObjects:=False, Contents:=True, Scenarios:=True, AllowFiltering:=True, AllowUsingPivotTables:=True
+            .Unprotect
+        End With
+    Next
+    Application.DisplayAlerts = True
+    MsgBox "Excel工作表保护密码已被破解！"
+End Sub

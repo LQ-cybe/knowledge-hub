@@ -1,0 +1,20 @@
+    '修改模块的名称；必须引用：Microsoft Visual Basic for Applications Extensibility 引用
+Sub RenameModule(OldName As String, NewName As String)
+    On Error Resume Next
+    
+    Dim vbComp As VBComponent
+    Set vbComp = Application.VBE.ActiveVBProject.VBComponents(OldName)
+    
+    If vbComp Is Nothing Then
+        MsgBox "模块 '" & OldName & "' 不存在！", vbExclamation
+        Exit Sub
+    End If
+    
+    vbComp.Name = NewName
+    
+    MsgBox "模块 '" & OldName & "' 已重命名为 '" & NewName & "'", vbInformation
+End Sub
+    '调用修改模块名称过程
+Sub a()
+    RenameModule "模块2", "yrNewModuleName"
+End Sub

@@ -1,0 +1,55 @@
+﻿    '    提取表的第一条记录和最后一条记录，追加到另外一个表中
+Sub CopyFirstAndLastRecords()
+    Dim db As DAO.Database
+    Dim sourceTable As DAO.Recordset
+    Dim destTable As DAO.Recordset
+    Dim sql As String
+    
+    ' 设置数据库对象
+    Set db = CurrentDb
+    
+    ' 打开源表记录集
+    Set sourceTable = db.OpenRecordset("tbl_单列流水码", dbOpenDynaset)
+    
+    ' 检查源表是否为空
+    If sourceTable.recordCount = 0 Then
+        MsgBox "tbl_单列流水码为空，没有记录可复制。"
+        sourceTable.Close
+        Set sourceTable = Nothing
+        Set db = Nothing
+        Exit Sub
+    End If
+    
+    ' 移动到第一条记录
+    sourceTable.MoveFirst
+    
+    ' 打开目标表记录集
+    Set destTable = db.OpenRecordset("tbl_单_导出记录", dbOpenDynaset)
+    
+    ' 追加第一条记录
+    destTable.AddNew
+    Dim field As DAO.field
+    For Each field In sourceTable.Fields
+        destTable.Fields(field.Name).Value = sourceTable.Fields(field.Name).Value
+    Next field
+    destTable.Update
+    
+    ' 移动到最后一条记录
+    sourceTable.MoveLast
+    
+    ' 追加最后一条记录
+    destTable.AddNew
+    For Each field In sourceTable.Fields
+        destTable.Fields(field.Name).Value = sourceTable.Fields(field.Name).Value
+    Next field
+    destTable.Update
+    
+    ' 关闭记录集和数据库对象
+    sourceTable.Close
+    destTable.Close
+    Set sourceTable = Nothing
+    Set destTable = Nothing
+    Set db = Nothing
+    
+    MsgBox "第一条记录和最后一条记录已成功复制到目标表。"
+End Sub

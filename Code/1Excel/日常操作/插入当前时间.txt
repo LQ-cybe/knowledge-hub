@@ -1,0 +1,8 @@
+'name=插入当前时间
+'officetype=excel,et
+'category=个人常用
+'description=在活动单元格插入当前日期时间
+
+Public Sub InsertTimestamp()
+    ActiveCell.Value = Format(Now, "yyyy-mm-dd hh:nn:ss")
+End Sub

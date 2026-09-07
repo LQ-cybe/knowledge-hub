@@ -1,0 +1,45 @@
+﻿    ' 此过程用于在除“目录”工作表外的所有工作表中生成返回目录的按钮
+Sub 生成返回目录按钮()
+    Dim currentSheet As Worksheet
+    Dim returnButton As Button
+    Dim buttonLeft As Double
+    Dim buttonTop As Double
+    Dim buttonWidth As Double
+    Dim buttonHeight As Double
+    ' 定义按钮的宽度和高度
+    buttonWidth = 60
+    buttonHeight = 20
+    ' 遍历工作簿中的所有工作表
+    For Each currentSheet In ThisWorkbook.Worksheets
+        ' 排除“目录”工作表
+        If currentSheet.Name <> "目录" Then
+            ' 计算按钮的左上角位置，这里将按钮放置在B2单元格处
+            buttonLeft = currentSheet.Cells(2, 2).Left
+            buttonTop = currentSheet.Cells(2, 2).Top
+            ' 在当前工作表中添加按钮
+            Set returnButton = currentSheet.Buttons.Add(buttonLeft, buttonTop, buttonWidth, buttonHeight)
+            With returnButton
+                ' 设置按钮上显示的文本
+                .Caption = "返回目录"
+                ' 设置按钮点击时执行的宏
+                .OnAction = "返回目录"
+            End With
+        End If
+    Next currentSheet
+End Sub
+    ' 此过程用于为控件添加返回“目录”工作表的超链接
+Sub 返回目录()
+    Dim targetSheet As Worksheet
+    ' 尝试查找“目录”工作表
+    On Error Resume Next
+    Set targetSheet = ThisWorkbook.Sheets("目录")
+    On Error GoTo 0
+    ' 检查“目录”工作表是否存在
+    If Not targetSheet Is Nothing Then
+        ' 选择“目录”工作表
+        targetSheet.Select
+    Else
+        ' 如果“目录”工作表不存在，弹出提示框
+        MsgBox "未找到名为 '目录' 的工作表。", vbExclamation, "错误"
+    End If
+End Sub

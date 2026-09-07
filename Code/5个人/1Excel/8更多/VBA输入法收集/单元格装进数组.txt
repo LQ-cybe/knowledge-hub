@@ -1,0 +1,10 @@
+Function Range2Array(ByVal rng As Range)
+    Dim ar()
+    If rng.Count > 1 Then
+        ar = rng.Value
+    Else
+        ReDim ar(1 To 1, 1 To 1)
+        ar(1, 1) = rng.Value
+    End If
+    Range2Array = ar
+End Function

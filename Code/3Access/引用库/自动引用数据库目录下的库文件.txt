@@ -1,0 +1,25 @@
+﻿'自动引用数据库目录下的库文件
+Sub AddLibraryReference()
+    Dim ref As Object
+    Dim libraryPath As String
+    ' 获取当前数据库的路径
+    libraryPath = CurrentProject.Path & "\RDPLib.ucl"
+    
+    ' 检查引用是否已存在
+    For Each ref In References
+        If ref.FullPath = libraryPath Then
+            Debug.Print "库引用已存在"
+            Exit Sub
+        End If
+    Next ref
+    
+    ' 如果引用不存在，则添加引用
+    On Error Resume Next
+    References.AddFromFile libraryPath
+    On Error GoTo 0
+    If Err.Number = 0 Then
+        Debug.Print "库引用已成功添加"
+    Else
+        Debug.Print "添加库引用时出错: " & Err.Description
+    End If
+End Sub

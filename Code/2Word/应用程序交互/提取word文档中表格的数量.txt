@@ -1,0 +1,24 @@
+﻿    '提取word文档中表格的数量
+Sub ReadWordTableCount()
+'        Wordwjm = "2024"                                       '文件名称
+'        MyPath = ThisWorkbook.Path & "\"                           '文件夹路径
+'        MyName = MyPath & Wordwjm & ".docx"                 '文件夹中文档名称
+    
+    Dim wordApp As Object
+    Dim wordDoc As Object
+    Dim filePath As String
+    '设置Word文件的路径
+    filePath = MyName                                          '替换为实际的Word文件路径
+    '创建Word应用程序对象
+    Set wordApp = CreateObject("Word.Application")
+    wordApp.Visible = False                                    '可设置为False使其后台运行
+    '打开Word文档
+    Set wordDoc = wordApp.Documents.Open(filePath)
+    '获取表格个数
+    tableCount = wordDoc.Tables.Count
+    '关闭Word文档并退出Word应用程序
+    wordDoc.Close
+    wordApp.Quit
+    '在Excel中显示表格个数
+    MsgBox "该Word文件中表格的个数为：" & tableCount
+End Sub

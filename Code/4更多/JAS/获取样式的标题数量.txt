@@ -1,0 +1,48 @@
+﻿Function GetTitle3Count() As Long
+    Application.ScreenUpdating = False
+    Dim wdApp As Object
+    Dim wdDoc As Object
+    Dim para As Object
+    Dim title3Count As Long
+    Dim titleStyle As String
+   '定义标题样式名称变量，方便修改
+    titleStyle = "标题 3"
+
+    On Error Resume Next
+   '尝试获取已打开的Word应用程序实例
+    Set wdApp = GetObject(, "Word.Application")
+    If wdApp Is Nothing Then
+       '如果未找到，则创建一个新的Word应用程序实例
+        Set wdApp = CreateObject("Word.Application")
+    End If
+    If wdApp Is Nothing Then
+       '如果仍然无法获取Word应用程序实例，给出提示并退出
+        MsgBox "无法启动Word应用程序。请确保已安装Word。"
+        Exit Function
+    End If
+    On Error GoTo 0
+
+   '假设当前活动文档为目标文档
+    Set wdDoc = wdApp.ActiveDocument
+    If wdDoc Is Nothing Then
+       '如果无法获取活动文档，给出提示并退出
+        MsgBox "无法获取当前活动文档。"
+        wdApp.Quit
+        Set wdApp = Nothing
+        Exit Function
+    End If
+
+    For Each para In wdDoc.Paragraphs
+        If para.Style.NameLocal = titleStyle Then
+            title3Count = title3Count + 1
+        End If
+    Next para
+
+    GetTitle3Count = title3Count
+    Debug.Print "当前样式：" & titleStyle & "丨有" & GetTitle3Count & "个"
+    '这里不关闭文档和退出应用程序，因为是当前活动文档，避免影响用户正在进行的操作
+    Set para = Nothing
+    Set wdDoc = Nothing
+    Set wdApp = Nothing
+    Application.ScreenUpdating = True
+End Function

@@ -1,0 +1,27 @@
+﻿'删除工作表代码的整行注释和空行
+Sub 删除工作表代码的整行注释和空行()
+'   Dim oCM As CodeModule
+'   Dim oVC As VBComponent
+'   Dim oCMActive As CodeModule
+   Dim oWK As Worksheet
+   Set oWK = Excel.ThisWorkbook.Worksheets(1)
+   sName1 = oWK.CodeName
+   Set oVC1 = Excel.ThisWorkbook.VBProject.VBComponents(sName1)
+   Set oCM1 = oVC1.CodeModule
+   With oCM1
+        '获取所有的代码行数
+        iLine1 = .CountOfLines
+        '逆序遍历
+        For i = iLine1 To 1 Step -1
+             strCode = .Lines(i, 1)
+            '判断是否是注释
+             If Left(Trim(strCode), 1) = "'" Then
+                   .DeleteLines i, 1
+             End If
+             '判断是否空行
+             If Len(Trim(strCode)) = 0 Then
+                   .DeleteLines i, 1
+             End If
+        Next i
+   End With
+End Sub

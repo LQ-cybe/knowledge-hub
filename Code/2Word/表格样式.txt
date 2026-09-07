@@ -1,0 +1,27 @@
+Attribute VB_Name = "表格样式"
+'统一设置表格格式（水平和垂直居中）
+Sub UniformTableFormatting()
+    Dim tbl As Table
+    Dim cell As cell
+
+    ' 遍历文档中所有表格
+    For Each tbl In ActiveDocument.Tables
+        ' 设置表格整体居中
+        tbl.Rows.Alignment = wdAlignRowCenter
+
+        ' 设置所有单元格内容居中
+        For Each cell In tbl.Range.Cells
+            ' 垂直居中
+            cell.VerticalAlignment = wdCellAlignVerticalCenter
+            ' 水平居中
+            cell.Range.ParagraphFormat.Alignment = wdAlignParagraphCenter
+        Next cell
+
+        ' 设置统一行高
+        tbl.Rows.HeightRule = wdRowHeightAtLeast
+        tbl.Rows.Height = CentimetersToPoints(0.8)
+    Next tbl
+
+'    MsgBox "已完成所有表格格式统一设置！", vbInformation
+End Sub
+

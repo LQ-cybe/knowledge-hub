@@ -1,0 +1,8 @@
+﻿'获取模块列表
+Sub Modulelist()
+    Dim oVC As VBComponent
+    Set oVC = Application.VBE.SelectedVBComponent
+    If Not oVC Is Nothing Then
+        Debug.Print oVC.Name
+    End If
+End Sub

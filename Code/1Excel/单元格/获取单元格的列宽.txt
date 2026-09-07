@@ -1,0 +1,5 @@
+﻿'获取单元格的列宽
+Sub GetColumnWidth()
+Dim r As Range: Set r = Range("A3")
+MsgBox "A3单元格的列宽为：" & r.ColumnWidth
+End Sub

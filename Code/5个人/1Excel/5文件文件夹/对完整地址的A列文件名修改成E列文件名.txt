@@ -1,0 +1,32 @@
+'对完整地址的A列文件名修改成E列文件名
+Sub RenameFiles()
+    Dim lastRow As Long
+    Dim i As Long
+    Dim oldPath As String
+    Dim newPath As String
+    
+    ' 获取数据有效行数，假设数据在 Sheet1，可根据实际工作表名修改
+    lastRow = Sheets("Sheet2").Cells(Rows.Count, "A").End(xlUp).Row
+    
+    For i = 2 To lastRow ' 从第 2 行开始，第 1 行是表头
+        oldPath = Sheets("Sheet2").Cells(i, "A").Value
+        newPath = Sheets("Sheet2").Cells(i, "E").Value
+        
+        ' 检查路径是否为空
+        If oldPath <> "" And newPath <> "" Then
+            On Error Resume Next
+            ' 执行重命名操作
+            Name oldPath As newPath
+            If Err.Number <> 0 Then
+                ' 若重命名失败，在工作表第 F 列记录错误信息
+                Sheets("Sheet2").Cells(i, "F").Value = "重命名失败：" & Err.Description
+            Else
+                ' 重命名成功，可在 F 列记录成功标识（可选）
+                Sheets("Sheet2").Cells(i, "F").Value = "重命名成功"
+            End If
+            On Error GoTo 0
+        End If
+    Next i
+    
+    MsgBox "文件重命名操作完成！", vbInformation
+End Sub

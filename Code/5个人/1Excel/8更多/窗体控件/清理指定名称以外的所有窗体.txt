@@ -1,0 +1,50 @@
+Sub DeleteUserFormsExceptSpecified()
+    Dim vbProj As VBIDE.VBProject
+    Dim vbComp As VBIDE.VBComponent
+    Dim formsCount As Integer
+    Dim excludedForms As Variant
+    Dim formName As String
+    
+    ' 设置要排除的窗体名称（不删除这些窗体）
+    excludedForms = Array("MainForm", "ReportForm", "SettingsForm")
+    ' 修改为您需要保留的窗体名称
+    
+    On Error Resume Next
+    
+    ' 设置对VBA项目的引用
+    Set vbProj = ThisWorkbook.VBProject
+    formsCount = 0
+    
+    ' 遍历所有VBA组件
+    For Each vbComp In vbProj.VBComponents
+        ' 检查是否是窗体对象
+        If vbComp.Type = vbext_ct_MSForm Then
+            formName = vbComp.Name
+            
+            ' 检查是否在排除列表中
+            Dim shouldExclude As Boolean
+            shouldExclude = False
+            For Each exclude In excludedForms
+                If formName = CStr(exclude) Then
+                    shouldExclude = True
+                    Exit For
+                End If
+            Next
+            
+            ' 如果不在排除列表中，则删除
+            If Not shouldExclude Then
+                vbProj.VBComponents.Remove vbComp
+                formsCount = formsCount + 1
+            End If
+        End If
+    Next vbComp
+    
+    ' 显示结果
+    MsgBox "已删除 " & formsCount & " 个窗体对象" & vbCrLf & _
+           "保留的窗体: " & Join(excludedForms, ", "), vbInformation, "操作完成"
+    
+    ' 清理
+    Set vbComp = Nothing
+    Set vbProj = Nothing
+End Sub
+

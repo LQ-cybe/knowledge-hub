@@ -1,0 +1,60 @@
+Public Declare PtrSafe Function GetSystemMetrics Lib "user32" (ByVal nIndex As Long) As Long
+Public Const SM_CXSCREEN = 0
+Public Const SM_CYSCREEN = 1
+Sub 取分辨率()
+ Dim x As Long, y As Long
+ x = GetSystemMetrics(SM_CXSCREEN)
+ y = GetSystemMetrics(SM_CYSCREEN)
+ Debug.Print "您的屏幕分辨率为：" & x & "*" & y
+End Sub
+'
+'
+'参数表
+'参数 类型及说明
+'nIndex Long，常数，指定欲获取的信息；如下表所示
+'nIndex常数设置
+'常数定义 取得信息
+'SM_ARRANGE 设置windows如何排列最小化窗口的一个标志?参考api32.txt中的ARW常数
+'SM_CLEANBOOT 指定启动模式。0=普通模式；1=带网络支持的安全模式
+'SM_CMETRICS 可用系统环境的数量
+'SM_CMOUSEBUTTON 鼠标按钮（按键）的数量。如没有鼠标，就为零
+'SM_CXBORDER, SM_CYBORDER 尺寸不可变边框的大小
+'SM_CXCURSOR, SM_CYCURSOR 标准指针大小
+'SM_CXDLGFRAME, SM_CYDLGFRAME 对话框边框的大小
+'SM_CXDOUBLECLK, SM_CYDOUBLECLK 双击区域的大小（参考注解）
+'SM_CXFRAME, SM_CYFRAME 尺寸可变边框的大小（在win95和nt 4.0中使用SM_C?FIXEDFRAME）
+'SM_CXFULLSCREEN, SM_CYFULLSCREEN 最大化窗口客户区的大小
+'SM_CXHSCROLL, SM_CYHSCROLL 水平滚动条上的箭头大小
+'SM_CXHTHUMB, SM_CYHTHUMB 滚动块在水平滚动条上的大小
+'SM_CXICON, SM_CYICON 标准图标的大小
+'SM_CXICONSPACING, SM_CYICONSPACING 桌面图标之间的间隔距离。在win95和nt 4.0中是指大图标的间距
+'SM_CXMAXIMIZED, SM_CYMAXIMIZED 最大化窗口的默认尺寸
+'SM_CXMAXTRACK, SM_CYMAXTRACK 改变窗口大小时，最大的轨迹宽度
+'SM_CXMENUCHECK, SM_CYMENUCHECK 菜单复选号位图的大小
+'SM_CXMENUSIZE, SM_CYMENUSIZE 菜单栏上的按钮大小
+'SM_CXMIN, SM_CYMIN 窗口的最小尺寸
+'SM_CXMINIMIZED, SM_CYMINIMIZED 最小化的窗口必须填充进去的一个矩形小于或等于SM_C?ICONSPACING
+'SM_CXMINTRACK, SM_CYMINTRACK 窗口的最小轨迹宽度
+'SM_CXSCREEN, SM_CYSCREEN 屏幕大小
+'SM_CXSIZE, SM_CYSIZE 标题栏位图的大小
+'SM_CXSIZEFRAME, SM_CYSIZEFRAME 具有WS_THICKFRAME样式的窗口的大小
+'SM_CXSMICON, SM_CYSMICON 小图标的大小
+'SM_CXSMSIZE, SM_CYSMSIZE 小标题按钮的大小
+'SM_CXVSCROLL, SM_CYVSCROLL 垂直滚动条中的箭头按钮的大小
+'SM_CYCAPTION 窗口标题的高度
+'SM_CYKANJIWINDOW Kanji窗口的大小（Height of Kanji window）
+'SM_CYMENU 菜单高度
+'SM_CYSMCAPTION 小标题的高度
+'SM_CYVTHUMB 垂直滚动条上滚动块的高度
+'SM_DBCSENABLED 如支持双字节则为TRUE
+'SM_DEBUG 如windows的调试版正在运行，则为TRUE
+'SM_MENUDROPALIGNMENT 如弹出式菜单对齐菜单栏项目的左侧，则为零
+'SM_MIDEASTENABLED 允许了希伯来和阿拉伯语
+'SM_MOUSEPRESENT 如安装了鼠标则为TRUE
+'SM_MOUSEWHEELPRESENT 如安装了带轮鼠标则为TRUE；只适用于nt 4.0
+'SM_NETWORK 如安装了网络，则设置位0。其他位保留未用
+'SM_PENWINDOWS 如装载了支持笔窗口的DLL，则表示笔窗口的句柄
+'SM_SECURE 如安装了安全（保密）机制，则为TRUE
+'SM_SHOWSOUNDS 强制视觉提示播放声音
+'SM_SLOWMACHINE 系统速度太慢，但仍在运行中（System is too slow for effective use but is being run anyway）
+'SM_SWAPBUTTON 如左右鼠标键已经交换，则为TRUE

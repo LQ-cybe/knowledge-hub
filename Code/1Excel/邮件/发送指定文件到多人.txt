@@ -1,0 +1,10 @@
+'发送指定文件到多人
+Sub SendMail4() '发送指定路径下工作簿
+Dim aName, strPath As String, wk As Workbook, strTit As String
+aName = Array("Excel@qq.com", "测试@qq.com")
+strTit = "你好，这是测试邮件"
+strPath = ThisWorkbook.Path & "/测试.xlsx"
+Set wk = Workbooks.Open(strPath)
+ActiveWorkbook.SendMail aName, strTit
+ActiveWorkbook.Close False
+End Sub

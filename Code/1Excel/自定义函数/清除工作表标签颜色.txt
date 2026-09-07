@@ -1,0 +1,8 @@
+﻿'清除当前工作簿所有工作表标签的颜色
+Sub ClearSheetTabColors()
+    Dim ws As Worksheet
+    For Each ws In ThisWorkbook.Worksheets
+        ws.Tab.ColorIndex = xlColorIndexNone '将工作表标签颜色索引设置为无颜色，即清除颜色
+    Next ws
+End Sub
+

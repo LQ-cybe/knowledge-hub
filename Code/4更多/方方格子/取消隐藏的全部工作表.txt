@@ -1,0 +1,12 @@
+'类别=工作表
+'说明=取消隐藏的全部工作表
+
+Sub 取消隐藏的全部工作表()
+Dim i As Integer
+For i = 1 To Sheets.Count
+    Sheets(i).Visible = True
+Next i
+End Sub
+
+
+

@@ -1,0 +1,15 @@
+﻿Sub JXPL()
+'在名为 “Sheet1” 的工作表中对指定的数据区域按照 A10 单元格的值进行降序排序操作。
+    ActiveWorkbook.Worksheets("Sheet1").Sort.SortFields.Clear
+    ActiveWorkbook.Worksheets("Sheet1").Sort.SortFields.Add Key:=Range("A10"), _
+        SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:=xlSortNormal
+'        xlDescending 表示降序排列，如果是 xlAscending 则为升序排列
+    With ActiveWorkbook.Worksheets("Sheet1").Sort
+        .SetRange Range("A10:A16")
+        .Header = xlNo
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+End Sub

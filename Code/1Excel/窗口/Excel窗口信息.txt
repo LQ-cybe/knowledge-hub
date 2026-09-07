@@ -1,0 +1,60 @@
+﻿' 诊断Excel 2024窗口类名
+Declare PtrSafe Function FindWindow Lib "user32" Alias "FindWindowA" _
+    (ByVal lpClassName As String, ByVal lpWindowName As String) As LongPtr
+    
+Declare PtrSafe Function EnumWindows Lib "user32" _
+    (ByVal lpEnumFunc As LongPtr, ByVal lParam As LongPtr) As Long
+    
+Declare PtrSafe Function GetClassName Lib "user32" Alias "GetClassNameA" _
+    (ByVal hWnd As LongPtr, ByVal lpClassName As String, ByVal nMaxCount As Long) As Long
+    
+Dim FoundWindows As String
+
+' 枚举所有顶层窗口的回调函数
+Function EnumWindowProc(ByVal hWnd As LongPtr, ByVal lParam As LongPtr) As Long
+    Dim className As String * 256
+    Dim ret As Long
+    Dim windowTitle As String * 256
+    
+    ret = GetClassName(hWnd, className, 255)
+    
+    ' 过滤出Excel相关的窗口
+    If InStr(1, className, "EXCEL", vbTextCompare) > 0 Or _
+       InStr(1, className, "XL", vbTextCompare) > 0 Then
+        FoundWindows = FoundWindows & "句柄: " & hWnd & " 类名: " & className & vbCrLf
+    End If
+    
+    EnumWindowProc = 1 ' 继续枚举
+End Function
+
+Sub DiagnoseExcelWindows()
+    FoundWindows = "Excel相关窗口类名：" & vbCrLf & vbCrLf
+
+    ' 枚举所有窗口
+    EnumWindows AddressOf EnumWindowProc, 0
+
+    ' 显示结果
+    MsgBox FoundWindows, vbInformation, "Excel 2024 窗口诊断"
+
+    ' 尝试直接查找常见的类名
+    Dim hWnd As LongPtr
+    Dim testClasses As Variant
+    Dim i As Integer
+    Dim result As String
+
+    testClasses = Array("XLMAIN", "EXCEL7", "EXCEL6", "EXCEL5", "EXCEL4", _
+                        "XLDESK", "EXCEL", "OMain", "OWorkbook")
+
+    result = "直接查找结果：" & vbCrLf
+
+    For i = LBound(testClasses) To UBound(testClasses)
+        hWnd = FindWindow(testClasses(i), vbNullString)
+        If hWnd <> 0 Then
+            result = result & testClasses(i) & " → 找到 (句柄: " & hWnd & ")" & vbCrLf
+        Else
+            result = result & testClasses(i) & " → 未找到" & vbCrLf
+        End If
+    Next i
+
+    MsgBox result, vbInformation, "类名测试"
+End Sub

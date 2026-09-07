@@ -1,0 +1,20 @@
+﻿'必须先打开窗体
+Sub PrintFormControlsInfo(formName As String)
+    Dim frm As Access.Form
+    Dim ctl As Access.Control
+    
+   ' 根据传入的窗体名称获取窗体对象
+    Set frm = Forms(formName)
+    
+   ' 遍历窗体中的所有控件
+    For Each ctl In frm.Controls
+        Debug.Print "控件名称: " & ctl.Name & ", 控件类型: " & TypeName(ctl)
+    Next ctl
+    
+   ' 释放对象引用
+    Set ctl = Nothing
+    Set frm = Nothing
+End Sub
+Sub TestPrintFormControlsInfo()
+    PrintFormControlsInfo "frm_创建数据"        '将 "YourFormName" 替换为实际的窗体名称
+End Sub

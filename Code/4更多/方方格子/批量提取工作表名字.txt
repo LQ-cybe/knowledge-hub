@@ -1,0 +1,44 @@
+Attribute VB_Name = "A004批量提取工作表名字"
+Option Explicit
+
+'批量提取工作表名字
+Sub ExtractSheetNames()
+    Dim ws As Worksheet
+    Dim newWs As Worksheet
+    Dim i As Integer
+    
+    ' 创建一个新工作表来存放结果
+    On Error Resume Next
+    Set newWs = ActiveWorkbook.Worksheets("SheetNames")
+    On Error GoTo 0
+    
+    ' 如果工作表已存在则删除
+    If Not newWs Is Nothing Then
+        Application.DisplayAlerts = False
+        newWs.Delete
+        Application.DisplayAlerts = True
+    End If
+    
+    ' 添加新工作表
+    Set newWs = ActiveWorkbook.Worksheets.Add(Before:=ThisWorkbook.Worksheets(1))
+    newWs.Name = "SheetNames"
+    
+    ' 设置标题
+    newWs.Range("A1").Value = "序号"
+    newWs.Range("B1").Value = "工作表名称"
+    
+    ' 提取所有工作表名称
+    i = 1
+    For Each ws In ActiveWorkbook.Worksheets
+        If ws.Name <> newWs.Name Then ' 跳过自身
+            newWs.Cells(i + 1, 1).Value = i
+            newWs.Cells(i + 1, 2).Value = ws.Name
+            i = i + 1
+        End If
+    Next ws
+    
+    ' 自动调整列宽
+    newWs.Columns("A:B").AutoFit
+    
+    MsgBox "共提取了 " & i - 1 & " 个工作表名称。", vbInformation
+End Sub

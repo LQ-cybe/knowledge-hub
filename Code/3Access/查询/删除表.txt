@@ -1,0 +1,1 @@
+sqlStatements(i) = "DROP TABLE [" & tableNames(i) & "];"

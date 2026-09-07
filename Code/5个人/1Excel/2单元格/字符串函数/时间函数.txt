@@ -1,0 +1,13 @@
+﻿Now '返回一个 Variant (Date)，根据计算机系统设置的日期和时间来指定日期和时间。
+Date '返回包含系统日期的 Variant (Date)。
+Time '返回一个指明当前系统时间的 Variant (Date)。
+Timer '返回一个 Single，代表从午夜开始到现在经过的秒数。
+Second(Time) '返回一个 Variant (Integer)，其值为 0 到 59 之间的整数，表示一分钟之中的某个秒
+Minute(Time) '返回一个 Variant (Integer)，其值为 0 到 59 之间的整数，表示一小时中的某分钟
+Hour(Time) '返回一个 Variant (Integer)，其值为 0 到 23 之间的整数，表示一天之中的某一钟点
+Day(Date) '返回一个 Variant (Integer)，其值为 1 到 31 之间的整数，表示一个月中的某一日
+Month(Date) '返回一个 Variant (Integer)，其值为 1 到 12 之间的整数，表示一年中的某月
+Year(Date) '返回 Variant (Integer)，包含表示年份的整数。
+Weekday(Date, [firstdayofweek]) '返回一个 Variant (Integer)，包含一个整数，代表某个日期是星期几
+TimeSerial(Hour, Minute, Second) '返回一个 Variant (Date)，包含具有具体时、分、秒的时间。
+DateDiff(interval, date1, date2[, firstdayofweek[, firstweekofyear]]) '返回 Variant (Long) 的值，表示两个指定日期间的时间间隔数目

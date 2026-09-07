@@ -1,0 +1,28 @@
+'把C列单元格的多行内容拆分成单列的，并复制A列对应的编号
+Sub SplitCColumnMultiLine_SyncA()
+    Dim sht As Worksheet
+    Dim lastRow As Long, i As Long, j As Long
+    Dim arrLines As Variant, newRow As Long
+    
+    Set sht = ActiveSheet
+    lastRow = sht.Cells(sht.Rows.Count, "A").End(xlUp).Row
+    newRow = lastRow + 1
+    
+    Application.ScreenUpdating = False
+    Application.Calculation = xlCalculationManual
+    
+    For i = 1 To lastRow
+        If Len(sht.Cells(i, "C").Value) > 0 Then
+            arrLines = Split(sht.Cells(i, "C").Value, vbLf)
+            For j = LBound(arrLines) To UBound(arrLines)
+                sht.Cells(newRow, "A").Value = sht.Cells(i, "A").Value
+                sht.Cells(newRow, "C").Value = Trim(arrLines(j))
+                newRow = newRow + 1
+            Next j
+        End If
+    Next i
+    
+    Application.Calculation = xlCalculationAutomatic
+    Application.ScreenUpdating = True
+    MsgBox "拆分完成！共生成 " & (newRow - lastRow - 1) & " 行新数据"
+End Sub

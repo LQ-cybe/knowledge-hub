@@ -1,0 +1,11 @@
+'添加新记录
+DoCmd.SetWarnings False '屏蔽系统警告
+Me.AllowAdditions = True '允许新增记录
+DoCmd.GoToRecord , , acNewRec     '获得焦点
+Me.序号.SetFocus    '获得焦点
+Me.序号 = DCount("[序号]", "TMP_tbl_材料") + 1   '表中记录数加1
+Me.AllowAdditions = False '不允许新增记录
+Me.品名型号.SetFocus    '获得焦点
+Me.品名型号.Dropdown        '展开组合框
+Me.btnDeleteAll.Enabled = True
+DoCmd.SetWarnings True '屏蔽系统警告

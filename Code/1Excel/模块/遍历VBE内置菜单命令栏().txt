@@ -1,0 +1,19 @@
+﻿Sub 遍历VBE内置菜单命令栏()
+    On Error Resume Next
+    Dim obj As CommandBar
+    Dim oWK As Worksheet
+    Set oWK = ActiveSheet
+    oWK.Cells.Clear
+    i = 2
+    For Each obj In Excel.Application.VBE.CommandBars
+        With oWK
+            obj.Reset
+            .Range("a1:b1") = Array("命令栏名称", "命令栏中文名称")
+            .Cells(i, "a") = obj.Name
+            .Cells(i, "b") = obj.NameLocal
+            i = i + 1
+            '显示可以显示的菜单栏
+            obj.Visible = True
+        End With
+    Next
+End Sub

@@ -1,0 +1,46 @@
+﻿' 函数：将指定范围的数据转换为一维数组
+Function ConvertRangeToArray(targetRange As Range) As Variant
+    Dim dataArray As Variant
+    Dim resultArray() As Variant
+    Dim i As Long, j As Long, k As Long
+    
+    ' 检查范围是否有效
+    If targetRange Is Nothing Then
+        ConvertRangeToArray = Empty
+        Exit Function
+    End If
+    
+    ' 获取范围数据
+    dataArray = targetRange.Value
+    
+    ' 根据范围维度调整数组
+    If targetRange.Cells.Count = 1 Then
+        ' 只有一个单元格
+        ReDim resultArray(1 To 1)
+        resultArray(1) = dataArray(1, 1)
+    ElseIf targetRange.Columns.Count = 1 Then
+        ' 单列多行范围
+        ReDim resultArray(1 To targetRange.Rows.Count)
+        For i = 1 To targetRange.Rows.Count
+            resultArray(i) = dataArray(i, 1)
+        Next i
+    ElseIf targetRange.Rows.Count = 1 Then
+        ' 单行多列范围
+        ReDim resultArray(1 To targetRange.Columns.Count)
+        For j = 1 To targetRange.Columns.Count
+            resultArray(j) = dataArray(1, j)
+        Next j
+    Else
+        ' 多行多列范围 - 转换为一维数组（按行排列）
+        ReDim resultArray(1 To targetRange.Cells.Count)
+        k = 1
+        For i = 1 To targetRange.Rows.Count
+            For j = 1 To targetRange.Columns.Count
+                resultArray(k) = dataArray(i, j)
+                k = k + 1
+            Next j
+        Next i
+    End If
+    
+    ConvertRangeToArray = resultArray
+End Function

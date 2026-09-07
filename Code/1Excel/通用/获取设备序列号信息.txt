@@ -1,0 +1,115 @@
+﻿'获取设备序列号信息
+Public X As String
+Sub GetAndDebugDiskSerial()
+    Dim objWMIService As Object
+    Dim colItems As Object
+    Dim objItem As Object
+    Dim serialNumber As String
+    
+    Set objWMIService = GetObject("winmgmts:\\.\root\cimv2")
+    '查询所有类型的硬盘驱动器
+    Set colItems = objWMIService.ExecQuery("SELECT * FROM Win32_DiskDrive")
+    
+    For Each objItem In colItems
+        serialNumber = objItem.serialNumber
+        '如果获取到序列号，就跳出循环
+        If serialNumber <> "" Then
+            Exit For
+        End If
+    Next
+    X = serialNumber
+    '在立即窗口输出
+    Debug.Print "硬盘序列号: " & serialNumber
+    SimpleEncrypt X, 2
+    Debug.Print X
+End Sub
+Sub GetAndDebugDiskSerial1()
+    Dim objWMIService As Object
+    Dim colItems As Object
+    Dim objItem As Object
+    Dim serialNumber As String
+    
+    On Error Resume Next
+    Set objWMIService = GetObject("winmgmts:\\.\root\cimv2")
+    Set colItems = objWMIService.ExecQuery("SELECT * FROM Win32_DiskDrive")
+    
+    For Each objItem In colItems
+        serialNumber = objItem.serialNumber
+        If serialNumber <> "" Then
+            Exit For
+        End If
+    Next
+    
+    If serialNumber = "" Then
+        Debug.Print "获取硬盘序列号失败"
+    Else
+        Debug.Print "硬盘序列号: " & serialNumber
+    End If
+    On Error GoTo 0
+End Sub
+Sub GetCPUSerialNumber()
+    Dim objWMIService As Object
+    Dim colItems As Object
+    Dim objItem As Object
+    Dim cpuSerial As String
+    
+    Set objWMIService = GetObject("winmgmts:\\.\root\cimv2")
+    Set colItems = objWMIService.ExecQuery("SELECT ProcessorId FROM Win32_Processor")
+    
+    For Each objItem In colItems
+        cpuSerial = objItem.ProcessorId
+        Exit For '通常只取第一个CPU的序列号
+    Next
+    
+    Debug.Print "CPU 序列号: " & cpuSerial
+End Sub
+Sub GetMACAddress()
+    Dim objWMIService As Object
+    Dim colItems As Object
+    Dim objItem As Object
+    Dim macAddress As String
+    
+    Set objWMIService = GetObject("winmgmts:\\.\root\cimv2")
+    Set colItems = objWMIService.ExecQuery("SELECT MACAddress FROM Win32_NetworkAdapter WHERE MACAddress Is Not NULL")
+    
+    For Each objItem In colItems
+        If objItem.macAddress <> "" Then
+            macAddress = objItem.macAddress
+            Exit For '通常只取第一个有效的MAC地址
+        End If
+    Next
+    
+    Debug.Print "MAC 地址: " & macAddress
+End Sub
+Sub GetBIOSSerialNumber()
+    Dim objWMIService As Object
+    Dim colItems As Object
+    Dim objItem As Object
+    Dim biosSerial As String
+    
+    Set objWMIService = GetObject("winmgmts:\\.\root\cimv2")
+    Set colItems = objWMIService.ExecQuery("SELECT SerialNumber FROM Win32_BIOS")
+    
+    For Each objItem In colItems
+        biosSerial = objItem.serialNumber
+        Exit For '通常只取第一个BIOS的序列号
+    Next
+    
+    Debug.Print "BIOS 序列号: " & biosSerial
+End Sub
+Sub GetMotherboardSerialNumber()
+    Dim objWMIService As Object
+    Dim colItems As Object
+    Dim objItem As Object
+    Dim motherboardSerial As String
+    
+    Set objWMIService = GetObject("winmgmts:\\.\root\cimv2")
+    Set colItems = objWMIService.ExecQuery("SELECT SerialNumber FROM Win32_BaseBoard")
+    
+    For Each objItem In colItems
+        motherboardSerial = objItem.serialNumber
+        Exit For '通常只取第一个主板的序列号
+    Next
+    
+    Debug.Print "主板序列号: " & motherboardSerial
+End Sub

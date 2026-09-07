@@ -1,0 +1,22 @@
+Sub jiakong()
+    Dim rng As Range, URng As Range, k As Long
+    On Error GoTo zhi
+    With ActiveSheet.UsedRange
+        Set rng = .Find("", LookIn:=xlValues, lookat:=xlWhole)
+        If Not rng Is Nothing Then
+            fristadd = rng.Address
+            Do
+                If URng Is Nothing Then
+                    Set URng = rng
+                Else
+                    Set URng = Union(URng, rng)
+                End If
+                Set rng = .FindNext(rng)
+                If rng.Address = fristadd Then Exit Do
+            Loop
+        End If
+    End With
+    If Not URng Is Nothing Then URng.ClearContents
+    MsgBox "当前sheet所有『假空』单元格已清除完成。", , "知了"
+zhi:
+End Sub

@@ -1,0 +1,34 @@
+﻿Sub 获取子文件夹路径fso方法()
+    ' 声明变量
+    Dim fso As Object
+    Dim PathSht As String
+    Dim f_num As Object
+    Dim fl As Object
+    Dim i As Long
+    ' 创建FileSystemObject对象
+    Set fso = CreateObject("scripting.filesystemobject")
+    ' 显示文件夹选择对话框
+    With Application.FileDialog(msoFileDialogFolderPicker)
+        ' 如果用户选择了文件夹
+        If .Show Then
+            PathSht = .SelectedItems(1)
+        Else
+            ' 用户取消选择，退出子程序
+            Exit Sub
+        End If
+    End With
+    ' 获取指定文件夹对象
+    Set f_num = fso.getfolder(PathSht)
+    ' 初始化行号
+    i = 1
+    For Each fl In f_num.subfolders
+        ' 将子文件夹的路径写入D列的单元格
+        Cells(i, 4).Value = fl.Name
+        '        Path：文件夹路径，name：文件夹名称
+        i = i + 1
+    Next fl
+    ' 释放对象引用
+    Set fso = Nothing
+    Set f_num = Nothing
+    Set fl = Nothing
+End Sub

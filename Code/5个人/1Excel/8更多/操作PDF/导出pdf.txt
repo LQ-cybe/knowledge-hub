@@ -1,0 +1,25 @@
+﻿'导出为pdf文件
+Sub ExportActiveSheetToPDF()
+    Dim ws As Worksheet
+    '指定要导出的工作表，这里假设是要导出活动工作表
+    Set ws = ActiveSheet
+    '获取并设置PDF文件名
+    Dim filePath As String
+    filePath = ThisWorkbook.Path & "\" & ws.Name & "_out.pdf"
+'    使用工作表的PrintArea属性获取打印区域
+    With ws
+        .PageSetup.CenterFooter = "第&P页/共&N页"
+        If .PageSetup.PrintArea <> "" Then
+            '如果设置了打印区域，则导出该区域
+            .ExportAsFixedFormat Type:=xlTypePDF, _
+                Filename:=filePath, _
+                OpenAfterPublish:=False, _
+                IgnorePrintAreas:=False
+        Else
+            '如果未设置打印区域，则导出整个工作表
+            ExportAsFixedFormat Type:=xlTypePDF, _
+                Filename:=filePath, _
+                OpenAfterPublish:=False
+        End If
+    End With
+End Sub

@@ -1,0 +1,15 @@
+﻿'获取文档的所有属性和值
+Sub GetAllTheAt5555nt()
+    On Error Resume Next
+    Dim oDP As DocumentProperty
+    For Each oDP In Excel.ThisWorkbook.BuiltinDocumentProperties
+        With oDP
+            Debug.Print .Name, .Value
+        End With
+    Next
+     For Each oDP In Excel.ThisWorkbook.CustomDocumentProperties
+        With oDP
+            Debug.Print .Name, .Value
+        End With
+    Next
+End Sub

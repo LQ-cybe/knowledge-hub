@@ -1,0 +1,19 @@
+﻿    Dim cf As Boolean                                          '开关变量,这里是局部变量,只能在本窗体内可见
+Private Sub 产品料号_Change()
+    If Not cf Then Exit Sub
+    Dim txt As String
+    Dim selectedCustomer As String
+'    electedCustomer = Me.客户名称.value
+'    khlh = Trim(Me.客户名称.value)
+    txt = Trim(Me.产品料号.Text)
+    Me.产品料号.RowSource = "Select [产品料号] FROM tbl_产品信息 WHERE   '|' & [产品料号] like '*" & txt & "*'"  '设置匹配规则
+    Me.产品料号.Dropdown
+End Sub
+Private Sub 产品料号_KeyDown(KeyCode As Integer, Shift As Integer)
+    cf = Not (KeyCode = vbKeyUp Or KeyCode = vbKeyDown)        '当用户按下 上下  方向键时,设置开关为关闭状态,避免执行Change事件
+End Sub
+Private Sub Form_Load()                                    '初始化变量
+    cf = True
+    Me.产品料号.AutoExpand = False
+    Me.产品料号.RowSource = "Select [产品料号] FROM tbl_产品信息"
+'Private Sub Form_Load()

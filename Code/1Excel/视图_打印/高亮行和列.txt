@@ -1,0 +1,17 @@
+'高亮行和列。放在ThisWorkbook模块中
+Private Sub Workbook_SheetSelectionChange(ByVal Sh As Object, ByVal Target As Range)
+    Dim iColor As Integer
+    On Error Resume Next
+    Cells.FormatConditions.Delete
+    iColor = 10
+    With Target.EntireRow.FormatConditions
+         .Delete
+         .Add xlExpression, , "TRUE"
+         .Item(1).Interior.ColorIndex = iColor
+         End With
+    With Target.EntireColumn.FormatConditions
+         .Delete
+         .Add xlExpression, , "TRUE"
+         .Item(1).Interior.ColorIndex = iColor
+    End With
+End Sub

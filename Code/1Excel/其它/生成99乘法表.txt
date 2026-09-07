@@ -1,0 +1,9 @@
+﻿'生成99乘法表
+Private Sub Generate99multiplicationtable()
+    Dim i As Integer, j As Integer
+    For i = 1 To 9
+        For j = 1 To i
+            Cells(i, j) = i & "×" & j & "=" & i * j
+        Next j
+    Next
+End Sub

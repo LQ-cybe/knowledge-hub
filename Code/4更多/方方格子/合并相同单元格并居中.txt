@@ -1,0 +1,68 @@
+Attribute VB_Name = "A001合并相同单元格并居中"
+Option Explicit
+
+'合并相同单元格并居中
+Sub MergeSameCellsAndCenter()
+    Dim rng As Range
+    Dim Cell As Range
+    Dim firstAddress As String
+    Dim mergeRange As Range
+    
+    ' 检查是否选中了单元格
+    If Selection Is Nothing Then
+        MsgBox "请先选择一列数据", vbExclamation
+        Exit Sub
+    End If
+    
+    ' 确保只处理单列
+    Set rng = Intersect(Selection, Selection.EntireColumn)
+    If rng Is Nothing Then
+        MsgBox "请只选择一列数据", vbExclamation
+        Exit Sub
+    End If
+    
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False ' 禁止合并提示
+    
+    ' 先取消所有合并单元格
+    rng.UnMerge
+    
+    ' 遍历选中的列
+    Set Cell = rng.Cells(1, 1)
+    firstAddress = Cell.Address
+    Set mergeRange = Cell
+    
+    For Each Cell In rng
+        If Cell.Value <> mergeRange.Cells(1, 1).Value Then
+            ' 合并相同内容的单元格
+            If mergeRange.Cells.Count > 1 Then
+                mergeRange.Merge
+                mergeRange.HorizontalAlignment = xlCenter
+                mergeRange.VerticalAlignment = xlCenter
+            End If
+            Set mergeRange = Cell
+        Else
+            Set mergeRange = Union(mergeRange, Cell)
+        End If
+    Next Cell
+    
+    ' 处理最后一组相同内容
+    If Not mergeRange Is Nothing Then
+        If mergeRange.Cells.Count > 1 Then
+            mergeRange.Merge
+            mergeRange.HorizontalAlignment = xlCenter
+            mergeRange.VerticalAlignment = xlCenter
+        End If
+    End If
+    
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+    MsgBox "合并完成!", vbInformation
+End Sub
+
+
+
+
+
+
+

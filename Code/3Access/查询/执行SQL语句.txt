@@ -1,0 +1,3 @@
+    Dim strSQL As String
+    strSQL = "CREATE TABLE TestTable (ID INT PRIMARY KEY, Name TEXT);"
+    DoCmd.RunSQL strSQL

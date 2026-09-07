@@ -1,0 +1,22 @@
+'修改文档主题颜色
+Sub changeTheme()
+Dim thm As ThemeColorScheme
+Dim wb As Workbook
+Set wb = ThisWorkbook
+Set thm = wb.Theme.ThemeColorScheme
+With thm
+    .Colors(msoThemeDark1) = RGB(0, 0, 0)
+    .Colors(msoThemeLight1) = RGB(255, 255, 255)
+    .Colors(msoThemeDark2) = RGB(92, 89, 80)
+    .Colors(msoThemeLight2) = RGB(250, 250, 250)
+    .Colors(msoThemeAccent1) = RGB(120, 186, 199)
+    .Colors(msoThemeAccent2) = RGB(246, 106, 89)
+    .Colors(msoThemeAccent3) = RGB(162, 207, 41)
+    .Colors(msoThemeAccent4) = RGB(252, 154, 66)
+    .Colors(msoThemeAccent5) = RGB(204, 179, 125)
+    .Colors(msoThemeAccent6) = RGB(183, 112, 157)
+    .Colors(msoThemeHyperlink) = RGB(174, 18, 129)
+    .Colors(msoThemeFollowedHyperlink) = RGB(120, 186, 199)
+    .Save (.Application.TemplatesPath & "Document Themes\Theme Colors\office.xml")
+End With
+End Sub

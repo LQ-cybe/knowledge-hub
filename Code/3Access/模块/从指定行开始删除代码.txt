@@ -1,0 +1,49 @@
+Sub DeleteCodeFromLine()
+    Dim vbComp As Object
+    Dim codeMod As Object
+    Dim startLine As Long
+    Dim totalLines As Long
+    Dim response As VbMsgBoxResult
+    
+    On Error GoTo ErrorHandler
+    
+    ' 获取当前模块
+    Set vbComp = Application.VBE.ActiveVBProject.VBComponents(Application.VBE.ActiveCodePane.CodeModule.Parent.Name)
+    Set codeMod = vbComp.CodeModule
+    
+    ' 获取模块总行数
+    totalLines = codeMod.CountOfLines
+    
+    If totalLines = 0 Then
+        MsgBox "模块为空，没有代码可删除。", vbInformation
+        Exit Sub
+    End If
+    
+    ' 提示用户输入开始删除的行号
+    startLine = Val(InputBox("请输入要开始删除的行号 (当前模块共有 " & totalLines & " 行):", "删除代码"))
+    
+    ' 验证输入
+    If startLine <= 0 Or startLine > totalLines Then
+        MsgBox "无效的行号! 请输入 1 到 " & totalLines & " 之间的数字。", vbExclamation
+        Exit Sub
+    End If
+    
+    ' 确认删除操作
+    response = MsgBox("确定要删除从第 " & startLine & " 行到第 " & totalLines & " 行的所有代码吗?", _
+                      vbYesNo + vbQuestion + vbDefaultButton2, "确认删除")
+    
+    If response = vbNo Then
+        Exit Sub
+    End If
+    
+    ' 删除指定行及之后的所有代码
+    codeMod.DeleteLines startLine, totalLines - startLine + 1
+    
+    MsgBox "已成功删除从第 " & startLine & " 行开始的所有代码。", vbInformation
+    Exit Sub
+    
+ErrorHandler:
+    MsgBox "发生错误: " & Err.Description & vbCrLf & _
+           "错误号: " & Err.Number, vbCritical
+    Exit Sub
+End Sub

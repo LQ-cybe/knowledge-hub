@@ -1,0 +1,7 @@
+﻿'遍历选中的工作表名称
+Sub TraverseTheSelectedWorksheetName()
+    Dim oWK As Worksheet
+    For Each oWK In Excel.ThisWorkbook.Windows(1).SelectedSheets
+        Debug.Print oWK.Name
+    Next
+End Sub

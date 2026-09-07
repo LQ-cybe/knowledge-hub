@@ -1,0 +1,3 @@
+'--------删除第二段至末尾的内容--------
+ActiveDocument.Range(ActiveDocument.Paragraphs(2).Range.Start, ActiveDocument.Range.End).Delete
+ 

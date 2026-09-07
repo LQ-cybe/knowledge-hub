@@ -1,0 +1,11 @@
+'删除行记录，按钮名称：cbtnDelete
+On Error GoTo Err_btnDelete_Click
+DoCmd.SetWarnings False '屏蔽系统警告
+    DoCmd.RunCommand acCmdSelectRecord
+    DoCmd.RunCommand acCmdDeleteRecord
+DoCmd.SetWarnings True '屏蔽系统警告
+Exit_btnDelete_Click:
+    Exit Sub
+Err_btnDelete_Click:
+    MsgBox Err.Description
+    Resume Exit_btnDelete_Click

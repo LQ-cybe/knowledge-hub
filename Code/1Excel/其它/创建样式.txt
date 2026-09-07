@@ -1,0 +1,14 @@
+'创建样式
+Sub ForceCreateHeading3Style()
+    On Error Resume Next
+    Dim styleObj As Style
+    Set styleObj = ActiveDocument.Styles("标题 3")
+    If Not styleObj Is Nothing Then
+        styleObj.Delete
+    End If
+    On Error GoTo 0
+    Set styleObj = ActiveDocument.Styles.Add(Name:="标题 3")
+    If styleObj Is Nothing Then
+        'MsgBox "创建标题 3 样式失败，请检查。"
+    End If
+End Sub

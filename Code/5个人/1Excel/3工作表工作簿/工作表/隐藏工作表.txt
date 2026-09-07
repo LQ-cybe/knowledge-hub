@@ -1,0 +1,4 @@
+﻿'隐藏工作表
+Sub s3()
+  Sheets(2).Visible = True
+End Sub

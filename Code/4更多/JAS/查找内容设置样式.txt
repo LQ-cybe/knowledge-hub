@@ -1,0 +1,27 @@
+﻿'JSX脚本导入后处理2
+'查找包含特定字符串的内容并设置为指定样式
+Sub SetParagraphStyle()
+    ' 关闭屏幕刷新，提高处理性能
+    Application.ScreenUpdating = False
+
+    ' 定义要查找的字符串
+    Dim searchString As String
+    searchString = "onClick = function () {//" ' 请将此处替换为你要查找的实际字符串
+
+    ' 定义自定义样式名称
+    Dim customStyleName As String
+    customStyleName = "标题3" ' 请确保该样式在文档中已经存在
+
+    ' 遍历文档中的每个段落
+    Dim para As Paragraph
+    For Each para In ActiveDocument.Paragraphs
+        ' 检查段落内容是否包含指定字符串
+        If InStr(1, para.Range.text, searchString, vbTextCompare) > 0 Then
+            ' 如果包含指定字符串，则将该段落的样式设置为自定义样式
+            para.Style = customStyleName
+        End If
+    Next para
+
+    ' 打开屏幕刷新
+    Application.ScreenUpdating = True
+End Sub

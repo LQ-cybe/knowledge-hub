@@ -1,0 +1,12 @@
+'10进制转换成指定位数的16进制
+Function Hexadecimal_conversion(Rawdata As Variant, Standarddigit As Integer) As String
+    Dim hexValue As String
+    ' 将Rawdata转换为十六进制字符串
+    hexValue = Hex(Rawdata)
+    ' 如果转换后的十六进制字符串长度小于指定位数，则用 0 补齐
+    If Len(hexValue) < Standarddigit Then
+        Hexadecimal_conversion = String(Standarddigit - Len(hexValue), "0") & hexValue
+    Else
+        Hexadecimal_conversion = hexValue
+    End If
+End Function    

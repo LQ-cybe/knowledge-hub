@@ -1,0 +1,30 @@
+﻿Public Sub 技巧()
+    Dim ws As Worksheet
+    Dim myRange As Range
+    Dim myChart As ChartObject
+    Dim N As Integer, i As Integer
+    Dim myChartType As Variant
+    myChartType = Array(xlLine, xlPie, xlXYScatter, xlPyramidColStacked, xl3DColumn)
+    Set ws = ThisWorkbook.Worksheets("Sheet1")    '指定数据源工作表
+    N = ws.Range("A65536").End(xlUp).Row    '获取数据个数
+    A = "A" & 2 & ":A" & N    'X坐标轴数据源
+    B = "B" & 2 & ":B" & N    'Y坐标轴数据源
+    Set myRange = ws.Range("A" & 1 & ":B" & N)     '图表的数据源
+    For i = 0 To UBound(myChartType)
+        Set myChart = ws.ChartObjects.Add(100, 30, 400, 250)     '创建新图表
+        With myChart
+            .Left = 10 + i * 110
+            .Top = 100
+            .Height = 100
+            .Width = 100
+        End With
+        With myChart.Chart
+            .ChartType = myChartType(i)    '指定图表类型
+            .SetSourceData Source:=myRange, PlotBy:=xlColumns    '指定数据源和绘图方式
+        End With
+        DoEvents
+    Next i
+    Set myRange = Nothing
+    Set myChart = Nothing
+    Set ws = Nothing
+End Sub

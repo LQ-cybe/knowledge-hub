@@ -1,0 +1,18 @@
+'https://www.jianshu.com/p/ac7fd266f48a
+Do While myname <>""
+Set wApp=CreateObject("word.application")		'新建word对象
+	With wApp
+		.Visible False
+		Set WordD=.Documents.Open(mypath&myname)		'打开文档
+		m=m+1
+		contents WordD.Paragraphs(3).Range.Text
+		Range("Al:B1")=Array("客户"，"本金")			'数据的标题栏
+		Cells(m,1)=contents
+		With WordD.Tables (1)
+			Cel1s(m,2)-Replace(.Cell(2,2).Range..Text,"□”，")
+			End With
+		WordD.Close
+		WApp.Quit
+	End With
+myname Dir（）
+loop word =nothing

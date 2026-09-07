@@ -1,0 +1,50 @@
+﻿'将选中的文本对象转曲
+Sub ConvertSelectedTextToCurves()
+    Dim s As Shape
+    Dim textShapes As New Collection
+    Dim i As Integer
+    Dim textCount As Integer
+
+    '检查是否有活动文档
+    If ActiveDocument Is Nothing Then
+        MsgBox "没有打开的文档！"
+        Exit Sub
+    End If
+
+    '检查是否有选中的对象
+    If ActiveSelection.Shapes.Count = 0 Then
+        MsgBox "请先选择要转曲的文本对象！"
+        Exit Sub
+    End If
+
+    textCount = 0
+
+    '遍历选中的所有形状
+    For Each s In ActiveSelection.Shapes
+        '检查形状是否为文本对象（包括美术字和段落文本）
+        If s.Type = cdrTextShape Then
+            textShapes.Add s
+            textCount = textCount + 1
+            '检查是否为标注尺寸文字
+        ElseIf s.Type = cdrLinearDimensionShape Or s.Type = cdrAngularDimensionShape Then
+            '标注尺寸也是文本对象，需要转曲
+            textShapes.Add s
+            textCount = textCount + 1
+        End If
+    Next s
+
+    '如果没有找到文本对象
+    If textCount = 0 Then
+        MsgBox "选中的对象中没有文本对象！"
+        Exit Sub
+    End If
+
+    '转换为曲线
+    For i = 1 To textShapes.Count
+        Set s = textShapes(i)
+        On Error Resume Next    '忽略可能的错误
+        s.ConvertToCurves
+    Next i
+
+    'MsgBox "已完成 " & textCount & " 个选中文本对象的转曲操作！"
+End Sub

@@ -1,0 +1,40 @@
+'自动创建窗体
+'必须引用 Microsoft Visual Basic for Applications Extensibility 5.3
+Sub CreateUserForm()
+    Application.ScreenUpdating = False
+    Dim VBcomp As VBComponent
+    Set VBcomp = ActiveWorkbook.VBProject.VBComponents.Add(vbext_ct_MSForm)  '新增Module1
+    With VBcomp.Properties
+        .Item("Font")("Size").Value = 11
+        .Item("Font")("Name").Value = "微软雅黑"
+        .Item("Font")("Bold").Value = True
+        .Item("BackColor").Value = RGB(254, 253, 253)
+        .Item("BorderColor").Value = RGB(0, 0, 0)
+        .Item("Width").Value = 350
+        .Item("Height").Value = 320
+        .Item("Caption") = "这是自动创建的Caption"
+    End With
+    Dim cmd As CommandButton, tBox As Object
+    For i = 1 To 7
+        Set cmd = VBcomp.Designer.Controls.Add("Forms.CommandButton.1")
+        With cmd
+            .BackStyle = fmBackStyleTransparent
+            .Caption = "AutoButton" & i
+            .ForeColor = RGB(0, 0, 0)
+            .Left = 20
+            .Top = 10 + (i - 1) * 40
+            .Width = 80
+            .Height = 30
+        End With
+        Set tBox = VBcomp.Designer.Controls.Add("Forms.TextBox.1")
+        With tBox
+            .BackStyle = fmBackStyleTransparent
+            .ForeColor = RGB(0, 0, 0)
+            .Left = 120
+            .Top = 12 + (i - 1) * 40
+            .Width = 180
+            .Height = 26
+        End With
+    Next i
+    Application.ScreenUpdating = True
+End Sub

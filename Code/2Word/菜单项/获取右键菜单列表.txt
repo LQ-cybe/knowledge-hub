@@ -1,0 +1,14 @@
+﻿'获取右键菜单列表
+Sub ListRightClickMenuItems()
+    Dim cmdBar As CommandBar
+    Dim ctrl As CommandBarControl
+    Dim msg As String
+    
+    Set cmdBar = Application.CommandBars("Text")
+    msg = "右键菜单项列表：" & vbCrLf
+    For Each ctrl In cmdBar.Controls
+        msg = msg & ctrl.Caption & " (ID: " & ctrl.ID & ")" & vbCrLf
+    Next ctrl
+    MsgBox msg
+End Sub
+

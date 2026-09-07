@@ -1,0 +1,4 @@
+﻿Sub 状态栏显示自定义文本()
+    sText = "现在是" & Format(Now(), "yyyy年mm月dd日 hh:mm:ss")
+    Excel.Application.StatusBar = sText
+End Sub

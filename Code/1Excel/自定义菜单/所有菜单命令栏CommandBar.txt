@@ -1,0 +1,21 @@
+﻿Sub 所有菜单命令栏CommandBar()
+    Dim oCB As CommandBar
+    Dim oWK As Worksheet
+    Set oWK = ActiveSheet
+    oWK.Cells.Clear
+    Dim iCol As Integer
+    arr = Array("命令栏名称", "命令栏中文名称", "是否内置命令栏", "是否可见")
+    iCol = UBound(arr) + 1
+    oWK.Range("a1").Resize(1, iCol) = arr
+    i = 2
+    For Each oCB In Excel.Application.CommandBars
+        With oWK
+            .Cells(i, "a") = oCB.Name
+            .Cells(i, "b") = oCB.NameLocal
+            .Cells(i, "c") = oCB.BuiltIn
+            .Cells(i, "d") = oCB.Visible
+            i = i + 1
+        End With
+    Next
+    oWK.Columns.AutoFit
+End Sub

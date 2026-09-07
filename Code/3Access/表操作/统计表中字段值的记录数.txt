@@ -1,0 +1,4 @@
+﻿'统计表中某个字段的值的记录数
+    Dim recordCount As Long
+    recordCount = DCount("*", "tbl_流水码", "[N] = '000002'")
+    MsgBox "符合条件的记录数为: " & recordCount

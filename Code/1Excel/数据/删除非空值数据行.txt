@@ -1,0 +1,36 @@
+﻿'删除选择区域中非空值单元格的整行数据
+Sub DeleteNonBlankRows()
+    Dim selectedRange As Range
+    Dim cell As Range
+    Dim rowToDelete As Range
+    Dim firstRow As Long
+
+    '获取用户选中的区域
+    On Error Resume Next
+    Set selectedRange = Application.Selection
+    If selectedRange Is Nothing Then
+        MsgBox "未选中任何区域，请重新选择。"
+        Exit Sub
+    End If
+    On Error GoTo 0
+
+    '按行倒序遍历选中区域，避免因删除行导致索引错乱
+    For Each cell In selectedRange.Cells.SpecialCells(xlCellTypeConstants).Cells
+        If cell.Value <> "" Then
+            If rowToDelete Is Nothing Then
+                Set rowToDelete = cell.EntireRow
+                firstRow = cell.row
+            ElseIf cell.row < firstRow Then
+                Set rowToDelete = Union(rowToDelete, cell.EntireRow)
+                firstRow = cell.row
+            Else
+                Set rowToDelete = Union(rowToDelete, cell.EntireRow)
+            End If
+        End If
+    Next cell
+
+    '删除非空白单元格所在行
+    If Not rowToDelete Is Nothing Then
+        rowToDelete.Delete
+    End If
+End Sub

@@ -1,0 +1,17 @@
+'name=删除空行
+'officetype=excel,et
+'category=批量删除
+'description=删除选区内的空行（整行为空则删除）
+
+Public Sub DeleteEmptyRows()
+    Dim r As Range, i As Long, lastRow As Long
+    On Error GoTo err1
+    Set r = Selection
+    lastRow = r.Rows(r.Rows.Count).Row
+    For i = lastRow To r.Row Step -1
+        If Application.WorksheetFunction.CountA(Rows(i)) = 0 Then Rows(i).Delete
+    Next i
+    Exit Sub
+err1:
+    MsgBox "操作失败", vbExclamation
+End Sub

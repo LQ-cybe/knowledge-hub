@@ -1,0 +1,12 @@
+'name=显示所有工作表
+'officetype=excel,et
+'category=工作簿
+'description=显示当前工作簿中所有隐藏的工作表
+
+Public Sub UnhideAllSheets()
+    Dim sh As Worksheet
+    For Each sh In ThisWorkbook.Worksheets
+        sh.Visible = xlSheetVisible
+    Next sh
+    MsgBox "已显示全部工作表", vbInformation
+End Sub

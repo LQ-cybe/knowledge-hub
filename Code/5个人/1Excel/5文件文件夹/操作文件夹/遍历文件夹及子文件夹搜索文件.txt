@@ -1,0 +1,26 @@
+﻿Dim ArryFile(), nFile '全局变量 nfie初始值为0
+
+Function searchFile(ByVal fd As Folder)
+  Dim fl As File
+  Dim subfd As Folder
+  Dim i As Integer
+  i = fd.Files.Count
+  If i > 0 Then
+    Set regex1 = CreateObject("VBSCRIPT.REGEXP") 'RegEx为建立正则表达式
+    With regex1
+      .Global = True '设置全局可用
+      .Pattern = "(xls)$" '输入后缀名用|隔开"(xls|xlsx|docx|doc)$
+    End With
+    ReDim Preserve ArryFile(1 To nFile + i)
+    For Each fl In fd.Files
+      If regex1.test(fl.Name) = True Then
+        nFile = nFile + 1
+        ArryFile(nFile) = fl.Path
+      End If
+    Next
+  End If
+  If fd.SubFolders.Count = 0 Then Exit Function
+  For Each subfd In fd.SubFolders
+    searchFile subfd
+  Next
+End Function

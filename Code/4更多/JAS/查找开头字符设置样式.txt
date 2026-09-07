@@ -1,0 +1,29 @@
+﻿'JSX脚本导入后处理1
+'把当前文档中含【//】字符开头的设置为指定样式，
+Sub SetHeadingsToTitle2()
+Application.ScreenUpdating = False
+    Dim para As Paragraph
+    Dim startStr As String
+    Dim strLength As Integer
+    ' 设置要查找的起始字符串
+    startStr = "//"
+    strLength = Len(startStr)
+    ' 检查文档中是否有内容
+    If ActiveDocument.Paragraphs.Count = 0 Then
+        MsgBox "文档中没有段落！", vbExclamation
+        Exit Sub
+    End If
+    ' 关闭屏幕更新以提高性能
+    Application.ScreenUpdating = False
+    ' 遍历文档中的每个段落
+    For Each para In ActiveDocument.Paragraphs
+        ' 检查段落是否以指定字符串开头
+        If Left(para.Range.text, strLength) = startStr Then
+            ' 应用标题2样式
+            para.Style = ActiveDocument.Styles("标题 3")
+        End If
+    Next para
+    ' 恢复屏幕更新
+    Application.ScreenUpdating = True
+    MsgBox "已完成所有符合条件段落的样式设置！", vbInformation
+End Sub

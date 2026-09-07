@@ -1,0 +1,27 @@
+﻿'将所有表导出到另一个数据库
+https://mp.weixin.qq.com/s/ai173bHWPB7WWMDw5nOB2g
+' Author    : Daniel Pineault, CARDA Consultants Inc.
+' Website   : http://www.cardaconsultants.com
+Function ExpAllTbls(sDestDb As String)  
+On Error GoTo Error_Handler
+    Dim db As DAO.Database
+    Dim td As DAO.TableDefs
+    Set db = CurrentDb()
+    Set td = db.TableDefs
+    For Each t In td
+        If Left(t.Name, 4) = "MSys" Then GoTo Continue  '忽略所有系统表
+        DoCmd.CopyObject sDestDb, t.Name, acTable, t.Name
+Continue:
+    Next
+Error_Handler_Exit:
+    On Error Resume Next
+    Set td = Nothing
+    Set db = Nothing
+    Exit Function
+Error_Handler:
+    MsgBox "运行失败"
+    Resume Error_Handler_Exit
+End Function
+Private Sub Command0_Click()
+ExpAllTbls ("C:\新建文件夹\Database2.accdb")         '写入目标数据库地址
+End Sub 

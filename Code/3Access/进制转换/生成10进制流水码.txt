@@ -1,0 +1,56 @@
+﻿'    生成10个字符以内的流水码
+Private Sub Command0_Click()
+    DoCmd.SetWarnings False                                    '屏蔽系统警告
+    Dim strSQL As String
+    strSQL = "DELETE tbl_流水码.*FROM tbl_流水码;"
+    DoCmd.RunSQL strSQL
+    
+    Dim startTime As Double
+    Dim endTime As Double
+    startTime = Timer                                          ' 在下面写执行代码
+    
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim i As Long
+    Dim batchSize As Integer
+    Dim batchCount As Integer
+    Dim QSM, JSM As Long
+    QSM = 1 
+    JSM = 500000
+    Dim QZ, ZJM, HZ As Integer
+    QZ = "A150807590"
+    ZJM = "20250415"
+    HZM = "AE03"
+    Dim LSMWS As Integer
+    LSMWS = 6
+    batchSize = 100                                            ' 每批插入的记录数
+    batchCount = 0
+    
+    ' 设置数据库对象
+    Set db = CurrentDb
+    Set rs = db.OpenRecordset("tbl_流水码", dbOpenDynaset)
+    
+    For i = QSM To JSM
+        rs.AddNew
+        rs!A = QZ & Right("0000000000" & i, LSMWS) & ZJM
+        rs!B = ZJM & Right("0000000000" & i + 5600, LSMWS) & HZM
+        rs!N = Right("0000000000" & i, LSMWS)
+        rs.Update
+    
+        batchCount = batchCount + 1
+        If batchCount = batchSize Then
+            rs.Close
+            Set rs = Nothing
+            DoEvents                                           ' 释放 CPU 资源，允许系统处理其他事件
+            Set rs = db.OpenRecordset("tbl_流水码", dbOpenDynaset)
+            batchCount = 0
+        End If
+    Next i
+    rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    endTime = Timer
+    MsgBox "操作完成，运行时间:" & Format((endTime - startTime), "000") & "秒"
+End Sub
+
+

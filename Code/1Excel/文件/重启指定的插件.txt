@@ -1,0 +1,13 @@
+﻿'重启 Excel 插件「EasyShuForExcel.xll」（先卸载再重新加载）
+Sub RestartEasyShuForExcel()
+    Dim ad As AddIn
+    For Each ad In Application.AddIns2
+        Debug.Print ad.Name
+        If ad.Name = "EasyShuForExcel.xll" Then
+            Exit For
+        End If
+    Next
+    ad.Installed = False
+    ad.Installed = True
+    MsgBox "更新成功"
+End Sub

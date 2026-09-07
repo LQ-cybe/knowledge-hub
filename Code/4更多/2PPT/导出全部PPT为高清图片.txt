@@ -1,0 +1,9 @@
+﻿'导出PPT中所有幻灯片为图片
+Sub sutExportAllPic()
+    Dim i As Integer, iCount As Integer
+    iCount = ActivePresentation.Slides.Count
+    For i = 1 To iCount
+        ActivePresentation.Slides(i).Export "D:\AAA\SUT2" & Format(i, "000") & ".jpg", "jpg", 10000, 10000 * 0.5625
+    Next
+End Sub
+

@@ -1,0 +1,83 @@
+﻿'修改后的 VBA 代码，通过使用InputBox函数来让用户以输入框选择区域的方式指定要对比的两列数据范围，
+'这样更加灵活，能适应不同的数据量和范围情况。
+Sub CompareColumnsWithInputBox()
+    Dim rngA As Range
+    Dim rngB As Range
+    Dim lastRowA As Long
+    Dim lastRowB As Long
+    Dim i As Long
+    Dim j As Long
+    Dim isMatch As Boolean
+    Dim arrA()
+    Dim arrB()
+    
+    '通过输入框让用户选择A列数据区域
+    On Error Resume Next
+    Set rngA = Application.InputBox("请选择A列数据所在的单元格区域（例如A1:A100）", Type:=8)
+    On Error GoTo 0
+    If rngA Is Nothing Then
+        MsgBox "未正确选择A列数据区域，程序退出。"
+        Exit Sub
+    End If
+    
+    '通过输入框让用户选择B列数据区域
+    On Error Resume Next
+    Set rngB = Application.InputBox("请选择B列数据所在的单元格区域（例如B1:B100）", Type:=8)
+    On Error GoTo 0
+    If rngB Is Nothing Then
+        MsgBox "未正确选择B列数据区域，程序退出。"
+        Exit Sub
+    End If
+    
+    '获取A列最后一个有数据的行号
+    lastRowA = rngA.Rows.Count
+    '获取B列最后一个有数据的行号
+    lastRowB = rngB.Rows.Count
+    
+    '将A列数据读取到数组中
+    ReDim arrA(1 To lastRowA)
+    For i = 1 To lastRowA
+        arrA(i) = rngA.Cells(i).Value
+    Next i
+    
+    '将B列数据读取到数组中
+    ReDim arrB(1 To lastRowB)
+    For i = 1 To lastRowB
+        arrB(i) = rngB.Cells(i).Value
+    Next i
+    
+    '先处理A列有，B列没有的数据，写入C列
+    j = 1
+    For i = 1 To lastRowA
+        isMatch = False
+        For Each element In arrB
+            If arrA(i) = element Then
+                isMatch = True
+                Exit For
+            End If
+        Next element
+        If Not isMatch Then
+        Cells(1, 3).Value = "A列有B列没有的数据"
+            Cells(j + 1, 3).Value = arrA(i)
+            j = j + 1
+        End If
+    Next i
+    
+    '再处理A列没有，B列有的的数据，写入D列
+    j = 1
+    For i = 1 To lastRowB
+        isMatch = False
+        For Each element In arrA
+            If arrB(i) = element Then
+                isMatch = True
+                Exit For
+            End If
+        Next element
+        If Not isMatch Then
+        Cells(1, 4).Value = "A列没有B列有的数据"
+            Cells(j + 1, 4).Value = arrB(i)
+            j = j + 1
+        End If
+    Next i
+    
+End Sub

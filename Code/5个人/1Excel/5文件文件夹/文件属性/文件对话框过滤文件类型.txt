@@ -1,0 +1,18 @@
+﻿Sub SelectFile()
+  '选择多个文件
+  
+  Dim l As Long
+  With Application.FileDialog(msoFileDialogFilePicker)
+    .AllowMultiSelect = True '多选择   
+    .Filters.Clear '清除文件过滤器
+    '设置两个文件过滤器
+    .Filters.Add "Excel Files", "*.xls;*.xlw"
+    .Filters.Add "All Files", "*.*"
+    .Show
+    'FileDialog 对象的 Show 方法显示对话框，并且返回 -1（如果您按 OK）和 0（如果您按 Cancel）。
+
+    For l = 1 To .SelectedItems.Count
+      MsgBox "您选择的文件是：" & .SelectedItems(l), vbOKOnly + vbInformation, "提示："
+    Next
+  End With
+End Sub

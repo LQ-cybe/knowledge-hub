@@ -1,0 +1,11 @@
+﻿'状态栏进度
+Sub Main()
+  Dim oldStatusBar
+  oldStatusBar = Application.DisplayStatusBar
+  Application.DisplayStatusBar = True
+  Application.StatusBar = "正在刷新..."
+  Application.StatusBar = "刷新完成!"
+  delay 2
+  Application.StatusBar = False
+  Application.DisplayStatusBar = oldStatusBar
+End Sub

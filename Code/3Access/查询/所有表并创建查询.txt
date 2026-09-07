@@ -1,0 +1,39 @@
+    '遍历当前数据库中所有表并创建查询，非*通配符方式
+Sub CreateQueriesForTables()
+    Dim db As DAO.Database
+    Dim tdf As DAO.TableDef
+    Dim qdf As DAO.QueryDef
+    Dim fld As DAO.field
+    Dim fieldList As String
+    
+    Set db = CurrentDb
+    
+    '遍历数据库中的所有表
+    For Each tdf In db.TableDefs
+        '排除系统表等特殊表
+        If Left(tdf.Name, 4) <> "MSys" Then
+            fieldList = ""
+            '构建字段列表字符串，不使用*号
+            For Each fld In tdf.Fields
+                fieldList = fieldList & fld.Name & ", "
+            Next fld
+            '去除最后多余的逗号和空格
+            If Len(fieldList) > 0 Then
+                fieldList = Left(fieldList, Len(fieldList) - 2)
+            End If
+    
+            '构建查询SQL语句
+            Dim sql As String
+            sql = "SELECT " & fieldList & " FROM [" & tdf.Name & "]"
+    
+            '创建查询对象
+            Set qdf = db.CreateQueryDef("qry_" & tdf.Name)
+            qdf.sql = sql
+        End If
+    Next tdf
+    
+    Set qdf = Nothing
+    Set tdf = Nothing
+    Set db = Nothing
+    Application.RefreshDatabaseWindow
+End Sub

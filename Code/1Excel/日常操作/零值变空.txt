@@ -1,0 +1,11 @@
+'name=零值变空
+'officetype=excel,et
+'category=空值零值
+'description=将选区中的零值变为空单元格
+
+Public Sub ClearZeroToBlank()
+    Dim c As Range
+    For Each c In Selection.Cells
+        If IsNumeric(c.Value) And c.Value = 0 Then c.ClearContents
+    Next c
+End Sub

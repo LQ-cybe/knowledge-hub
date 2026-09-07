@@ -1,0 +1,7 @@
+Sub PrintPDFFile()
+    Dim result As Long
+    result = ShellExecute(0, "print", "C:\Test\example.pdf", "", "", 1)
+    If result <= 32 Then
+        MsgBox "打印文件失败！"
+    End If
+End Sub

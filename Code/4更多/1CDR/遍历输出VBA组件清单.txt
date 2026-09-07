@@ -1,0 +1,55 @@
+﻿' 遍历输出当前工程所有组件到立即窗口
+Sub ListAllComponents()
+    Dim VBProj As Object
+    Dim VBComp As Object
+    Dim moduleCount As Integer
+    Dim classCount As Integer
+    Dim formCount As Integer
+    
+    ' 获取当前VBA工程
+    On Error Resume Next
+    Set VBProj = Application.VBE.ActiveVBProject
+    
+    If VBProj Is Nothing Then
+        Debug.Print "错误：无法获取当前VBA工程！"
+        Debug.Print "请在VBA编辑器中打开你的项目"
+        Exit Sub
+    End If
+    On Error GoTo 0
+
+    Debug.Print "VBA工程组件列表"
+    Debug.Print "工程名称：" & VBProj.Name
+   
+    ' 初始化计数器
+    moduleCount = 0
+    classCount = 0
+    formCount = 0
+    
+    ' 遍历所有组件
+    For Each VBComp In VBProj.VBComponents
+        Select Case VBComp.Type
+            Case 1  ' vbext_ct_StdModule - 标准模块
+                Debug.Print "[模块] " & VBComp.Name
+                moduleCount = moduleCount + 1
+                
+            Case 2  ' vbext_ct_ClassModule - 类模块
+                Debug.Print "[类模块] " & VBComp.Name
+                classCount = classCount + 1
+                
+            Case 3  ' vbext_ct_MSForm - 窗体
+                Debug.Print "[窗体] " & VBComp.Name
+                formCount = formCount + 1
+                
+            Case Else
+                Debug.Print "[其他] " & VBComp.Name & " (类型:" & VBComp.Type & ")"
+        End Select
+    Next VBComp
+    
+    ' 输出统计信息
+    Debug.Print "统计信息："
+    Debug.Print "  标准模块：" & moduleCount & " 个"
+    Debug.Print "  类模块：" & classCount & " 个"
+    Debug.Print "  窗体：" & formCount & " 个"
+    Debug.Print "  总计：" & (moduleCount + classCount + formCount) & " 个"
+    Set VBProj = Nothing
+End Sub

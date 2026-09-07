@@ -1,0 +1,23 @@
+﻿Sub Addlogrecording()
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim YourTableName As String
+    YourTableName = "tbl_数据码类型_日志"
+    ' 获取当前数据库
+    Set db = CurrentDb
+    Set rs = db.OpenRecordset(YourTableName, dbOpenDynaset)
+    
+    rs.AddNew
+    rs!操作记录类别ID = Me.类别ID.value
+    rs!类型名称 = Me.类型名称.value
+    rs!字符位数 = Me.字符位数.value
+    rs!字段内容 = Me.字段内容.value
+    rs!说明 = Me.说明.value
+    rs!OperationTime = Now()
+    rs!Operator = GetParameter("Current User NickName")
+    rs.Update
+    
+    rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+End Sub

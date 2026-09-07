@@ -1,0 +1,2 @@
+﻿ActiveSheet.Range("A:A").Find(What: = "*", LookIn: = xlFormulas, SearchOrder: = xlByRows, SearchDirection: = xlPrevious).Row
+ActiveSheet.Range("1:1").Find(What: = "*", LookIn: = xlFormulas, SearchOrder: = xlByRows, SearchDirection: = xlPrevious).Column

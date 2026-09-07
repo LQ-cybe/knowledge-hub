@@ -1,0 +1,15 @@
+'name=数字转中文大写
+'officetype=excel,et
+'category=数值转换
+'description=将选区数字转为中文大写金额（仅对数字单元格生效）
+
+Public Sub NumberToChinese()
+    Dim c As Range, v As Double
+    On Error Resume Next
+    For Each c In Selection.Cells
+        If IsNumeric(c.Value) Then
+            v = CDbl(c.Value)
+            If v >= 0 Then c.Value = Application.WorksheetFunction.Text(v, "[DBNum2]")
+        End If
+    Next c
+End Sub

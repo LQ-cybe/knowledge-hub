@@ -1,0 +1,3 @@
+If ActiveDocument.Saved = False Then
+    ActiveDocument.Save
+End If

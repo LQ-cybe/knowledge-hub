@@ -1,0 +1,14 @@
+﻿'将指定区域批量打印成pdf文件,并打开
+Sub AutoPrintSheet()
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets("Sheet1")
+    
+    ' 设置打印区域
+    ws.PageSetup.PrintArea = "$A$11:$H$16"
+    
+    ' 指定打印机
+    ws.PrintOut ActivePrinter:="HP Officejet Pro 3620"
+    
+    ' 打印工作表
+    ws.PrintOut
+End Sub

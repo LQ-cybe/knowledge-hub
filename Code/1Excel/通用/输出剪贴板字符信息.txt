@@ -1,0 +1,33 @@
+﻿'输出剪贴板字符内容和位数及ASCII码
+Sub GetCharFromClipboard_Debug()
+    Dim clipboardData As MSForms.DataObject
+    Set clipboardData = New MSForms.DataObject
+    
+    On Error Resume Next
+    clipboardData.GetFromClipboard
+    If Err.Number <> 0 Then
+        MsgBox "剪贴板访问失败：" & Err.Description, vbCritical
+        Exit Sub
+    End If
+    On Error GoTo 0
+    
+    Dim myChar As String
+    myChar = clipboardData.GetText
+    
+    ' 方式1：消息框显示，直观验证
+    MsgBox "剪贴板字符内容：" & myChar & vbCrLf & "字符长度：" & Len(myChar), vbInformation
+    
+    ' 方式2：立即窗口输出，细节更全
+    Debug.Print "===== 剪贴板字符调试 ====="
+    Debug.Print "原始内容：" & myChar
+    Debug.Print "字符ASCII码（逐个）：";
+    Dim i As Integer
+    For i = 1 To Len(myChar)
+        Debug.Print Asc(Mid(myChar, i, 1)) & " ";
+    Next
+    Debug.Print vbCrLf & "=========================="
+    
+    ' 强制写入单元格（指定位置，避免ActiveCell为空）
+'    ThisWorkbook.Sheets("Sheet1").Range("A1").Value = myChar
+'    MsgBox "已尝试写入 Sheet1 的 A1 单元格，可前往查看", vbInformation
+End Sub

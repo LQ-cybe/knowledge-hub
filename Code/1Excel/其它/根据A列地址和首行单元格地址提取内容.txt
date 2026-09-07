@@ -1,0 +1,157 @@
+﻿    '批量提取数据
+Sub ExtractXLSMData_WithLog()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim i As Long, j As Long
+    Dim folderPath As String
+    Dim xlsmFile As String
+    Dim wb As Workbook
+    Dim sourceWs As Worksheet
+    Dim targetAddress As String
+    Dim resultRow As Long
+    Dim logMsg As String
+    Dim successCount As Long, failCount As Long
+    Dim startTime As Date
+    
+    ' 记录开始时间
+    startTime = Now
+    
+    ' 初始化统计变量
+    successCount = 0
+    failCount = 0
+    
+    ' 设置当前工作表
+    Set ws = ActiveSheet
+    lastRow = ws.Cells(ws.Rows.Count, "B").End(xlUp).Row       ' 获取 B 列最后一行
+    
+    ' 禁用屏幕更新、自动计算和事件处理以提高性能
+    Application.ScreenUpdating = False
+    Application.Calculation = xlCalculationManual
+    Application.EnableEvents = False
+    
+    ' 创建日志列（如果不存在）
+    If ws.Cells(1, "T").Value = "" Then
+        ws.Cells(1, "T").Value = "处理日志"
+    End If
+    
+    ' 遍历 B 列的文件夹路径（从第 2 行开始，第 1 行是表头）
+    For i = 2 To lastRow
+        On Error GoTo ProcessError
+        
+        logMsg = ""
+        folderPath = ws.Cells(i, "B").Value
+        resultRow = i                                          ' 结果写入当前行
+        
+        ' 每处理50个文件释放一次资源
+        If i Mod 50 = 0 Then
+            DoEvents ' 释放系统资源
+            ws.Application.StatusBar = "已处理 " & i & " 个文件，共 " & lastRow - 1 & " 个..."
+        End If
+        
+        ' 1. 检查文件夹路径是否为空
+        If folderPath = "" Then
+            logMsg = "B" & i & " 单元格路径为空，跳过"
+            GoTo ProcessComplete
+        End If
+        
+        ' 2. 检查路径是否存在
+        If Dir(folderPath, vbDirectory) = "" Then
+            logMsg = "路径不存在: " & folderPath
+            GoTo ProcessComplete
+        End If
+        
+        ' 3. 查找文件夹下的 .xlsm 文件（只取第一个）
+        xlsmFile = Dir(folderPath & "\*.xlsm")
+        If xlsmFile = "" Then
+            logMsg = "未找到 .xlsm 文件: " & folderPath
+            GoTo ProcessComplete
+        End If
+        
+        ' 4. 尝试打开 .xlsm 文件
+        Set wb = Workbooks.Open(folderPath & "\" & xlsmFile, ReadOnly:=True, UpdateLinks:=False)
+        
+        ' 5. 获取文件中的第一个工作表
+        Set sourceWs = wb.Worksheets(1)
+        
+        ' 6. 遍历 D1:R1 获取目标单元格地址并提取内容
+        Dim hasData As Boolean
+        hasData = False
+        
+        For j = 4 To 19
+            targetAddress = ws.Cells(1, j).Value               ' 读取 D1:S1 的单元格地址
+            
+            If targetAddress <> "" Then
+                ' 验证目标地址格式是否正确
+                If IsValidCellAddress(targetAddress) Then
+                    ws.Cells(resultRow, j).Value = sourceWs.Range(targetAddress).Value
+                    If Not IsError(ws.Cells(resultRow, j).Value) Then
+                        hasData = True
+                    Else
+                        logMsg = logMsg & " 目标单元格 " & targetAddress & " 包含错误值"
+                    End If
+                Else
+                    logMsg = logMsg & " 无效的单元格地址: " & targetAddress
+                End If
+            End If
+        Next j
+        
+        ' 7. 写入工作表名称到 S 列
+        ws.Cells(resultRow, "T").Value = sourceWs.name
+        
+        ' 8. 统计成功情况
+        If hasData Then
+            successCount = successCount + 1
+            logMsg = "处理成功: " & xlsmFile & logMsg
+        Else
+            failCount = failCount + 1
+            logMsg = "无有效数据提取: " & xlsmFile & logMsg
+        End If
+        
+ProcessCleanup:
+        ' 确保工作簿已关闭
+        If Not wb Is Nothing Then
+            wb.Close SaveChanges:=False
+            Set wb = Nothing
+        End If
+        Set sourceWs = Nothing
+        
+        GoTo ProcessComplete
+        
+ProcessError:
+        logMsg = "处理出错: " & Err.Description
+        failCount = failCount + 1
+        Resume ProcessCleanup
+        
+ProcessComplete:
+        ' 记录日志到 T 列
+'        ws.Cells(resultRow, "T").Value = logMsg
+        
+        ' 重置错误处理
+        On Error GoTo 0
+    Next i
+    
+    ' 恢复Excel设置
+    Application.ScreenUpdating = True
+    Application.Calculation = xlCalculationAutomatic
+    Application.EnableEvents = True
+    ws.Application.StatusBar = False
+    
+    ' 显示处理结果
+'    MsgBox "处理完成！" & vbCrLf & _
+'            "共处理: " & (lastRow - 1) & " 个文件夹" & vbCrLf & _
+'            "成功提取: " & successCount & " 个文件" & vbCrLf & _
+'            "失败/跳过: " & failCount & " 个文件" & vbCrLf & _
+'            "耗时: " & Format(Now - startTime, "hh:mm:ss") & vbCrLf & _
+'            "详情请查看 T 列日志", vbInformation
+End Sub
+
+' 辅助函数：验证单元格地址格式是否正确
+Function IsValidCellAddress(address As String) As Boolean
+    On Error GoTo Invalid
+    Dim testRange As Range
+    Set testRange = ActiveSheet.Range(address)
+    IsValidCellAddress = True
+    Exit Function
+Invalid:
+    IsValidCellAddress = False
+End Function

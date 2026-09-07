@@ -1,0 +1,19 @@
+﻿Sub ReadProtectedCellValue()
+    Dim wb As Workbook
+    Dim ws As Worksheet
+    Dim cellValue As Variant
+   '假设密码为"yourPassword"，请替换为实际密码
+    Set wb = Workbooks.Open("D:\LQ\SMDA\3050000055131-A1\3050000055131_序列号流水码批量生成(超过65536).xlsm", , True, , "yourPassword")
+    If wb Is Nothing Then
+        MsgBox "无法打开工作簿，可能密码错误或权限不足。"
+        Exit Sub
+    End If
+    Set ws = wb.Sheets("单变码") '请替换为实际工作表名称
+    '解除工作表保护
+    ws.Unprotect Password:="123456"
+    cellValue = ws.Range("B2").Value '请替换为实际单元格引用
+    wb.Close SaveChanges:=False
+    Set ws = Nothing
+    Set wb = Nothing
+    MsgBox "单元格值为: " & cellValue
+End Sub

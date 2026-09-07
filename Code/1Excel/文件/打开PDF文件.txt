@@ -1,0 +1,9 @@
+﻿'打开PDF文件
+Sub OpenPDF_file()
+sPath = Excel.ThisWorkbook.Path & “\”
+Dim obj
+Set obj = VBA.CreateObject(“Wscript.Shell”)
+obj.Run (sPath & “1.pdf”)
+End Sub 
+
+

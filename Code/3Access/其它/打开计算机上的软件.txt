@@ -1,0 +1,12 @@
+﻿Sub cs()
+' 使用Shell函数启动计算器
+'Shell "calc.exe", vbNormalFocus
+'打开记事本
+'Shell "notepad.exe"
+'打开AI软件
+Shell "D:\我的文档\常用软件\Adobe Illustrator CS6\Support Files\Contents\Windows\Illustrator.exe"
+
+'启动浏览器
+'Shell "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+'Shell "C:\Program Files\Microsoft Office\root\Office16\EXCEL.EXE"
+End Sub

@@ -1,0 +1,57 @@
+﻿' 遍历 VBE 所有菜单栏、子菜单，输出 ID 和 Caption 到工作表
+Sub ListVBEBuiltInMenuIDs()
+    Dim ws As Worksheet
+    Dim row As Long
+    Dim bar As Object         ' CommandBar
+    Dim ctl As Object         ' CommandBarControl
+    
+    ' 创建/使用工作表
+    On Error Resume Next
+    Set ws = ThisWorkbook.Worksheets("VBE内置菜单列表")
+    On Error GoTo 0
+    If ws Is Nothing Then
+        Set ws = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count))
+        ws.Name = "VBE内置菜单列表"
+    End If
+    
+    ' 标题
+    row = 1
+    ws.Cells(row, 1) = "菜单条名称"
+    ws.Cells(row, 2) = "控件标题"
+    ws.Cells(row, 3) = "ID"
+    ws.Cells(row, 4) = "类型"
+    row = 2
+    
+    ' 关闭屏幕更新
+    Application.ScreenUpdating = False
+    
+    ' 遍历 VBE 所有 CommandBar
+    On Error Resume Next
+    For Each bar In Application.VBE.CommandBars
+        DoEvents
+        
+        ' 遍历每个菜单条的控件
+        For Each ctl In bar.Controls
+            If Err.Number <> 0 Then
+                Err.Clear
+                GoTo NextCtl
+            End If
+            
+            ' 写入表格
+            ws.Cells(row, 1) = bar.Name
+            ws.Cells(row, 2) = ctl.caption
+            ws.Cells(row, 3) = ctl.id
+            ws.Cells(row, 4) = Choose(ctl.Type, "Button", "Edit", "Dropdown", "ComboBox", "Popup", "Split")
+            
+            row = row + 1
+            If row Mod 100 = 0 Then DoEvents
+            
+NextCtl:
+        Next ctl
+    Next bar
+    On Error GoTo 0
+    
+    Application.ScreenUpdating = True
+    
+    MsgBox "完成！共输出 " & row - 2 & " 条 VBE 内置菜单", vbInformation
+End Sub

@@ -1,0 +1,4 @@
+﻿Sub ShowMenuBarAndRibbon()
+    Application.ExecuteExcel4Macro "SHOW.TOOLBAR(""Ribbon"",True)"    ' 显示菜单栏
+    Application.ExecuteExcel4Macro "SHOW.TOOLBAR(""Ribbon"",false)"    ' 显示功能区
+End Sub

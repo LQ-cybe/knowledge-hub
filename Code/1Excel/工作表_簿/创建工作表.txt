@@ -1,0 +1,9 @@
+﻿'创建工作表对象
+    Dim newSheet As Worksheet
+    On Error Resume Next
+    Set newSheet = ThisWorkbook.Sheets("汇总数据")
+    If newSheet Is Nothing Then
+        Set newSheet = ThisWorkbook.Sheets.Add
+        newSheet.Name = "汇总数据"
+    End If
+    On Error GoTo 0

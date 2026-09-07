@@ -1,0 +1,25 @@
+﻿'此函数只按颜色统计单元格范围之内颜色相同的单元格数值的的和
+Option Explicit
+Function CountColor(col As Range, countrange As Range) As Integer
+    Dim icell As Range
+    Application.Volatile
+    For Each icell In countrange
+        If icell.Interior.ColorIndex = col.Interior.ColorIndex Then
+            CountColor = CountColor + 1
+        End If
+    Next icell
+End Function
+Function SumColor(col As Range, sumrange As Range) As Integer
+    Dim icell As Range
+    Application.Volatile
+    For Each icell In sumrange
+        If icell.Interior.ColorIndex = col.Interior.ColorIndex Then
+            SumColor = Application.Sum(icell) + SumColor
+        End If
+    Next icell
+End Function
+Sub color()
+End Sub
+'引用方法:Sumcolor(A1"指定需要统计的单元格颜色",A2：B20"要统计的单元格范围")
+'=countcolor(D$1,$A$1:$B$20)    统计同颜色单元格的个数
+'=sumcolor(D1,$A$1:$B$20)   统计同单元格值的和

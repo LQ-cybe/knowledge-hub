@@ -1,0 +1,8 @@
+'单元格内容去重并排序，'除汉字、全角字符、特殊字符以外的所有字符串
+Function strSort(str1 As String) As String
+    Dim arr(255) As String
+    For i = 1 To Len(str1)
+        arr(Asc(Mid(str1, i, 1))) = Mid(str1, i, 1)
+    Next
+    strSort = Join(arr, "")
+End Function

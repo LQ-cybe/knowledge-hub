@@ -1,0 +1,11 @@
+'提取文件名称
+Function GetFileNameFromPath(ByVal filePath As String) As String
+    Dim parts As Variant
+    parts = Split(filePath, "\")
+    
+    If UBound(parts) >= 0 Then
+        GetFileNameFromPath = parts(UBound(parts))
+    Else
+        GetFileNameFromPath = filePath
+    End If
+End Function

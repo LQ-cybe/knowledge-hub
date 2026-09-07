@@ -1,0 +1,37 @@
+﻿Function DirFiles(ByVal mypath, Optional ByVal fileStr = "*.*")
+  '返回一个数组2列 '1 列 -纯文件名+后缀 '2 列 -完整路径
+  '3 列  纯文件名
+  '4列  纯后缀
+  '本函数默认不搜索 隐藏文件
+  If mypath Like "*\" Then '总是把传进来的路径处理成不带斜杠的数据
+    mypath = Left(mypath, Len(mypath) - 1) '去掉最后的分隔符
+  End If
+  Dim dic
+  Set dic = CreateObject("scripting.dictionary")
+  Dim fname, k
+  fname = Dir(mypath & "\" & fileStr)
+  k = 0
+  Do While fname <> "" '不为空的时候 往下循环
+    k = k + 1
+    If fname Like fileStr Then '实现模糊搜索文件
+      '这里可以自己定义搜索条件 暂时用like方法一般就是 *匹配模糊搜索
+      dic(k) = fname '写入第一个文件
+    End If
+    fname = Dir
+  Loop
+  Dim brr
+  If dic.Count = 0 Then
+    ReDim brr(0, 0)
+  Else
+    ReDim brr(1 To dic.Count, 1 To 4) '1列纯文件名 2列完整文件名
+    For i = 1 To dic.Count
+      brr(i, 1) = dic(i) '纯文件名
+      brr(i, 2) = mypath & "\" & brr(i, 1) '完整路径+文件名
+      brr(i, 3) = Left(brr(i, 1), InStrRev(brr(i, 1), ".") - 1) '纯文件名
+      brr(i, 4) = Mid(brr(i, 1), InStrRev(brr(i, 1), ".") + 1) '路径
+    Next
+  End If
+  DirFiles = brr
+  '返回结果字典
+End Function
+

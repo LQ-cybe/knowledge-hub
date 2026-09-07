@@ -1,0 +1,68 @@
+﻿' 模块名称：MTP_FormIcon
+' 功能说明：通用窗体图标设置模块。提供 ChangeFormIcon 函数，可将指定
+'           图标句柄应用到任意 UserForm 窗体左上角（同时设置小图标与
+'           大图标），供多个窗体共用调用，无需在每个窗体重复声明 API。
+' 适用场景：在任意 UserForm 的 Initialize 事件中调用 ChangeFormIcon。
+' 调用示例：Call ChangeFormIcon(Me, Image1.Picture.Handle)
+' 说明：    Image 控件需提前加载 .ico 图标文件（Picture 属性）。
+' 作者：    Excel催化剂
+' 日期：    2026-08-01
+Option Explicit
+#If VBA7 Then
+    Private Declare PtrSafe Function SendMessage Lib "user32" Alias "SendMessageA" ( _
+        ByVal hWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, lParam As Any) As LongPtr
+    Private Declare PtrSafe Function DrawMenuBar Lib "user32" (ByVal hWnd As LongPtr) As Long
+    Private Declare PtrSafe Function FindWindow Lib "user32" Alias "FindWindowA" ( _
+        ByVal lpClassName As String, ByVal lpWindowName As String) As LongPtr
+#Else
+    Private Declare Function SendMessage Lib "user32" Alias "SendMessageA" ( _
+        ByVal hWnd As Long, ByVal wMsg As Long, ByVal wParam As Long, lParam As Any) As Long
+    Private Declare Function DrawMenuBar Lib "user32" (ByVal hWnd As Long) As Long
+    Private Declare Function FindWindow Lib "user32" Alias "FindWindowA" ( _
+        ByVal lpClassName As String, ByVal lpWindowName As String) As Long
+#End If
+
+Private Const WM_SETICON As Long = &H80
+Private Const ICON_SMALL As Long = 0&
+Private Const ICON_BIG As Long = 1&
+
+
+' 函数名称：ChangeFormIcon
+' 功能说明：为指定 UserForm 设置左上角图标，同时刷新小图标与大图标。
+' 入参说明：
+'   frmForm - 需要设置图标的 UserForm 对象引用（通常传入 Me）
+'   hIcon   - 图标句柄，通常通过 Image 控件的 Picture.Handle 获取；
+'             省略时（=0）清除当前图标，恢复默认。
+' 返回值：  Boolean —— 成功返回 True，未找到窗口或出错返回 False。
+' 注意事项：应在 UserForm_Initialize 事件中调用；此时窗体窗口已创建，
+'           FindWindow 可按 Caption 找到句柄。若窗体 Caption 为空或
+'           与其他窗口重名，建议先设置唯一 Caption 再调用。
+' 调用示例：
+'   Private Sub UserForm_Initialize()
+'       Call ChangeFormIcon(Me, Image1.Picture.Handle)
+'   End Sub
+
+Public Function ChangeFormIcon(ByVal frmForm As Object, Optional ByVal hIcon As Long = 0&) As Boolean
+    Dim hWnd As LongPtr
+
+    On Error GoTo ErrHandler
+
+    ' 通过窗体标题查找窗口句柄
+    hWnd = FindWindow(vbNullString, frmForm.Caption)
+    If hWnd = 0 Then
+        ChangeFormIcon = False
+        Exit Function
+    End If
+
+    ' 同时设置小图标和大图标
+    SendMessage hWnd, WM_SETICON, ICON_SMALL, ByVal hIcon
+    SendMessage hWnd, WM_SETICON, ICON_BIG, ByVal hIcon
+    DrawMenuBar hWnd
+
+    ChangeFormIcon = True
+    Exit Function
+
+ErrHandler:
+    ChangeFormIcon = False
+End Function
+

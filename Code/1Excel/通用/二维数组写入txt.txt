@@ -1,0 +1,68 @@
+    ' 功能：将二维数组写入txt（支持UTF-8/ANSI）
+    ' 参数：
+    '   arr - 二维数组
+    '   filePath - 文件路径
+    '   encoding - "UTF-8"(默认) 或 "ANSI"
+Function WriteArrayToTxt(arr As Variant, filePath As String, Optional encoding As String = "UTF-8") As Boolean
+    On Error GoTo ErrorHandler
+
+    If Not IsArray(arr) Then Exit Function
+    If Dir(filePath) <> "" Then Kill filePath
+    
+    Dim firstRow As Long, lastRow As Long
+    Dim firstCol As Long, lastCol As Long
+    firstRow = LBound(arr, 1)
+    lastRow = UBound(arr, 1)
+    firstCol = LBound(arr, 2)
+    lastCol = UBound(arr, 2)
+    
+    Select Case UCase(encoding)
+    Case "ANSI"
+        Dim fileNum As Integer: fileNum = FreeFile
+        Open filePath For Output As #fileNum
+        
+        Dim i As Long, j As Long
+        Dim lineContent As String
+        For i = firstRow To lastRow
+            lineContent = arr(i, firstCol)
+            For j = firstCol + 1 To lastCol
+                lineContent = lineContent & vbTab & arr(i, j)
+            Next j
+            Print #fileNum, lineContent
+        Next i
+        Close #fileNum
+        
+    Case Else
+        ' 使用二进制模式写入，避免BOM
+        With CreateObject("ADODB.Stream")
+            .Type = 1  ' 二进制模式
+            .Open
+            
+            ' 手动添加UTF-8内容（不包含BOM）
+            Dim rowContent As String
+            Dim utf8Bytes() As Byte
+            For i = firstRow To lastRow
+                rowContent = arr(i, firstCol)
+                For j = firstCol + 1 To lastCol
+                    rowContent = rowContent & vbTab & arr(i, j)
+                Next j
+                rowContent = rowContent & vbCrLf
+                
+                ' 将字符串转换为UTF-8字节数组
+                utf8Bytes = StrConv(rowContent, vbFromUnicode)
+                .Write utf8Bytes
+            Next i
+            
+            .SaveToFile filePath, 2  ' 覆盖写入
+            .Close
+        End With
+    End Select
+    
+    WriteArrayToTxt = True
+    Exit Function
+
+ErrorHandler:
+    If fileNum > 0 Then Close #fileNum
+    MsgBox "写入失败：" & Err.Description & vbCrLf & "路径: " & filePath, vbCritical
+    WriteArrayToTxt = False
+End Function

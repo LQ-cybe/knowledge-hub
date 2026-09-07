@@ -1,0 +1,5 @@
+﻿Sub 破解工作表密码()
+ActiveSheet.Protect DrawingObjects:=True, CONTENTS:=True, AllowFiltering:=True
+ActiveSheet.Protect DrawingObjects:=False, CONTENTS:=True, AllowFiltering:=True
+ActiveSheet.Unprotect
+End Sub

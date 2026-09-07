@@ -1,0 +1,19 @@
+' 卸载指定目录插件
+Sub UninstallAddin()
+    Dim addin As addin
+    Dim found As Boolean
+    
+    found = False
+    
+    For Each addin In Application.AddIns
+        If addin.FullName = "C:\Users\LQ\AppData\Roaming\Microsoft\AddIns\我的插件.xlam" Then
+            addin.Installed = False
+            found = True
+            Exit For
+        End If
+    Next addin
+    
+    If found Then
+'        MsgBox "插件已卸载", vbInformation
+    End If
+End Sub

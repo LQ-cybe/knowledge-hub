@@ -1,0 +1,71 @@
+Sub ExportTableToTxt()                                     '导出表数据到到桌面TXT文件
+Dim desktopPath As String
+Dim txtFilePath As String
+Dim db As DAO.Database
+Dim rs As DAO.Recordset
+Dim stream As Object
+Dim fieldCount As Integer
+Dim I As Integer
+Dim line As String
+Dim startTime As Double
+Dim endTime As Double
+
+startTime = Timer
+desktopPath = CreateObject("WScript.Shell").SpecialFolders("Desktop")    ' 获取桌面路径
+' 构建 TXT 文件的完整路径
+txtFilePath = desktopPath & "\" & nameTxt & ".txt"
+
+On Error Resume Next
+' 删除已存在的同名 TXT 文件
+Kill txtFilePath
+On Error GoTo 0
+
+' 打开数据库和记录集
+Set db = CurrentDb
+'假设表中有A字段，按A字段降序,DESC=降序，ASC=升序
+Set rs = db.OpenRecordset("SELECT * FROM " & Serialnumberdata & " ORDER BY A " & sequence & " ")
+
+' 创建ADODB.Stream对象用于写UTF-16 LE编码文件
+Set stream = CreateObject("ADODB.Stream")
+stream.Type = 2 ' 文本类型
+stream.charSet = "UTF-16LE" ' 设置为UTF-16 LE编码
+stream.Open
+stream.WriteText "" ' 写入BOM标记
+
+' 获取字段数量
+fieldCount = rs.Fields.count
+
+' 写入字段名
+For I = 0 To fieldCount - 1
+    line = line & Replace(Replace(rs.Fields(I).Name, """", ""), ",", "")
+    If I < fieldCount - 1 Then
+        line = line & vbTab ' 使用制表符代替空格
+    End If
+Next I
+stream.WriteText line & vbCrLf
+line = ""
+
+' 写入记录数据
+Do While Not rs.EOF
+    For I = 0 To fieldCount - 1
+        line = line & Replace(Replace(rs.Fields(I).value, """", ""), ",", "")
+        If I < fieldCount - 1 Then
+            line = line & vbTab ' 使用制表符代替空格
+        End If
+    Next I
+    stream.WriteText line & vbCrLf
+    line = ""
+    rs.MoveNext
+Loop
+
+' 保存并关闭对象
+stream.SaveToFile txtFilePath, 2 ' 覆盖现有文件
+stream.Close
+rs.Close
+
+Set stream = Nothing
+Set rs = Nothing
+Set db = Nothing
+
+'endTime = Timer
+End Sub

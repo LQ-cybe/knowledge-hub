@@ -1,0 +1,69 @@
+Attribute VB_Name = "B002二维码函数"
+'联网使用
+Function GenerateQRCode(Cell As Range, Optional Size As Integer = 150) As Boolean
+    ' 功能：调用在线API生成二维码并插入Excel
+    ' 参数：
+    '   Cell - 包含内容的单元格
+    '   Size - 二维码尺寸（默认150x150像素）
+    
+    Dim strText As String
+    Dim strURL As String
+    Dim objHTTP As Object
+    Dim imgPath As String
+    Dim qrCode As Picture
+    
+    On Error GoTo ErrorHandler
+    
+    ' 获取单元格内容
+    strText = WorksheetFunction.EncodeURL(Cell.Value)
+    If strText = "" Then Exit Function
+    
+    ' 使用QR Code Monkey API（免费）
+    strURL = "https://api.qrcode-monkey.com/qr/custom?size=" & Size & "&data=" & strText
+    
+    ' 创建HTTP请求对象
+    Set objHTTP = CreateObject("MSXML2.XMLHTTP")
+    With objHTTP
+        .Open "GET", strURL, False
+        .Send
+    End With
+    
+    ' 检查请求是否成功
+    If objHTTP.Status <> 200 Then
+        MsgBox "无法获取二维码，HTTP错误: " & objHTTP.Status, vbExclamation
+        Exit Function
+    End If
+    
+    ' 保存临时图片文件
+    imgPath = Environ("Temp") & "\QRCode_" & Format(Now, "yyyymmddhhnnss") & ".png"
+    
+    ' 将响应写入文件
+    Dim objStream As Object
+    Set objStream = CreateObject("ADODB.Stream")
+    With objStream
+        .Type = 1 ' 二进制
+        .Open
+        .Write objHTTP.responseBody
+        .SaveToFile imgPath, 2 ' 覆盖
+        .Close
+    End With
+    
+    ' 插入图片到单元格右侧
+    Set qrCode = Cell.Parent.Pictures.Insert(imgPath)
+    With qrCode
+        .Left = Cell.Offset(0, 1).Left
+        .Top = Cell.Top
+        .ShapeRange.LockAspectRatio = msoTrue
+        .Height = Application.CentimetersToPoints(2) ' 约2厘米高
+    End With
+    
+    ' 删除临时文件
+    Kill imgPath
+    
+    GenerateQRCode = True
+    Exit Function
+    
+ErrorHandler:
+    GenerateQRCode = False
+    MsgBox "生成二维码时出错: " & Err.Description, vbExclamation
+End Function

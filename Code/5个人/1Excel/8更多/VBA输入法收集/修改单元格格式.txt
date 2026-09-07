@@ -1,0 +1,14 @@
+Function RangeFormat(ByVal rng As Range)
+    With rng
+        .NumberFormatLocal = "@"
+        .Borders.LineStyle = 1 '区域加边框
+        .WrapText = True '自动换行
+        .RowHeight = 20
+        .Font.Size = 12
+        .Font.Name = "楷体"
+        .HorizontalAlignment = xlCenter '水平居中
+        .VerticalAlignment = xlCenter '垂直居中
+        .Interior.Pattern = xlNone '清除颜色
+        .Font.ColorIndex = xlNone
+    End With
+End Function

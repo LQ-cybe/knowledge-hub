@@ -1,0 +1,129 @@
+﻿'1.XLAM 加载宏使用完全正常
+'2.只处理你选中的区域，不碰其他数据
+'3.任意两列通用，不绑定列号
+'4.跳过隐藏行
+'5.区间重叠就标红 +提示
+'数据区间范围重叠验证
+Sub CheckOverlapRanges()
+    Dim selRng As Range
+    Dim visibleRows As Range
+    Dim cell As Range
+    Dim arr() As Variant
+    Dim rowNumArr() As Long
+    Dim col1 As Long, col2 As Long
+    Dim i As Long, k As Long
+    Dim startVal As Variant, endVal As Variant
+    Dim prevStart As Variant, prevEnd As Variant
+    Dim hasOverlap As Boolean
+    Dim ws As Worksheet
+
+    ' 1. 获取选中区域
+    On Error Resume Next
+    Set selRng = Selection
+    On Error GoTo 0
+
+    If selRng Is Nothing Then
+        MsgBox "请先选择数据区域！", vbExclamation
+        Exit Sub
+    End If
+
+    ' 2. 必须选中 2 列
+    If selRng.Columns.Count <> 2 Then
+        MsgBox "请选择【两列】数据：第一列=起始，第二列=结尾", vbExclamation
+        Exit Sub
+    End If
+
+    ' 3. 获取选中的两列号（动态，任意列都能用）
+    col1 = selRng.Column
+    col2 = selRng.Column + 1
+
+    ' 4. 只取可见行（跳过隐藏行）
+    On Error Resume Next
+    Set visibleRows = selRng.SpecialCells(xlCellTypeVisible)
+    On Error GoTo 0
+
+    If visibleRows Is Nothing Then
+        MsgBox "没有可见数据！", vbExclamation
+        Exit Sub
+    End If
+
+    Set ws = visibleRows.Parent
+    Application.ScreenUpdating = False
+    selRng.Interior.ColorIndex = xlNone ' 清除之前颜色
+
+    ' 5. 把【非空、可见】数据存入数组
+    ReDim arr(1 To visibleRows.Count, 1 To 2)
+    ReDim rowNumArr(1 To visibleRows.Count)
+    k = 0
+
+    For Each cell In visibleRows.Rows
+        startVal = cell.Cells(1, 1).Value
+        endVal = cell.Cells(1, 2).Value
+
+        ' 跳过空单元格
+        If startVal <> "" And endVal <> "" And IsNumeric(startVal) And IsNumeric(endVal) Then
+            k = k + 1
+            arr(k, 1) = startVal
+            arr(k, 2) = endVal
+            rowNumArr(k) = cell.Row
+        End If
+    Next cell
+
+    If k = 0 Then
+        MsgBox "所选区域无有效数字！", vbExclamation
+        GoTo 结束
+    End If
+
+    ' 6. 按你的规则逐行检查
+    hasOverlap = False
+
+    ' 从第2行开始，每一行都和上一行对比
+    For i = 2 To k
+        startVal = arr(i, 1)
+        endVal = arr(i, 2)
+        prevStart = arr(i - 1, 1)
+        prevEnd = arr(i - 1, 2)
+
+        ' 规则1：当前行的起始/结尾是否在上一行的区间内
+        If (startVal >= prevStart And startVal <= prevEnd) Then
+            ws.Cells(rowNumArr(i), col1).Interior.Color = vbRed
+            hasOverlap = True
+        End If
+
+        If (endVal >= prevStart And endVal <= prevEnd) Then
+            ws.Cells(rowNumArr(i), col2).Interior.Color = vbRed
+            hasOverlap = True
+        End If
+
+        ' 规则2：当前行的起始/结尾是否与上一行的起始/结尾重复
+        If startVal = prevStart Or startVal = prevEnd Then
+            ws.Cells(rowNumArr(i), col1).Interior.Color = vbRed
+            hasOverlap = True
+        End If
+
+        If endVal = prevStart Or endVal = prevEnd Then
+            ws.Cells(rowNumArr(i), col2).Interior.Color = vbRed
+            hasOverlap = True
+        End If
+
+        ' 额外：如果上一行的起始/结尾与当前行重复，也要标红上一行的单元格
+        If prevStart = startVal Or prevStart = endVal Then
+            ws.Cells(rowNumArr(i - 1), col1).Interior.Color = vbRed
+            hasOverlap = True
+        End If
+
+        If prevEnd = startVal Or prevEnd = endVal Then
+            ws.Cells(rowNumArr(i - 1), col2).Interior.Color = vbRed
+            hasOverlap = True
+        End If
+    Next i
+
+结束:
+    Application.ScreenUpdating = True
+
+    If hasOverlap Then
+        MsgBox "检测到重叠/重复数据，已填充红色！", vbExclamation
+    Else
+        MsgBox "未检测到重叠/重复数据！", vbInformation
+    End If
+End Sub

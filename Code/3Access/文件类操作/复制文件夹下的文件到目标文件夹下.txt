@@ -1,0 +1,27 @@
+﻿'备份文件夹下的文件到目标文件夹下，不含子文件夹和文件
+Sub CopyFolderUsingFileCopy(sourceFolder As String, destinationFolder As String)
+    Dim file As Integer
+    Dim sourceFile As String
+    Dim destinationFile As String
+    
+   '确保目标文件夹存在，如果不存在则创建
+    If Dir(destinationFolder, vbDirectory) = "" Then
+        MkDir destinationFolder
+    End If
+    
+    sourceFile = Dir(sourceFolder & "\*.*")
+    Do While sourceFile <> ""
+        If (GetAttr(sourceFolder & "\" & sourceFile) And vbDirectory) = 0 Then '检查是否为文件
+            destinationFile = destinationFolder & "\" & sourceFile
+            FileCopy sourceFolder & "\" & sourceFile, destinationFile
+        End If
+        sourceFile = Dir
+    Loop
+End Sub
+Sub TestCopyFolderUsingFileCopy()
+    Dim aFolder As String
+    Dim bFolder As String
+    aFolder = "D:\LQ\SMDA\03DQ0024-08T"
+    bFolder = "\\192.168.0.254\公共文件可修改\共享F盘\F盘\G 开头的客户\GY002高义\数码档\"
+    CopyFolderUsingFileCopy aFolder, bFolder
+End Sub

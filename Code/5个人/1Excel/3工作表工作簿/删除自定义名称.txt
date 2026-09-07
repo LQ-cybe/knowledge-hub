@@ -1,0 +1,55 @@
+'删除自定义名称
+Sub DeleteInvalidNames()
+    Dim n As Name
+    Dim ws As Worksheet
+    Dim wb As Workbook
+    Dim rng As Range
+    Dim nameToDelete As String
+    Dim response As VbMsgBoxResult
+
+    Set wb = ActiveWorkbook
+
+    ' 显示警告信息
+    response = MsgBox("此操作将删除工作簿中所有无效的自定义名称。继续吗？", vbExclamation + vbOKCancel, "警告")
+    If response = vbCancel Then Exit Sub
+
+    ' 遍历所有名称
+    For Each n In wb.Names
+        On Error Resume Next
+        Set rng = Nothing
+        Set rng = Range(n.RefersTo)
+        On Error GoTo 0
+
+        ' 检查名称是否无效
+        If rng Is Nothing Then
+            nameToDelete = n.Name
+            ' 确认删除
+            response = MsgBox("删除名称: " & nameToDelete & "?", vbQuestion + vbYesNo, "确认删除")
+            If response = vbYes Then
+                n.Delete
+            End If
+        End If
+    Next n
+
+    ' 检查工作表级名称
+    For Each ws In wb.Worksheets
+        For Each n In ws.Names
+            On Error Resume Next
+            Set rng = Nothing
+            Set rng = ws.Range(n.RefersTo)
+            On Error GoTo 0
+
+            ' 检查名称是否无效
+            If rng Is Nothing Then
+                nameToDelete = n.Name
+                ' 确认删除
+                response = MsgBox("删除工作表 " & ws.Name & " 中的名称: " & nameToDelete & "?", vbQuestion + vbYesNo, "确认删除")
+                If response = vbYes Then
+                    n.Delete
+                End If
+            End If
+        Next n
+    Next ws
+
+    MsgBox "无效名称检查完成"
+End Sub

@@ -1,0 +1,1 @@
+﻿  wsTranspose.UsedRange.Columns.AutoFit           '工作表中所有有数据的列的宽度 自适应

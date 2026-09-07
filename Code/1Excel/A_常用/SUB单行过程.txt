@@ -1,0 +1,2 @@
+﻿'SUB单行过程
+Sub ASAPTool_x64_48(control As IRibbonControl): Call ASAPStartTool(48): End Sub

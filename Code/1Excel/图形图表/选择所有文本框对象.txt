@@ -1,0 +1,17 @@
+﻿'选择所有文本框对象
+Sub SelectAllTextBoxObjects()
+    Dim oSP As Shape
+    Dim oWK As Worksheet
+    Set oWK = Excel.ActiveSheet
+    Dim arr()
+    With oWK
+        For Each oSP In .Shapes
+            If oSP.Type = msoTextBox Then
+                ReDim Preserve arr(k)
+                arr(k) = oSP.Name
+                k = k + 1
+            End If
+        Next
+        .Shapes.Range(arr).Select
+    End With
+End Sub

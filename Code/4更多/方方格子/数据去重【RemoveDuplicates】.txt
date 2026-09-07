@@ -1,0 +1,13 @@
+Sub 数据去重()
+    Dim rng As Range
+    Application.ScreenUpdating = False  '关闭屏幕更新
+    Application.DisplayAlerts = False     '屏蔽屏中弹幕
+    'B列筛选值复制到E列中
+    Set rng = ActiveSheet.Range("I2: L7741")     '筛选结果存放区，不含标题
+    With rng
+        ActiveSheet.Range("A2:D7741").Copy ActiveSheet.Range("i2")     '把筛选结果复制到预定存放区，不含标题
+        .RemoveDuplicates Columns:=Array(3, 4), HEADER:=xlNo   'Columns:=1表示单列筛选，Header:=xlNo表示不含标题
+    End With
+    Application.ScreenUpdating = True  '关闭屏幕更新
+    Application.DisplayAlerts = True     '屏蔽屏中弹幕
+End Sub

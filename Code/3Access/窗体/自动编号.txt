@@ -1,0 +1,48 @@
+﻿    Option Compare Database
+    Option Explicit
+    '******************************************************************************************************************
+    '程序功能：本程序是用来配合自动编号管理的窗体完成自动编号
+    '程序名称：自动编号
+    '程序参数：输入编号规则名称
+    '使用范围：适合所有access
+    '使用范例：直接在程序中调用即可  rs!序号=自动编号（表名_序号[规则名称]）
+    '程序作者：月皓星隐
+    '编外的话：为了方便查看，所以变量用中文的
+    '编写时间：2015-09-01
+    '******************************************************************************************************************
+Function 自动编号(ByVal 规则名称 As String)
+    Dim rs As New ADODB.Recordset
+    Dim cn As ADODB.Connection
+    Dim 循环次数 As Integer
+    Dim 日期前缀 As String
+    Dim 流水号 As Long
+    Dim 流水号后缀 As String
+    '1.先根据规则名称找到记录
+    Set cn = CurrentProject.Connection
+    rs.Open "自动编号管理", cn, adOpenKeyset, adLockOptimistic
+    rs.Filter = "[规则名称]='" & 规则名称 & "'"
+    '2.根据情况进行编号
+    If rs.EOF Or rs.BOF Then MsgBox "没有有效的规则，请确定是否规则名称输入正确": Exit Function
+    If IsNull(rs!最后编号) Then
+        流水号 = 1
+    Else
+        流水号 = Val(Right(rs!最后编号, rs!顺序号位数)) + 1
+    End If
+    For 循环次数 = 1 To rs!顺序号位数
+        流水号后缀 = 流水号后缀 & "0"
+    Next 循环次数
+    '2.1有日期形式加入的情况
+    If IsNull(rs!日期格式) = False Then
+        日期前缀 = Format(Now(), rs!日期格式)
+        自动编号 = rs!编号前缀 & 日期前缀 & Format(流水号, 流水号后缀)
+        rs!最后编号 = 自动编号
+        rs.Update
+    Else
+        '2.2没有日期加入编号的情况
+        自动编号 = rs!编号前缀 & Format(流水号, 流水号后缀)
+        rs!最后编号 = 自动编号
+        rs.Update
+    End If
+    Set rs = Nothing
+    Set cn = Nothing
+End Function

@@ -1,0 +1,20 @@
+﻿'批量导入窗体对象
+Sub BatchImportFormsSimple()
+    Dim fd As FileDialog
+    Dim varItem As Variant
+    Set fd = Application.FileDialog(msoFileDialogFilePicker)
+    With fd
+        .Title = "请选择要导入的窗体文件（.frm）"
+        .InitialFileName = Environ("USERPROFILE") & "\Desktop\"
+        .Filters.Clear
+        .Filters.Add "窗体文件", "*.frm", 1
+        .AllowMultiSelect = True
+        If .Show = -1 Then
+            For Each varItem In .selectedItems
+                ThisWorkbook.VBProject.VBComponents.Import varItem
+            Next
+            MsgBox "导入完成！", vbInformation
+        End If
+    End With
+    Set fd = Nothing
+End Sub

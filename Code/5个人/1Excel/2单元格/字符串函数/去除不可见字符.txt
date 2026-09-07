@@ -1,0 +1,13 @@
+﻿Function 去除不可见字符(rng As Range)
+  Dim ar, i
+  ar = Array(9, 10, 13, 28, 29, 30, 31, 32, 127)
+  For i = 0 To UBound(ar)
+    rng.Replace ChrW(ar(i)), ""
+  Next
+  
+  For i = 129 To 254
+    rng.Replace ChrW(i), ""
+  Next
+  rng.Replace " ", ""  
+End Function
+

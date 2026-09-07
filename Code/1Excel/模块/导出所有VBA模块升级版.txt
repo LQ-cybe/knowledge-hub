@@ -1,0 +1,60 @@
+﻿'导出所有可导出的VBA模块(针对当前活动工作簿)
+Sub OPEN_导出所有模块(control As IRibbonControl)
+    Dim vbc As Object    ' 改用后期绑定，避免VBComponent类型报错
+    Dim strPath As String
+    Dim strFileName As String
+    Dim fso As Object
+    Dim exportCount As Integer    ' 统计成功导出数量
+    Dim activeWB As Object    ' 声明活动工作簿对象，兼容后期绑定
+
+    ' 1. 校验是否有活动工作簿
+    If ActiveWorkbook Is Nothing Then
+        MsgBox "未打开任何Excel工作簿！请先打开需要导出模块的工作簿", vbCritical, "错误"
+        Exit Sub
+    End If
+    Set activeWB = ActiveWorkbook    ' 绑定当前活动工作簿
+
+    ' 2. 修正路径获取（去掉Desktop后的反斜杠，手动拼接）
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    strPath = fso.BuildPath(CreateObject("WScript.Shell").SpecialFolders("Desktop"), "")    ' 桌面路径
+
+    ' 3. 检查路径是否可写
+    If Not fso.FolderExists(strPath) Then
+        MsgBox "导出路径不存在：" & strPath, vbCritical
+        Exit Sub
+    End If
+
+    exportCount = 0
+    On Error Resume Next    ' 捕获单个组件导出错误
+
+    ' 4. 遍历【当前活动工作簿】的VBA组件，仅导出可导出的类型
+    For Each vbc In activeWB.VBProject.VBComponents
+        ' 用数值替代枚举常量（避免引用缺失报错）：
+        ' 1=标准模块(vbext_ct_StdModule)，2=类模块(vbext_ct_ClassModule)
+        Select Case vbc.Type
+        Case 1, 2
+            ' 处理非法文件名（替换特殊字符）
+            strFileName = fso.BuildPath(strPath, Replace(vbc.Name, "/\*?|<>", "_") & ".bas")
+            ' 导出模块
+            vbc.Export strFileName
+            If err.Number = 0 Then
+                exportCount = exportCount + 1
+            Else
+                Debug.Print "导出失败：" & vbc.Name & "，错误：" & err.Description
+                err.Clear
+            End If
+        End Select
+    Next vbc
+
+    ' 5. 导出结果提示（显示当前工作簿名称，更直观）
+    If exportCount > 0 Then
+        MsgBox "成功从【" & activeWB.Name & "】导出 " & exportCount & " 个VBA模块到：" & vbCrLf & strPath, vbInformation
+    Else
+        MsgBox "未从【" & activeWB.Name & "】导出任何模块，可能无可用的标准模块/类模块", vbExclamation
+    End If
+
+    ' 释放对象
+    Set fso = Nothing
+    Set activeWB = Nothing
+    Set vbc = Nothing
+End Sub

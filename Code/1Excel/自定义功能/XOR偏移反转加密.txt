@@ -1,0 +1,45 @@
+﻿Option Explicit
+'XOR偏移反转加密
+' 固定密钥与偏移（必须和加密完全一致）
+Private Const KEY = "AI2026COLOR"
+Private Const OFFSET = 42
+' 加密函数（原文 → 密文）
+Function Encrypt(s As String) As String
+    Dim i As Long, kLen As Long, pos As Long
+    Dim code As Long, keyCode As Long
+    Dim res As String
+    kLen = Len(KEY)
+    res = ""
+    For i = 1 To Len(s)
+        code = AscW(Mid(s, i, 1))       ' 取字符编码
+        pos = (i - 1) Mod kLen + 1     ' 密钥位置（正确循环）
+        keyCode = AscW(Mid(KEY, pos, 1))
+        code = code Xor keyCode         ' XOR
+        code = code + OFFSET            ' 偏移 +42
+        res = res & Hex(code) & ","
+    Next i
+    If Len(res) > 0 Then res = Left(res, Len(res) - 1)
+    Encrypt = StrReverse(res)           ' 反转
+End Function
+' 解密函数（密文 → 原文）
+Function Decrypt(s As String) As String
+    Dim i As Long, kLen As Long, pos As Long
+    Dim rev As String, arr As Variant
+    Dim code As Long, keyCode As Long
+    Dim res As String
+    If s = "" Then Decrypt = "": Exit Function
+    rev = StrReverse(s)                 ' 反转回来
+    arr = Split(rev, ",")               ' 分割
+    kLen = Len(KEY)
+    res = ""
+    For i = 0 To UBound(arr)
+        code = val("&H" & arr(i))       ' 十六进制转数字
+        code = code - OFFSET            ' 偏移 -42
+        pos = i Mod kLen + 1            ' 密钥位置（必须和加密一致）
+        keyCode = AscW(Mid(KEY, pos, 1))
+        code = code Xor keyCode         ' XOR 回去
+        res = res & ChrW(code)          ' 还原字符
+    Next i
+    Decrypt = res
+End Function
+

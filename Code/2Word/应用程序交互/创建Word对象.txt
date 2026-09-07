@@ -1,0 +1,1 @@
+ Set doc= CreateObject("word.application")

@@ -1,0 +1,26 @@
+﻿'将此工作簿下的文件夹列表写入当前工作表的A列单元格中
+Sub ListSubFolders()
+    Dim fso As Object
+    Dim currentWorkbookPath As String
+    Dim mainFolder As Object
+    Dim subFolder As Object
+    Dim i As Long
+    
+    '创建文件系统对象
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    '获取当前工作簿所在路径
+    currentWorkbookPath = ThisWorkbook.Path
+    '获取当前工作簿所在目录对应的文件夹对象
+    Set mainFolder = fso.GetFolder(currentWorkbookPath)
+    
+    i = 1
+    '遍历该文件夹下的所有子文件夹
+    For Each subFolder In mainFolder.SubFolders
+        Cells(i + 1, 1).Value = subFolder.Name
+        i = i + 1
+    Next subFolder
+    
+    Set fso = Nothing
+    Set mainFolder = Nothing
+    Set subFolder = Nothing
+End Sub

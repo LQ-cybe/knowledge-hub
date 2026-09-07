@@ -1,0 +1,5 @@
+﻿    With ActiveWindow
+        .SplitColumn = 0           '冻结列
+        .SplitRow = 1               '冻结行
+    End With
+ActiveWindow.FreezePanes = False           '冻结拆分的行列

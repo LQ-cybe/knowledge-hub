@@ -1,0 +1,12 @@
+'name=空单元格向下填充
+'officetype=excel,et
+'category=空值零值
+'description=用上方非空单元格填充选区内的空单元格
+
+Public Sub FillDownBlanks()
+    On Error Resume Next
+    Selection.SpecialCells(xlCellTypeBlanks).FormulaR1C1 = "=R[-1]C"
+    Selection.Copy
+    Selection.PasteSpecial Paste:=xlPasteValues
+    Application.CutCopyMode = False
+End Sub

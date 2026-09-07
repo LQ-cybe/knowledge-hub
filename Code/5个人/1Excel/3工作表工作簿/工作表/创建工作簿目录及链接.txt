@@ -1,0 +1,14 @@
+﻿Sub 链接()
+    Sheets("首页").Select
+    '创建一个工作表，名称为首页，并表中A列显示所有的工作表名称，并创建超链接
+    For i = 2 To Sheets.Count
+        Cells(i, 1).Value = Sheets(i).Name
+    Next
+    '超链接
+    For i = 2 To Sheets.Count
+        t = Cells(i, 1)
+        Cells(i, 1).Select
+        ActiveSheet.Hyperlinks.Add Anchor:=Selection, Address:="", SubAddress:=t & "!A1", ScreenTip:="进入", TextToDisplay:=t
+    Next
+    Range("A1").Activate                                       ' 定位到A1单元格
+End Sub

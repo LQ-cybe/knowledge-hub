@@ -1,0 +1,5 @@
+﻿Sub RangeCopy()
+  Application.DisplayAlerts = False
+  Sheet1.Range("A1").CurrentRegion.Copy Sheet2.Range("A1")
+  Application.DisplayAlerts = True
+End Sub

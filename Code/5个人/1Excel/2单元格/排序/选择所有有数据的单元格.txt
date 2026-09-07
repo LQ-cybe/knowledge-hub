@@ -1,0 +1,11 @@
+﻿'以当前单元格为基准，往下选择所有有数据的单元格（跳过当前单元格）
+Sub SelectDataBelowCurrentCell()
+    Range("A1").Select
+    Dim currentCell As Range
+    Set currentCell = ActiveCell
+    Dim lastRow As Long
+    lastRow = Cells(Rows.Count, currentCell.Column).End(xlUp).Row
+    Dim rangeToSelect As Range
+    Set rangeToSelect = currentCell.Offset(1, 0).Resize(lastRow - currentCell.Row, 1)
+    rangeToSelect.Select
+End Sub

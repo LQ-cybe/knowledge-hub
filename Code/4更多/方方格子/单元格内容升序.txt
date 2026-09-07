@@ -1,0 +1,24 @@
+'单元格内按升序排列
+'如果要按降序排列，把代码中的大于号换成小于号即可
+Function sx(T_rng As Range)
+    Dim a() As String
+    sx = T_rng.text
+    s = Len(sx)
+    ReDim a(1 To s) As String
+    For i = 1 To s
+        a(i) = Mid(sx, i, 1)
+    Next i
+    For m = 1 To s
+        For j = 2 To s
+            If a(j - 1) > a(j) Then
+                t = a(j - 1)
+                a(j - 1) = a(j)
+                a(j) = t
+            End If
+        Next j
+    Next m
+    sx = ""
+    For i = 1 To s
+        sx = sx & a(i)
+    Next i
+End Function

@@ -1,0 +1,5 @@
+﻿Sub 重启桌面()
+    Shell "taskkill /f /im explorer.exe", vbHide               '' 结束 explorer 进程
+    Delay 1                                                    '必须要延迟，否则重启无效
+    Shell "explorer.exe", vbHide                               ' 重新启动 explorer
+End Sub

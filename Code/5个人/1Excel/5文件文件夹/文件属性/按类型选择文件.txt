@@ -1,0 +1,48 @@
+﻿Sub 浏览指定类型的文件名称() '后面的代码自己添加
+  On Error Resume Next
+  Dim fileToOpen()
+  fileToOpen = Application.GetOpenFilename("Excel文件 (*.xl*), *.xl*", , "请选择Excel文件", , True)
+  If Err.Number > 0 Then Exit Sub
+  For i = 1 To UBound(fileToOpen)
+    MsgBox fileToOpen(i)
+  Next i
+End Sub
+
+Public Function PickFolder()
+  '** 使用FileDialog对象来选择文件夹
+  Dim fd As FileDialog
+  Dim strPath As String
+  
+  Set fd = Application.FileDialog(msoFileDialogFolderPicker)
+  
+  '** 显示选择文件夹对话框
+  If fd.Show = -1 Then '** 用户选择了文件夹
+    strPath = fd.SelectedItems(1)
+  Else
+    strPath = ""
+  End If
+  Set fd = Nothing
+  PickFolder = strPath
+End Function
+
+Function PickFile(path) '打开指定目录 弹出选择文件对话框
+  On Error Resume Next
+  ChDrive path
+  ChDir path
+  PickFile = Application.GetOpenFilename("xls(*.xls;*.xlsx),*.xls;*.xlsx")
+End Function
+
+Sub Test()
+  Dim i&, j&, k&, arr, brr
+  Dim wbk
+  Set wbk = PickFile(ThisWorkbook.path) '打开本表目录 弹出选择文件对话框
+End Sub
+
+Function OpenWbk(path) '打开指定目录 弹出选择文件对话框 返回打开的文件
+  On Error Resume Next
+  ChDrive path
+  ChDir path
+  Set OpenWbk = Workbooks.Open(Application.GetOpenFilename("xls(*.xls;*.xlsx),*.xls;*.xlsx"))
+End Function
+
+

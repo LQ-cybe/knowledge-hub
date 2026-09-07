@@ -1,0 +1,15 @@
+Sub TestExportSpecificRange()
+    Dim success As Boolean
+    Dim ws As Worksheet
+    Dim rng As Range
+    Dim Clastrow As Integer
+    Set ws = ActiveSheet
+    Clastrow = ActiveSheet.Cells.Find("*", , , , xlByRows, xlPrevious).Row
+    Set rng = ws.Range("A1:C" & Clastrow)
+    success = ExportSheetToUTF8Txt(ActiveSheet.Name, rng)
+    If success Then
+        MsgBox "导出成功！"
+    Else
+        MsgBox "导出失败，可能是工作表不存在。"
+    End If
+End Sub

@@ -1,0 +1,104 @@
+Sub SelectAndSaveAsXLS()
+    Dim fd As FileDialog
+    Set fd = Application.FileDialog(msoFileDialogFilePicker)
+    fd.Filters.Add "Excel Files", "*.xlsm;*.xls;*.xlsb", 1
+    If fd.Show = -1 Then
+        Dim filePath As String
+        filePath = fd.SelectedItems(1)
+        Debug.Print "Selected file path: " & filePath
+        If Right(filePath, 5) = ".xlsm" Then
+            Dim wb As Workbook
+            Set wb = Workbooks.Open(filePath)
+            Dim newFilePath As String
+            newFilePath = Left(filePath, Len(filePath) - 5) & ".xls"
+            wb.SaveAs FileName:=newFilePath, FileFormat:=xlExcel8
+            wb.Close False
+            VBAPassword newFilePath, False
+            Dim nb As Workbook
+            Set nb = Workbooks.Open(newFilePath)
+            Dim yiposm As String
+            Dim fuchan As String
+            yiposm = Left(newFilePath, Len(newFilePath) - 4) & "已破.xlsm"
+            fuchan = newFilePath & ".bak"
+            nb.SaveAs FileName:=yiposm, FileFormat:=xlOpenXMLWorkbookMacroEnabled
+            nb.Close False
+            Kill newFilePath
+            Kill fuchan
+        ElseIf Right(filePath, 5) = ".xlsb" Then
+            Dim wwb As Workbook
+            Set wwb = Workbooks.Open(filePath)
+            Dim newwFilePath As String
+            newwFilePath = Left(filePath, Len(filePath) - 5) & ".xls"
+            wwb.SaveAs FileName:=newwFilePath, FileFormat:=xlExcel8
+            wwb.Close False
+            VBAPassword newwFilePath, False
+            Dim nnb As Workbook
+            Set nnb = Workbooks.Open(newwFilePath)
+            Dim yiposmn As String
+            Dim fuchann As String
+            yiposmn = Left(newwFilePath, Len(newwFilePath) - 4) & "已破.xlsb"
+            fuchann = newwFilePath & ".bak"
+            nnb.SaveAs FileName:=yiposmn, FileFormat:=xlExcel12
+            nnb.Close False
+            Kill newwFilePath
+            Kill fuchann
+        ElseIf Right(filePath, 4) = ".xls" Then
+            Dim wwwb As Workbook
+            Set wwwb = Workbooks.Open(filePath)
+            Dim newwwFilePath As String
+            newwwFilePath = Left(filePath, Len(filePath) - 4) & "h.xls"
+            wwwb.SaveAs FileName:=newwwFilePath, FileFormat:=xlExcel8
+            wwwb.Close False
+            VBAPassword newwwFilePath, False
+            Dim nnnb As Workbook
+            Set nnnb = Workbooks.Open(newwwFilePath)
+            Dim yiposmnn As String
+            Dim fuchannn As String
+            yiposmnn = Left(newwwFilePath, Len(newwwFilePath) - 5) & "已破.xls"
+            fuchannn = newwwFilePath & ".bak"
+            nnnb.SaveAs FileName:=yiposmnn, FileFormat:=xlExcel8
+            nnnb.Close False
+            Kill newwwFilePath
+            Kill fuchannn
+        End If
+    End If
+End Sub
+Private Function VBAPassword(FileName As String, Optional Protect As Boolean = False)
+      If Dir(FileName) = "" Then
+         Exit Function
+      Else
+         FileCopy FileName, FileName & ".bak"
+      End If
+      Dim GetData As String * 5
+      Open FileName For Binary As #1
+      Dim CMGs As Long
+      Dim DPBo As Long
+      For i = 1 To LOF(1)
+          Get #1, i, GetData
+          If GetData = "CMG=""" Then CMGs = i
+          If GetData = "[Host" Then DPBo = i - 2: Exit For
+      Next
+      If CMGs = 0 Then
+         MsgBox "请先对VBA编码设置一个保护密码...", 32, "提示"
+         Exit Function
+      End If
+      If Protect = False Then
+         Dim St As String * 2
+         Dim s20 As String * 1
+         Get #1, CMGs - 2, St
+         Get #1, DPBo + 16, s20
+         For i = CMGs To DPBo Step 2
+             Put #1, i, St
+         Next
+         If (DPBo - CMGs) Mod 2 <> 0 Then
+            Put #1, DPBo + 1, s20
+         End If
+         MsgBox "尊主，爆破密码成功！解除密码文件为*已破", 32, "提示"
+      Else
+         Dim MMs As String * 5
+         MMs = "DPB="""
+         Put #1, CMGs, MMs
+         MsgBox "对文件特殊加密成功......", 32, "提示"
+      End If
+      Close #1
+End Function

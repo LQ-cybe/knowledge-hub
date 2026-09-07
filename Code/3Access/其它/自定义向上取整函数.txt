@@ -1,0 +1,8 @@
+﻿    '向上取整
+Function Ceiling(Num As Double) As Double
+    If Num - Int(Num) = 0 Then
+        Ceiling = Num
+    Else
+        Ceiling = Int(Num) + 1
+    End If
+End Function

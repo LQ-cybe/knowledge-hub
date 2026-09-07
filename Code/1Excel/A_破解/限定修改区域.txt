@@ -1,0 +1,19 @@
+'允许用户修改指定区域
+Sub ProtectSheetWithoutSpecificRange()
+    Dim unprotectRange As Range
+    Dim meekouWorkSheet As Worksheet
+    Set meekouWorkSheet = ActiveSheet
+    On Error Resume Next
+    If meekouWorkSheet.ProtectContents Then
+        MsgBox "当前工作表处于保护状态，请先取消保护"
+        Exit Sub
+    End If
+    '选择指定区域允许用户修改
+    meekouWorkSheet.Cells.Locked = True
+    Set unprotectRange = Application.InputBox("请选择允许编辑的区域", "选中区域", Type:=8)
+    pwd = Application.InputBox("请输入保护工作表的密码", "设置密码", Type:=2)
+    '保护工作表
+    unprotectRange.Locked = False
+    unprotectRange.FormulaHidden = False
+    unprotectRange.Worksheet.Protect Password:=pwd, DrawingObjects:=True, Contents:=True, Scenarios:=True
+End Sub

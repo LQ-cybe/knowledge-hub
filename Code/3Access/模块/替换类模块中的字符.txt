@@ -1,0 +1,138 @@
+' 主函数，用于替换类模块代码中的字符串
+' 需要引用: Microsoft Visual Basic for Applications Extensibility 5.3
+Public Sub ReplaceStringInForm(ByVal formName As String, ByVal oldString As String, ByVal newString As String)
+    On Error GoTo ErrorHandler
+    
+    Dim vbProj As VBIDE.VBProject
+    Dim vbComp As VBIDE.VBComponent
+    Dim codeMod As VBIDE.CodeModule
+    Dim lineCount As Long
+    Dim i As Long
+    Dim lineText As String
+    Dim isComment As Boolean
+    Dim frm As Form
+    Dim componentFound As Boolean
+    Dim componentType As String
+    
+    ' 获取当前VB项目
+    Set vbProj = Application.VBE.ActiveVBProject
+    
+    ' 验证组件是否存在，改进匹配逻辑
+    componentFound = False
+    For Each vbComp In vbProj.VBComponents
+        If StrComp(vbComp.Name, formName, vbTextCompare) = 0 Then
+            componentFound = True
+            Select Case vbComp.Type
+                Case vbext_ct_ClassModule: componentType = "类模块"
+                Case vbext_ct_MSForm: componentType = "窗体"
+                Case vbext_ct_StdModule: componentType = "标准模块"
+                Case vbext_ct_Document: componentType = "文档"
+                Case Else: componentType = "未知类型 (" & vbComp.Type & ")"
+            End Select
+            Exit For
+        End If
+    Next vbComp
+    
+    ' 如果组件不存在，详细输出匹配过程信息
+    If Not componentFound Then
+        Dim componentList As String
+        componentList = "可用组件列表:" & vbCrLf & vbCrLf
+        Dim mismatchMsg As String
+        mismatchMsg = "以下是遍历组件时的名称匹配情况：" & vbCrLf
+        For Each vbComp In vbProj.VBComponents
+            componentList = componentList & vbComp.Name & " (" & GetComponentTypeDescription(vbComp.Type) & ")" & vbCrLf
+            If StrComp(vbComp.Name, formName, vbTextCompare) <> 0 Then
+                mismatchMsg = mismatchMsg & "组件 " & vbComp.Name & " 与传入名称 " & formName & " 不匹配" & vbCrLf
+            End If
+        Next vbComp
+        MsgBox "错误: 未找到组件 '" & formName & "'" & vbCrLf & vbCrLf & componentList & vbCrLf & mismatchMsg, vbExclamation
+        Exit Sub
+    End If
+    
+    ' 检查组件是否可修改
+    If Not CanModifyComponent(vbComp) Then
+        MsgBox "错误: 无法修改组件 '" & formName & "' (" & componentType & ")" & vbCrLf & _
+               "可能是因为它是只读的或不支持代码模块访问。", vbExclamation
+        Exit Sub
+    End If
+    
+    ' 获取组件的代码模块
+    Set codeMod = vbComp.CodeModule
+    lineCount = codeMod.CountOfLines
+    
+    ' 尝试打开窗体(如果未打开)
+    On Error Resume Next
+    Set frm = Forms(formName)
+    If Err.Number <> 0 Then
+        Err.Clear
+        ' 尝试打开窗体
+        DoCmd.OpenForm formName, acDesign
+        Set frm = Forms(formName)
+    End If
+    On Error GoTo ErrorHandler
+    
+    ' 如果窗体成功打开，修改控件名称
+    If Not frm Is Nothing Then
+        Dim ctl As Control
+        For Each ctl In frm.Controls
+            If InStr(1, ctl.Name, oldString, vbTextCompare) > 0 Then
+                ctl.Name = Replace(ctl.Name, oldString, newString, 1, -1, vbTextCompare)
+            End If
+        Next ctl
+        
+        ' 关闭窗体但不保存更改(我们只修改了代码模块)
+        DoCmd.Close acForm, formName, acSaveNo
+    Else
+        ' 如果无法打开窗体，仅修改代码模块
+        Debug.Print "警告: 无法打开窗体 '" & formName & "', 仅修改代码模块"
+    End If
+    
+    ' 遍历代码模块的每一行
+    For i = 1 To lineCount
+        lineText = codeMod.Lines(i, 1)
+        
+        ' 检查是否为注释行
+        isComment = Left$(Trim(lineText), 1) = "'" Or _
+                   (InStr(1, lineText, "Rem ", vbTextCompare) > 0 And _
+                    (InStr(1, lineText, "'", vbTextCompare) = 0 Or _
+                     InStr(1, lineText, "Rem ", vbTextCompare) < InStr(1, lineText, "'", vbTextCompare)))
+        
+        ' 如果不是注释且包含要替换的字符串，则替换
+        If Not isComment And InStr(1, lineText, oldString, vbTextCompare) > 0 Then
+            lineText = Replace(lineText, oldString, newString, 1, -1, vbTextCompare)
+            codeMod.ReplaceLine i, lineText
+        End If
+    Next i
+    
+    MsgBox "替换完成！在组件 '" & formName & "' (" & componentType & ") 中，'" & oldString & "' 已被替换为 '" & newString & "'。", vbInformation
+    Exit Sub
+    
+ErrorHandler:
+    MsgBox "发生错误: " & Err.Description & vbCrLf & _
+           "请确保已启用'信任访问VBA项目对象模型'选项。", vbCritical
+    Resume Next
+End Sub
+
+' 获取组件类型描述
+Private Function GetComponentTypeDescription(componentType As Long) As String
+    Select Case componentType
+        Case vbext_ct_ClassModule: GetComponentTypeDescription = "类模块"
+        Case vbext_ct_MSForm: GetComponentTypeDescription = "窗体"
+        Case vbext_ct_StdModule: GetComponentTypeDescription = "标准模块"
+        Case vbext_ct_Document: GetComponentTypeDescription = "文档"
+        Case Else: GetComponentTypeDescription = "未知类型 (" & componentType & ")"
+    End Select
+End Function
+
+' 检查组件是否可修改
+Private Function CanModifyComponent(vbComp As VBIDE.VBComponent) As Boolean
+    On Error Resume Next
+    Dim codeMod As VBIDE.CodeModule
+    Set codeMod = vbComp.CodeModule
+    
+    CanModifyComponent = (Not codeMod Is Nothing) And (codeMod.CountOfLines > 0)
+End Function
+'调用查找替换函数，把字符A替换成字符B;必须添加窗体前缀
+Sub TestReplaceStringInForm()
+    ReplaceStringInForm "Form_" & "发送消息_1", "测试1", "这是测试代码"
+End Sub

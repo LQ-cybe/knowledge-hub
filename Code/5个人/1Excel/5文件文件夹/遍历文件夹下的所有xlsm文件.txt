@@ -1,0 +1,47 @@
+Sub ListXLSMFiles()
+    Dim fso As Object
+    Dim folder As Object
+    Dim file As Object
+    Dim outputRow As Long
+    
+    ' 设置输出起始行
+    outputRow = 1
+    
+    ' 创建文件系统对象
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    
+    ' 指定要遍历的根文件夹
+    Set folder = fso.GetFolder("D:\LQ\SMDA")
+    
+    ' 清空A列现有数据
+    Range("A:A").ClearContents
+    
+    ' 调用递归函数处理文件夹
+    ProcessFolder folder, outputRow
+    
+    ' 释放对象
+    Set folder = Nothing
+    Set fso = Nothing
+    
+    MsgBox "已完成扫描! 共找到 " & (outputRow - 1) & " 个 .xlsm 文件。", vbInformation
+End Sub
+
+Sub ProcessFolder(folder As Object, ByRef outputRow As Long)
+    Dim subFolder As Object
+    Dim file As Object
+    
+    ' 遍历当前文件夹中的所有文件
+    For Each file In folder.Files
+        ' 检查文件扩展名是否为 .xlsm (不区分大小写)
+        If LCase(Right(file.Path, 5)) = ".xlsm" Then
+            ' 将完整文件路径输出到A列
+            Cells(outputRow, 1).Value = file.Path
+            outputRow = outputRow + 1
+        End If
+    Next file
+    
+    ' 递归处理子文件夹
+    For Each subFolder In folder.SubFolders
+        ProcessFolder subFolder, outputRow
+    Next subFolder
+End Sub

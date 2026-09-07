@@ -1,0 +1,43 @@
+Attribute VB_Name = "B001求某颜色单元格数字的和"
+Option Explicit
+
+Function SumByColor(DataRange As Range, ColorCell As Range) As Double
+    ' 功能：按单元格背景颜色求和
+    ' 参数：
+    '   DataRange - 需要求和的区域
+    '   ColorCell - 包含参考颜色的任意单元格
+    
+    Dim Cell As Range
+    Dim colorValue As Long
+    Dim totalSum As Double
+    
+    ' 获取参考颜色值（包括条件格式）
+    colorValue = GetCellColor(ColorCell)
+    
+    ' 初始化总和
+    totalSum = 0
+    
+    ' 遍历数据区域
+    For Each Cell In DataRange
+        ' 检查单元格颜色是否匹配且包含数字
+        If GetCellColor(Cell) = colorValue And IsNumeric(Cell.Value) Then
+            totalSum = totalSum + Cell.Value
+        End If
+    Next Cell
+    
+    ' 返回结果
+    SumByColor = totalSum
+End Function
+
+Private Function GetCellColor(TargetCell As Range) As Long
+    ' 辅助函数：获取单元格的实际显示颜色（包括条件格式）
+    
+    On Error Resume Next
+    ' 优先获取条件格式颜色
+    GetCellColor = TargetCell.DisplayFormat.Interior.Color
+    If Err.Number <> 0 Then
+        ' 如果出错（如Excel 2007），则使用普通颜色
+        GetCellColor = TargetCell.Interior.Color
+    End If
+    On Error GoTo 0
+End Function

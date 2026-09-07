@@ -1,0 +1,4 @@
+﻿Sub 新建工作簿()
+	dim wbk as workbook
+	set wbk=application.workbook.add()
+End Sub

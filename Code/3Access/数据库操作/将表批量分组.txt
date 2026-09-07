@@ -1,0 +1,45 @@
+'将表批量分组
+ub BatchDeleteTables_ByPattern()
+    Dim db As DAO.Database
+    Dim tdf As DAO.TableDef
+    Dim tableGroups As Object
+    Dim groupName As String
+    Dim tableName As String
+    Dim prefixPatterns As Variant
+    Dim i As Integer
+    
+    Set db = CurrentDb
+    Set tableGroups = CreateObject("Scripting.Dictionary")
+    
+    ' 定义前缀模式和对应的组名
+    prefixPatterns = Array( _
+        "tbl_采购", "业务表", _
+        "tbl_客户", "客户表", _
+        "tbl_日志", "日志表", _
+        "tbl_系统", "系统表" _
+    )
+    
+    ' 自动识别表并分组
+    For Each tdf In db.TableDefs
+        If Left(tdf.Name, 4) <> "MSys" Then ' 跳过系统表
+            tableName = tdf.Name
+            
+            ' 检查表名匹配哪个前缀模式
+            For i = 0 To UBound(prefixPatterns) Step 2
+                If InStr(1, tableName, prefixPatterns(i), vbTextCompare) = 1 Then
+                    groupName = prefixPatterns(i + 1)
+                    
+                    ' 如果组不存在，创建新组
+                    If Not tableGroups.Exists(groupName) Then
+                        tableGroups.Add groupName, New Collection
+                    End If
+                    
+                    ' 将表添加到对应组
+                    tableGroups(groupName).Add tableName
+                    Exit For
+                End If
+            Next i
+        End If
+    Next tdf
+    
+End Sub

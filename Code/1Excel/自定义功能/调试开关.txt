@@ -1,0 +1,43 @@
+﻿Option Explicit
+' 全局调试总开关：True开启调试输出，False屏蔽所有调试打印/弹窗
+Public g_DebugSwitch As Boolean
+'  调试打印（替代Debug.Print）
+Public Sub DebugLog(Optional ByVal logText As String = "")
+    If Not g_DebugSwitch Then Exit Sub ' 开关关闭直接退出，不输出
+    Debug.Print "[调试日志] " & logText
+End Sub
+'  普通调试弹窗（替代调试用MsgBox）
+Public Sub DebugMsg(Optional ByVal msgText As String = "")
+    If Not g_DebugSwitch Then Exit Sub
+    MsgBox "[调试提示]" & vbCrLf & msgText, vbInformation, "调试信息"
+End Sub
+'  警告类调试弹窗
+Public Sub DebugAlert(Optional ByVal msgText As String = "")
+    If Not g_DebugSwitch Then Exit Sub
+    MsgBox "[调试警告]" & vbCrLf & msgText, vbExclamation, "调试警告"
+End Sub
+'  快捷切换开关工具
+' 一键开启调试
+Public Sub Debug_Open()
+    g_DebugSwitch = True
+    MsgBox "调试输出已【开启】，所有DebugLog/DebugMsg将正常显示", vbInformation
+End Sub
+' 一键关闭调试
+Public Sub Debug_Close()
+    g_DebugSwitch = False
+    MsgBox "调试输出已【关闭】，所有调试打印、弹窗全部屏蔽", vbInformation
+End Sub
+' 测试主流程
+Sub BigMainProcess()
+    ' 业务逻辑...
+    DebugLog "进入主流程函数"
+    Dim i As Long
+    For i = 1 To 100
+        DebugLog "当前循环序号：" & i
+        If i = 50 Then
+            DebugMsg "循环到达50，断点校验"
+        End If
+    Next i
+    DebugAlert "主流程执行完毕，数据校验完成"
+    MsgBox "测试结束"
+End Sub

@@ -1,0 +1,38 @@
+﻿'备份文件夹下的文件到目标文件夹下，含子文件夹和文件
+Sub CopyFolderUsingFSO(sourceFolder As String, destinationFolder As String)
+    Dim fso As Object
+    Dim source As Object
+    Dim destination As Object
+    
+   '创建FileSystemObject对象
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    
+   '确保目标文件夹存在，如果不存在则创建
+    If Not fso.FolderExists(destinationFolder) Then
+        fso.CreateFolder destinationFolder
+    End If
+    
+   '获取源文件夹对象
+    Set source = fso.GetFolder(sourceFolder)
+    
+   '遍历源文件夹中的所有文件和子文件夹
+    For Each file In source.Files
+        file.Copy destinationFolder & "\" & file.Name
+    Next file
+    
+    For Each subFolder In source.SubFolders
+        CopyFolderUsingFSO subFolder.Path, destinationFolder & "\" & subFolder.Name
+    Next subFolder
+    
+   '释放对象
+    Set destination = Nothing
+    Set source = Nothing
+    Set fso = Nothing
+End Sub
+Sub TestCopyFolderUsingFileCopy()
+    Dim aFolder As String
+    Dim bFolder As String
+    aFolder = "D:\LQ\SMDA\03DQ0024-08T"
+    bFolder = "\\192.168.0.254\公共文件可修改\共享F盘\F盘\G 开头的客户\GY002高义\数码档\"
+    CELL CopyFolderUsingFSO(aFolder, bFolder)
+End Sub

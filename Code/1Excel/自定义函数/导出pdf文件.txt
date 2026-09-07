@@ -1,0 +1,11 @@
+﻿'导出当前工作表为pdf文件，文件名使用A2单元格的值
+Sub ExportToPDF()
+    Dim ws As Worksheet
+    Dim pdfFileName As String
+    Set ws = ActiveSheet '获取当前活动工作表
+    
+    pdfFileName = ws.Range("L1").Value & ".pdf" '获取A2单元格的值作为文件名并添加.pdf后缀
+    
+    ws.ExportAsFixedFormat Type:=xlTypePDF, Filename:=ThisWorkbook.Path & "\" & pdfFileName, Quality:=xlQualityStandard, IncludeDocProperties:=True, IgnorePrintAreas:=False, OpenAfterPublish:=False
+    '将当前工作表导出为PDF格式，指定文件路径（使用当前工作簿所在路径）、文件名、质量标准等参数
+End Sub

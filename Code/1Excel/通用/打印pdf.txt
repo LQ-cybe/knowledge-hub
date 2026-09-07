@@ -1,0 +1,78 @@
+Sub PrintToPDF()
+    Dim ws As Worksheet
+    Dim strPDFPath As String
+    Set ws = ActiveSheet
+    
+    ' 1. 检查并临时解除工作表保护
+    Dim isProtected As Boolean
+    isProtected = ws.ProtectContents
+    If isProtected Then
+        ws.Unprotect ' 无密码时直接解除，有密码需传参
+    End If
+    
+    ' 2. 简化 PageSetup
+    With ws.PageSetup
+        .Orientation = xlPortrait
+    End With
+    
+    ' 3. 验证打印机名称（后期绑定，不依赖引用库）
+    Dim pdfPrinterFound As Boolean
+    Dim printerName As Variant
+    
+    On Error Resume Next
+    For Each printerName In Application.Printers
+        If InStr(1, CStr(printerName), "Microsoft Print to PDF", vbTextCompare) > 0 Then
+            pdfPrinterFound = True
+            Exit For
+        End If
+    Next
+    On Error GoTo 0
+    
+    If Not pdfPrinterFound Then
+        MsgBox "未找到 Microsoft Print to PDF 打印机！", vbCritical
+        Exit Sub
+    End If
+    
+    ' 4. 确保输出路径有效
+    strPDFPath = "C:\Users\Administrator\Desktop\承认书_张海雪\Document.pdf"
+    Dim outputFolder As String
+    outputFolder = Left(strPDFPath, InStrRev(strPDFPath, "\") - 1)
+    
+    ' 检查文件夹是否存在，不存在则创建
+    If Len(Dir(outputFolder, vbDirectory)) = 0 Then
+        On Error Resume Next
+        MkDir outputFolder
+        If Err.Number <> 0 Then
+            MsgBox "无法创建文件夹: " & outputFolder & vbCrLf & "请检查路径或权限。", vbCritical
+            Exit Sub
+        End If
+        On Error GoTo 0
+    End If
+    
+    ' 5. 执行打印
+    On Error Resume Next
+    With Application
+        .PrintCommunication = False
+        .ActivePrinter = "Aodo PDF"
+        ws.PrintOut _
+            Copies:=1, _
+            Collate:=True, _
+            IgnorePrintAreas:=False, _
+            PrintToFile:=True, _
+            PrToFileName:=strPDFPath
+        .PrintCommunication = True
+    End With
+    
+    ' 6. 错误处理与恢复
+    If Err.Number <> 0 Then
+        MsgBox "打印失败：" & Err.Description & vbCrLf & "错误代码: " & Err.Number, vbCritical
+    Else
+        MsgBox "已成功导出 PDF 至：" & strPDFPath, vbInformation
+    End If
+    
+    ' 7. 恢复工作表保护（若原保护）
+    If isProtected Then
+        ws.Protect ' 无密码时恢复，有密码需传参
+    End If
+End Sub
+

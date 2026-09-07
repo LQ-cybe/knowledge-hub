@@ -1,0 +1,41 @@
+Function BaseConversion(num As Long, base As Integer, digit As Integer) As String
+    Dim digits As String
+    Dim result As String
+    Dim quotient As Long
+    Dim remainder As Integer
+    
+    ' 根据不同进制设置对应的字符集
+    Select Case base
+        Case 31
+            digits = "0123456789ABCDEFGHIJKLMNOPQRST"
+        Case 34
+            digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWX"
+        Case 36
+            digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        Case Else
+            MsgBox "不支持的进制: " & base
+            Exit Function
+    End Select
+    
+    quotient = num
+    result = ""
+    
+    ' 进行进制转换
+    Do While quotient > 0
+        remainder = quotient Mod base
+        result = Mid(digits, remainder + 1, 1) & result
+        quotient = quotient \ base
+    Loop
+    
+    ' 如果结果为空，说明输入的数字是 0
+    If result = "" Then
+        result = "0"
+    End If
+    
+    ' 补齐位数
+    If Len(result) < digit Then
+        result = String(digit - Len(result), "0") & result
+    End If
+    
+    BaseConversion = result
+End Function    

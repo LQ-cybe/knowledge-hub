@@ -1,0 +1,2 @@
+﻿'当前文件全地址
+ThisWorkbook.FullName

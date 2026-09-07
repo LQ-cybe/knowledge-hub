@@ -1,0 +1,61 @@
+Sub 删除页眉页脚()
+    docpath = GetWordPath
+    If IsEmpty(docpath) Then Exit Sub
+    Dim wd As Document
+    Application.DisplayAlerts = wdAlertsNone
+    For i = 1 To UBound(docpath)
+        Set wd = Documents.Open(docpath(i))
+        'For Each oSec In wd.Sections                           '文档的节中循环
+        'Set myrange = oSec.Headers(wdHeaderFooterPrimary).Range
+        'myrange.Delete                                     '删除页眉中的内容
+        'Set myrange2 = oSec.Footers(wdHeaderFooterPrimary).Range
+        'myrange2.Delete                                    '删除页脚中的内容
+        'Next
+        For sec = 1 To wd.Sections.Count
+            Selection.GoTo wdGoToSection, wdGoToAbsolute, sec
+            With wd.Sections(sec)
+                '/首页页眉
+                Set oHF = .Headers(wdHeaderFooterFirstPage)
+                oHF.Range.Delete
+                '//////////////////奇数页页眉//////////////////////////
+                Set oHF = .Headers(wdHeaderFooterPrimary)
+                oHF.Range.Delete
+                '/////////////////////////////////////////////////////
+                '/偶数页页眉
+                Set oHF = .Headers(wdHeaderFooterEvenPages)
+                oHF.Range.Delete
+                '/首页页脚
+                Set oHF = .Footers(wdHeaderFooterFirstPage)
+                oHF.Range.Delete
+                '/奇数页页脚
+                Set oHF = .Footers(wdHeaderFooterPrimary)
+                oHF.Range.Delete
+                '/偶数页页脚
+                Set oHF = .Footers(wdHeaderFooterEvenPages)
+                oHF.Range.Delete
+            End With
+            With wd.ActiveWindow.ActivePane.View
+                .SeekView = wdSeekCurrentPageHeader            '进入当前页面的页眉
+                Selection.WholeStory
+                Selection.Delete
+                .SeekView = wdSeekCurrentPageFooter            '进入当前页面的页脚
+                Selection.WholeStory
+                Selection.Delete
+                .SeekView = wdSeekMainDocument                 '退出页眉页脚视图
+            End With
+    
+            If wd.Sections(sec).Headers(wdHeaderFooterPrimary).Range.ParagraphFormat.Borders(wdBorderBottom).LineStyle = 1 Then
+                wd.Sections(sec).Headers(wdHeaderFooterPrimary).Range.ParagraphFormat.Borders(wdBorderBottom).LineStyle = 0
+                With wd.ActiveWindow.ActivePane.View
+                    .SeekView = wdSeekCurrentPageHeader        '进入当前页面的页眉
+    
+                    .SeekView = wdSeekMainDocument             '退出页眉页脚视图
+                End With
+    
+            End If
+        Next
+        wd.Close True
+    Next
+    Application.DisplayAlerts = wdAlertsAll
+    MsgBox "完成！"
+End Sub

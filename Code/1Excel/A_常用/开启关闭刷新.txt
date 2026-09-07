@@ -1,0 +1,14 @@
+﻿    Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    Application.AskToUpdateLinks = False
+    Application.Calculation = xlManual
+    Excel.Application.DisplayStatusBar = False '关闭状态栏
+    Application.EnableEvents = False '关闭事件更新
+    ActiveSheet.DisplayPageBreaks = False '隐藏分页
+
+    Application.DisplayAlerts = true
+    Application.ScreenUpdating = true
+    Application.AskToUpdateLinks =true
+    Application.Calculation = xlAutomatic
+ 
+

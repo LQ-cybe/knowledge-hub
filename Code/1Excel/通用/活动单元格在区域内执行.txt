@@ -1,0 +1,2 @@
+﻿'只有当前活动单元格在这个区域内才执行后面的代码
+If Not Intersect(ActiveCell, Range("A3:A1836")) Is Nothing Then

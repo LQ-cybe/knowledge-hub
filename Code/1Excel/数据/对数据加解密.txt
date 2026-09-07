@@ -1,0 +1,27 @@
+﻿'对数据加解密
+Sub EncryptData()
+    ' 定义变量
+    Dim inputString As String, index As Integer, charIndex As Integer
+    Dim tempChar As String
+    Dim encryptionKey As String, encryptedString As String
+    Dim keyPath As String
+    
+    ' 读取加密密钥 写一个数字即可
+    encryptionKey = "12"
+    
+    ' 遍历需要加密的单元格范围（A2到A7）
+    For index = 1 To 7
+        inputString = Range("A" & index).Value  ' 获取待加密的字符串
+        encryptedString = ""  ' 初始化加密结果字符串
+        
+        ' 遍历字符串的每一位字符
+        For charIndex = 1 To Len(inputString)
+            ' 加密处理：将字符的ASCII值与密钥进行XOR操作
+            tempChar = Chr(Asc(Mid(inputString, charIndex, 1)) Xor CInt(encryptionKey))
+            encryptedString = encryptedString & tempChar
+        Next charIndex
+        
+        ' 将加密结果写回单元格
+        Range("A" & index).Value = encryptedString
+    Next index
+End Sub

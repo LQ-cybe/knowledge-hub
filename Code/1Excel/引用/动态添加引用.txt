@@ -1,0 +1,65 @@
+﻿    '使用addfromguid动态添加引用
+Sub AddReference()
+    Dim RefItem(7, 3) As Variant
+    
+    RefItem(0, 0) = "{000204EF-0000-0000-C000-000000000046}"
+    RefItem(0, 1) = 4
+    RefItem(0, 2) = 0
+    
+    RefItem(1, 0) = "{00020813-0000-0000-C000-000000000046}"
+    RefItem(1, 1) = 1
+    RefItem(1, 2) = 6
+    
+    RefItem(2, 0) = "{0D452EE1-E08F-101A-852E-02608C4D0BB4}"
+    RefItem(2, 1) = 2
+    RefItem(2, 2) = 0
+    
+    RefItem(3, 0) = "{00020430-0000-0000-C000-000000000046}"
+    RefItem(3, 1) = 2
+    RefItem(3, 2) = 0
+    
+    RefItem(4, 0) = "{2DF8D04C-5BFA-101B-BDE5-00AA0044DE52}"
+    RefItem(4, 1) = 2
+    RefItem(4, 2) = 4
+    
+    RefItem(5, 0) = "{420B2830-E718-11CF-893D-00A0C9054228}"
+    RefItem(5, 1) = 1
+    RefItem(5, 2) = 0
+    
+    RefItem(6, 0) = "{2A75196C-D9EB-4129-B803-931327F72D5C}"
+    RefItem(6, 1) = 2
+    RefItem(6, 2) = 8
+    
+    Dim strGUID As String, theRef As Variant, i As Long
+    
+    On Error Resume Next
+    
+    For i = ThisWorkbook.VBProject.References.Count To 1 Step -1
+        Set theRef = ThisWorkbook.VBProject.References.Item(i)
+        If theRef.IsBroken = True Then
+            ThisWorkbook.VBProject.References.Remove theRef
+        End If
+    Next i
+    
+    Err.Clear
+    
+    Dim errmsg As String
+    
+    For i = 0 To 6
+        ThisWorkbook.VBProject.References.AddFromGuid GUID:=RefItem(i, 0), Major:=RefItem(i, 1), Minor:=RefItem(i, 2)
+        Select Case Err.Number
+            Case Is = 32813
+                '引用已经加载，无需做任何事情
+            Case Is = vbNullString
+                '成功加载
+            Case Else
+                '加载出现错误，保存错误信息
+                errmsg = errmsg & RefItem(i, 0) & "出现错误错误"
+        End Select
+    Next i
+    If errmsg <> "" Then
+        MsgBox errmsg
+    End If
+    On Error GoTo 0
+    
+End Sub

@@ -1,0 +1,3 @@
+﻿Sub Date_Time() '使用格式代码和 VBA 代码来修改页眉信息和外观
+    ActiveSheet.PageSetup.CenterHeader = "&D  &B&ITime:&I&B&T"
+End Sub

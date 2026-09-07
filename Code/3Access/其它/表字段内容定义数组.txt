@@ -1,0 +1,50 @@
+﻿Public YMcoding() As Variant
+ '将表中的第2个字段的所有内容定义成数组
+Function GetColumnAsArrayAndCount() As Long
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim arr() As Variant
+    Dim i As Long
+    Dim count As Long
+    
+    ' 设置表名，你需要将 "YourTableName" 替换为实际的表名
+    Dim tableName As String
+    tableName = "tbl_日期码格式参数表"
+    
+    ' 打开数据库
+    Set db = CurrentDb()
+    
+    ' 打开记录集
+    Set rs = db.OpenRecordset(tableName)
+    
+    ' 检查记录集是否为空
+    If Not (rs.EOF And rs.BOF) Then
+        rs.MoveLast
+        count = rs.recordCount
+        ReDim arr(0 To count - 1)
+        
+        rs.MoveFirst
+        i = 0
+        Do Until rs.EOF
+            ' 假设第二列的索引为 1（索引从 0 开始）
+            arr(i) = rs.Fields(1)
+            rs.MoveNext
+            i = i + 1
+        Loop
+    End If
+    
+    ' 关闭记录集和数据库
+    rs.Close
+    Set rs = Nothing
+    db.Close
+    Set db = Nothing
+    
+    ' 这里可以根据需求对数组进行进一步操作
+    ' 例如，打印数组元素
+    For i = LBound(arr) To UBound(arr)
+        Debug.Print arr(i)                  '在立即窗口输出所有的数组
+    Next i
+    YMcoding() = arr()
+    ' 返回数组的数据数量
+    GetColumnAsArrayAndCount = count
+End Function

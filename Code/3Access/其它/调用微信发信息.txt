@@ -1,0 +1,57 @@
+' 需要先引用以下库 [VBA编辑器 - 工具 - 引用]
+' 1. Microsoft Windows Common Controls-2 6.0
+' 2. Microsoft HTML Object Library
+
+Private Declare PtrSafe Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
+
+Sub WeChatMassSend()
+    Dim WshShell As Object
+    Dim hwnd As Long
+    Dim FilePath As String
+    Dim Contacts As Variant
+    Dim i As Long
+    
+    Set WshShell = CreateObject("WScript.Shell")
+    FilePath = "C:\YourFile.docx" ' 修改为实际文件路径
+    Contacts = Array("张三", "李四", "王五") ' 修改为联系人列表
+    
+    ' 确保微信已登录并打开主窗口
+    If Not AppActivate("微信") Then
+        MsgBox "请先打开微信客户端"
+        Exit Sub
+    End If
+    
+    For i = LBound(Contacts) To UBound(Contacts)
+        ' 激活微信窗口
+        WshShell.AppActivate "微信"
+        Sleep 500
+        
+        ' 模拟快捷键打开搜索(Ctrl+F)
+        WshShell.SendKeys "^f"
+        Sleep 300
+        
+        ' 输入联系人姓名
+        WshShell.SendKeys Contacts(i)
+        Sleep 1000 ' 等待搜索结果
+        
+        ' 回车打开聊天窗口
+        WshShell.SendKeys "{ENTER}"
+        Sleep 1500
+        
+        ' 打开文件选择框(Ctrl+F)
+        WshShell.SendKeys "^f"
+        Sleep 1000
+        
+        ' 输入文件路径并发送
+        WshShell.SendKeys FilePath
+        Sleep 500
+        WshShell.SendKeys "{ENTER}"
+        Sleep 2000 ' 等待文件上传
+        
+        ' 发送文件(回车)
+        WshShell.SendKeys "{ENTER}"
+        Sleep 1500
+    Next i
+    
+    MsgBox "操作完成，请人工检查发送结果"
+End Sub

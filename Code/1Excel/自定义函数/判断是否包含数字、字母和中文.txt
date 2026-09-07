@@ -1,0 +1,47 @@
+'判断是否包含字母
+Function isContainsLower(value As String)
+   isContainsLower = value Like "*[a-z]*"
+End Function
+
+'判断是否包含数字
+Function isContainsNumber(value As String)
+    isContainsNumber = value Like "*[0-9]*"
+End Function
+'判断是否包含中文
+Function isContainsChinese(value As String)
+    Dim objRegex As Object
+    Set objRegex = CreateObject("vbscript.regexp")
+    With objRegex
+        .Global = True
+        .Pattern = "[\u4E00-\u9FFF\u6300-\u77FF\u7800-\u8CFF\u8D00-\u9FFF]+"
+        ChineseString = .Replace(value, vbNullString)
+    End With
+    isContainsChinese = Len(ChineseString) <> Len(value)
+End Function
+'功能：判断字符串是否包含指定类型的字符
+'参数：value - 要检查的字符串
+'     typeFlag - 1:判断是否包含字母 2:判断是否包含数字 3:判断是否包含中文
+'返回值：Boolean - True表示包含指定类型的字符，False表示不包含
+Function CheckStringType(value As String, typeFlag As Integer) As Boolean
+    Select Case typeFlag
+        Case 1 '判断是否包含字母
+            CheckStringType = value Like "*[a-z]*"
+            
+        Case 2 '判断是否包含数字
+            CheckStringType = value Like "*[0-9]*"
+            
+        Case 3 '判断是否包含中文
+            Dim objRegex As Object
+            Dim ChineseString As String
+            Set objRegex = CreateObject("vbscript.regexp")
+            With objRegex
+                .Global = True
+                .Pattern = "[\u4E00-\u9FFF\u6300-\u77FF\u7800-\u8CFF\u8D00-\u9FFF]+"
+                ChineseString = .Replace(value, vbNullString)
+            End With
+            CheckStringType = Len(ChineseString) <> Len(value)
+            
+        Case Else
+            CheckStringType = False
+    End Select
+End Function

@@ -1,0 +1,18 @@
+'筛选所有含有小写字母的数据
+Sub FilterLower()
+    Dim sourceRange As Range
+    Dim current As Range
+    Set sourceRange = Range("A1:A10")
+    Dim filterArray() As String
+    Dim i As Integer
+    i = 0
+    For Each current In sourceRange
+        If current.Value Like "*[a-z]*" Then
+            ReDim Preserve filterArray(i)
+            filterArray(i) = current.Value
+            i = i + 1
+        End If
+    Next
+    sourceRange.AutoFilter Field:=1, _
+        Criteria1:=filterArray, Operator:=xlFilterValues
+End Sub

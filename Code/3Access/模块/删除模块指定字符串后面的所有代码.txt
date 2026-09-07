@@ -1,0 +1,55 @@
+' 删除模块指定字符串后面的所有代码
+Sub DeleteCodeAfterString()
+    Dim strSearch As String
+    Dim targetModuleName As String
+    Dim vbComp As Object
+    Dim codeMod As Object
+    Dim lineNum As Long
+    Dim totalLines As Long
+    Dim i As Long
+    
+    On Error GoTo ErrorHandler
+    
+    ' 设置目标模块名（要处理的模块）
+    targetModuleName = "模块1"  ' 替换为实际模块名
+    
+    ' 设置要查找的字符串标记
+    strSearch = "'yyyyyyy"
+    
+    ' 获取目标模块
+    Set vbComp = Application.VBE.ActiveVBProject.VBComponents(targetModuleName)
+    Set codeMod = vbComp.CodeModule
+    
+    ' 获取模块总行数
+    totalLines = codeMod.CountOfLines
+    
+    If totalLines = 0 Then
+'        MsgBox "模块为空，没有代码可删除。", vbInformation
+        Exit Sub
+    End If
+    
+    ' 查找指定字符串所在的行
+    lineNum = 0
+    For i = 1 To totalLines
+        If InStr(1, codeMod.Lines(i, 1), strSearch, vbTextCompare) > 0 Then
+            lineNum = i + 1
+            Exit For
+        End If
+    Next i
+    
+    If lineNum = 0 Then
+'        MsgBox "未找到指定的字符串: """ & strSearch & """", vbExclamation
+        Exit Sub
+    End If
+    
+    ' 删除指定行及之后的所有代码
+    codeMod.DeleteLines lineNum, totalLines - lineNum + 1
+    
+'    MsgBox "已成功删除模块 [" & targetModuleName & "] 中从第 " & lineNum & " 行开始的所有代码。", vbInformation
+    Exit Sub
+    
+ErrorHandler:
+'    MsgBox "发生错误: " & Err.Description & vbCrLf & _
+           "错误号: " & Err.Number, vbCritical
+    Exit Sub
+End Sub

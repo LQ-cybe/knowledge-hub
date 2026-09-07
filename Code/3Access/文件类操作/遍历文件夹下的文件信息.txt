@@ -1,0 +1,62 @@
+    Dim tbl_Name, FilePath, FileName As String
+    '    提取文件夹下的文件名和目录
+Sub ScanFoldersAndFiles()
+    DoCmd.SetWarnings False                                    '屏蔽系统警告
+    Dim fso As Object
+    Dim rootFolder As Object
+    Dim folder As Object
+    Dim file As Object
+    Dim strFolderPath As String
+    Dim strSQL As String
+    tbl_Name = "tbl_文件夹子文件信息"
+    FilePath = "文件夹目录"
+    FileName = "文件名"
+    Call TJFS                                                  '调用判断是否删除原始数据过程
+    strFolderPath = "C:\Users"                                 '设置要扫描的根文件夹路径
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    Set rootFolder = fso.GetFolder(strFolderPath)
+    '遍历文件夹及其子文件夹
+    Call TraverseFolders(rootFolder)
+    '    MsgBox "扫描完成！"
+    Set file = Nothing
+    Set folder = Nothing
+    Set rootFolder = Nothing
+    Set fso = Nothing
+    MsgBox "操作完成！"
+    DoCmd.SetWarnings True
+End Sub
+Sub TraverseFolders(ByVal currentFolder As Object)
+    DoCmd.SetWarnings False                                    '屏蔽系统警告
+    Dim subFolder As Object
+    Dim file As Object
+    Dim strSQL As String
+    '遍历当前文件夹中的文件
+    For Each file In currentFolder.Files
+        strSQL = "INSERT INTO " & tbl_Name & "  (  " & FilePath & "  , " & FileName & ") VALUES ('" & currentFolder.Path & "\', '" & file.Name & "')"
+        DoCmd.RunSQL strSQL
+    Next file
+    '遍历当前文件夹中的子文件夹
+    For Each subFolder In currentFolder.SubFolders
+        Call TraverseFolders(subFolder)
+    Next subFolder
+    DoCmd.SetWarnings True                                     '屏蔽系统警告
+End Sub
+    '删除tbl_Name表的数据
+Sub delSQL()
+    DoCmd.SetWarnings False                                    '屏蔽系统警告
+    Dim delSQL As String
+    delSQL = "DELETE " & tbl_Name & ".* FROM  " & tbl_Name & " ;"
+    DoCmd.RunSQL delSQL
+    DoCmd.SetWarnings True
+End Sub
+    '判断是否删除tbl_Name表中的原始数据
+Sub TJFS()
+    DoCmd.SetWarnings False                                    '屏蔽系统警告
+    Dim response As VbMsgBoxResult
+    response = MsgBox("是否删除原始数据？", vbYesNo + vbQuestion, "确认操作")
+    If response = vbYes Then
+        Call delSQL                                            '调用删除tbl_Name表数据的过程
+    Else
+    End If
+    DoCmd.SetWarnings True                                     '屏蔽系统警告
+End Sub

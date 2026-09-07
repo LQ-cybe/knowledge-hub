@@ -1,0 +1,37 @@
+﻿'获取当前Access中的表 查询 窗体 报表明细
+Private Sub btn罗列_Click()
+    Dim i As Integer
+    '检索各对象明细前，先清空文本框
+    Me.Text表 = Null
+    Me.Text查询 = Null
+    Me.Text窗体 = Null
+    Me.Text报表 = Null
+    '检索当前Access中数据表清单
+    For i = 0 To CurrentDb.TableDefs.Count - 1
+        Me.Text表 = Me.Text表 & i + 1 & "、" & CurrentDb.TableDefs(i).Name
+        Me.Text表 = Me.Text表 & vbCrLf
+    Next i
+    '检索当前Access中查询清单
+    If CurrentDb.QueryDefs.Count = 0 Then
+        Me.Text查询 = "当前Access未创建查询！"
+    Else
+        For i = 0 To CurrentDb.QueryDefs.Count - 1
+            Me.Text查询 = Me.Text查询 & i + 1 & "、" & CurrentDb.QueryDefs(i).Name
+            Me.Text查询 = Me.Text查询 & vbCrLf
+        Next i
+    End If
+    '检索当前Access中窗体清单
+    For i = 0 To CurrentDb.Containers("forms").Documents.Count - 1
+        Me.Text窗体 = Me.Text窗体 & i + 1 & "、" & CurrentDb.Containers("forms").Documents(i).Name
+        Me.Text窗体 = Me.Text窗体 & vbCrLf
+    Next i
+    '检索当前Access中报表清单
+    If CurrentDb.Containers("reports").Documents.Count = 0 Then
+        Me.Text报表 = "当前Access未创建报表！"
+    Else
+        For i = 0 To CurrentDb.Containers("reports").Documents.Count - 1
+            Me.Text报表 = Me.Text报表 & i + 1 & "、" & CurrentDb.Containers("reports").Documents(i).Name
+            Me.Text报表 = Me.Text报表 & vbCrLf
+        Next i
+    End If
+End Sub

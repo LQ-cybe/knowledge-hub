@@ -1,0 +1,34 @@
+﻿'36进制转换成10进制
+Function Base36ToBase10(strBase36 As String) As Long
+    Dim i As Integer
+    Dim digit As Integer
+    Dim result As Long
+    Dim power As Long
+    result = 0
+    power = 1
+    For i = Len(strBase36) To 1 Step -1
+        Select Case Mid(strBase36, i, 1)
+            Case "0" To "9"
+                digit = CInt(Mid(strBase36, i, 1))
+            Case "A" To "Z"
+                digit = Asc(UCase(Mid(strBase36, i, 1))) - Asc("A") + 10
+            Case Else
+                Base36ToBase10 = 0 '如果包含非法字符，返回0
+                Exit Function
+        End Select
+        result = result + digit * power
+        power = power * 36
+    Next i
+    Base36ToBase10 = result
+End Function
+Sub TestBase36ToBase10()
+    Dim strBase36 As String
+    Dim base10Value As Long
+    strBase36 = "255R"          '36进制的字符
+    base10Value = Base36ToBase10(strBase36)
+    MsgBox base10Value
+End Sub
+
+Option Explicit
+'34进制转10进制
+Option Explicit

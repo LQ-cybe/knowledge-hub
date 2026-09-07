@@ -1,0 +1,7 @@
+'VBE 中所有命令栏的名称
+Sub ListAllCommandBars()
+    Dim cbr As CommandBar
+    For Each cbr In Application.VBE.CommandBars
+        Debug.Print "英文名: " & cbr.Name & " | 本地名: " & cbr.NameLocal
+    Next cbr
+End Sub

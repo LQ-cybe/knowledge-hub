@@ -1,0 +1,68 @@
+﻿'使用DAO修改链接表文件
+Sub ChangeLinkedTablePathDAO()
+    Dim db As DAO.Database
+    Dim tdf As DAO.TableDef
+    Dim oldDBPath As String
+    Dim newDBPath As String
+    Dim newConnect As String
+    Dim tableCount As Integer
+    Dim updatedCount As Integer
+    
+    ' 设置旧数据库路径和新数据库路径
+    oldDBPath = "D:\变码数据管理系统V1.6-cs\Data--855.accdb"
+    newDBPath = "D:\变码数据管理系统V1.6-cs\Data--666.accdb"
+    ' 验证路径有效性
+    If Len(Trim(oldDBPath)) = 0 Or Len(Trim(newDBPath)) = 0 Then
+        MsgBox "数据库路径不能为空!", vbExclamation
+        Exit Sub
+    End If
+    
+    ' 获取当前数据库对象
+    Set db = CurrentDb
+    tableCount = 0
+    updatedCount = 0
+    
+    ' 开始处理链接表
+    On Error Resume Next
+    For Each tdf In db.TableDefs
+        ' 跳过系统表
+        If Left(tdf.Name, 4) <> "MSys" Then
+            ' 检查是否为链接表
+            If Not tdf Is Nothing And Len(tdf.Connect) > 0 Then
+                ' 调试输出：打印当前处理的表和连接字符串
+                Debug.Print "处理表: " & tdf.Name & ", 连接: " & tdf.Connect
+                
+                ' 使用安全的字符串比较
+                If InStr(1, CStr(tdf.Connect), oldDBPath, vbTextCompare) > 0 Then
+                    ' 构建新的连接字符串
+                    newConnect = Replace(tdf.Connect, oldDBPath, newDBPath)
+                    
+                    ' 更新链接
+                    tdf.Connect = newConnect
+                    tdf.RefreshLink
+                    
+                    ' 检查更新是否成功
+                    If Err.Number = 0 Then
+                        updatedCount = updatedCount + 1
+                        Debug.Print "成功更新表: " & tdf.Name
+                    Else
+                        Debug.Print "更新失败: " & tdf.Name & ", 错误: " & Err.Description
+                        Err.Clear
+                    End If
+                End If
+                tableCount = tableCount + 1
+            End If
+        End If
+    Next tdf
+    On Error GoTo 0
+    
+    ' 释放对象
+    Set tdf = Nothing
+    Set db = Nothing
+    
+    ' 显示结果
+    MsgBox "处理完成!" & vbCrLf & _
+           "总表数: " & tableCount & vbCrLf & _
+           "已更新: " & updatedCount & vbCrLf & _
+           "未修改: " & (tableCount - updatedCount), vbInformation
+End Sub

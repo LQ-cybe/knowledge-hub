@@ -1,0 +1,22 @@
+Sub 取得VBE中所有CommandBar对象()
+  Dim objMenu As CommandBar, objCont As CommandBarControl, num As Integer, arr()
+  On Error Resume Next
+  Application.ScreenUpdating = False  '关闭屏幕刷新，加快速度
+  Range("A:F").Clear  '清空工作表数据
+  [a1:f1] = Array("菜单名称", "子菜单名称", "菜单ID", "菜单INDEX", "图标ID", "类别")  '设置标题
+  For Each objMenu In Application.VBE.CommandBars  '遍历工具栏对象
+    For Each objCont In objMenu.Controls  '遍历子对象
+      num = num + 1
+      ReDim Preserve arr(1 To 6, 1 To num)  '重置数组
+      arr(1, num) = objMenu.Name & "(索引号：" & objMenu.Index & ")"  '获取CommandBar命令名称与索引号
+      arr(2, num) = objCont.Caption  '获取子对象的中文标题
+      arr(3, num) = objCont.ID  '获取子对象的内部ID
+      arr(4, num) = objCont.Index  '获取子对象的索引号
+      arr(5, num) = objCont.FaceId  '获取子对象的图标ID
+      arr(6, num) = TypeName(objCont)  '获取子对象的类型
+    Next objCont
+  Next objMenu
+  [a2].Resize(num, 6) = WorksheetFunction.Transpose(arr)  '将数组转置后存入工作表区域
+  Columns("A:F").EntireColumn.AutoFit  '自动调整列宽
+  Application.ScreenUpdating = True  '恢复屏幕刷新
+End Sub

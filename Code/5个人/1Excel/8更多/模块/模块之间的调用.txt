@@ -1,0 +1,26 @@
+Sub Subroutine1()
+    MsgBox "这是第一个子程序"
+End Sub
+
+Sub Subroutine2()
+    '调用Subroutine1
+    Subroutine1
+    MsgBox "这是第二个子程序，已调用了第一个子程序"
+End Sub
+
+'调用Module1 模块里的 SubroutineInModule1 子程序
+Sub CallSubFromAnotherModule()
+    '调用Module1中的SubroutineInModule1子程序
+    Module1.SubroutineInModule1
+    MsgBox "已调用了Module1中的子程序"
+End Sub
+
+'需要注意的是，跨工作簿调用时要确保目标工作簿的位置可访问，并且相关的代码模块、子程序等都有合适的访问权限设置，避免出现运行时错误。
+Sub CallSubFromAnotherWorkbook()
+    Dim wb As Workbook
+    Set wb = Workbooks.Open("C:\Path\To\Book1.xlsm") '替换为实际的文件路径
+    '假设Book1中要调用的子程序在Module1模块里，名为SubInBook1
+    wb.Module1.SubInBook1
+    wb.Close SaveChanges:=False '调用后关闭工作簿（可根据实际需求决定是否保存更改等）
+    MsgBox "已调用了Book1中的子程序"
+End Sub

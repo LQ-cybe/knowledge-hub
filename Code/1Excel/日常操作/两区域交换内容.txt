@@ -1,0 +1,21 @@
+'name=两区域交换内容
+'officetype=excel,et
+'category=工作簿
+'description=交换两个选中区域的内容（先选第一区域，再选第二区域）
+
+Public Sub SwapTwoRanges()
+    Dim r1 As Range, r2 As Range, v
+    If Selection.Areas.Count <> 2 Then
+        MsgBox "请先选择两个区域（按住Ctrl再选第二个）", vbExclamation
+        Exit Sub
+    End If
+    Set r1 = Selection.Areas(1)
+    Set r2 = Selection.Areas(2)
+    If r1.Cells.Count <> r2.Cells.Count Then
+        MsgBox "两个区域单元格数量必须相同", vbExclamation
+        Exit Sub
+    End If
+    v = r1.Value
+    r1.Value = r2.Value
+    r2.Value = v
+End Sub

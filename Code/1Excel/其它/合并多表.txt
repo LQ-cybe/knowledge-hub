@@ -1,0 +1,19 @@
+Sub sss()
+    Dim arr()
+    a = Range("a1").End(xlToRight).Column
+    For Each sh In Sheets
+        If sh.Name <> "汇总表" Then
+            arr1 = sh.Range("a1").Resize(sh.UsedRange.Rows.Count - 1, a)
+            act = act + UBound(arr1)
+            ReDim Preserve arr(1 To a, 1 To act) '
+            For j = 1 To UBound(arr1)
+                n = n + 1
+                For i = 1 To a
+                    arr(i, n) = arr1(j, i)
+                Next i
+            Next j
+        End If
+    Next
+    Sheets("汇总表").Range("1:65536").ClearContents
+    Sheets("汇总表").[a1].Resize(n, a) = Application.Transpose(arr)
+End Sub

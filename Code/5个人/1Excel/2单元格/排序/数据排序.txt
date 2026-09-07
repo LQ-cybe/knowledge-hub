@@ -1,0 +1,26 @@
+﻿    '复制的工作表中的排序事件，增加对列的自动扩展功能
+Sub SJPX()
+    Dim PX As XlSortOrder
+    Dim currentCell As Range
+    Dim lastRow As Long
+    Dim lastCol As Long
+    Dim rangeToSelect As Range
+    On Error GoTo ErrorHandler                                 '设置错误处理，遇到错误跳转到ErrorHandler标签处
+    '根据全局变量的值确定排序顺序
+    If PXVALUE = "升序" Then
+        PX = xlAscending
+    Else
+        PX = xlDescending
+    End If
+    Set currentCell = Range("A1")                              '直接指定要操作的起始单元格，可根据实际情况修改
+    lastRow = Cells(Rows.Count, currentCell.Column).End(xlUp).Row
+    lastCol = Cells(currentCell.Row, Columns.Count).End(xlToLeft).Column    '获取最后一列的列号
+    Set rangeToSelect = Range(currentCell.Offset(1, 0), Cells(lastRow, lastCol))    '扩展选择区域到最后一列
+    '直接使用定义好的rangeToSelect区域进行排序操作，避免使用Selection
+    rangeToSelect.Sort Key1:=rangeToSelect.Cells(1, 1), Order1:=PX, Header:=xlNo          
+'将 Header 参数设置为 xlYes，明确告诉排序方法排序区域包含标题行
+    Exit Sub                                                   '正常执行完后退出过程，避免进入错误处理代码块
+ErrorHandler:
+    MsgBox "出现错误，错误信息：" & Err.Description                      '显示错误信息
+End Sub
+

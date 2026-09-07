@@ -1,0 +1,10 @@
+'提取当前文档的所有属性
+Sub GetWorkBookInfo()
+    r = 1
+    On Error Resume Next
+  For Each p In ActiveWorkbook.BuiltinDocumentProperties
+        Cells(r, 1).value = p.Name
+        Cells(r, 2).value = p.value
+        r = r + 1
+    Next
+End Sub

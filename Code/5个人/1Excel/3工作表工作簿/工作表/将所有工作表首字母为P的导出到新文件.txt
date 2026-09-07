@@ -1,0 +1,45 @@
+﻿Sub CopySheetsStartingWithPToDesktop()
+    Dim wbCurrent As Workbook
+    Dim wbNew As Workbook
+    Dim ws As Worksheet
+    Dim firstChar As String
+    Dim desktopPath As String
+    
+    ' 设置当前工作簿
+    Set wbCurrent = ThisWorkbook
+    
+    ' 创建一个新的工作簿
+    Set wbNew = Workbooks.Add
+    
+    ' 获取桌面路径
+    desktopPath = CreateObject("WScript.Shell").SpecialFolders("Desktop")
+    
+    ' 遍历当前工作簿中的所有工作表
+    For Each ws In wbCurrent.Sheets
+        ' 获取工作表名称的第一个字符
+        firstChar = Left(ws.Name, 1)
+        ' 检查第一个字符是否为 "P"
+        If UCase(firstChar) = "P" Then
+            ' 复制工作表到新工作簿
+            If wbNew.Sheets.Count = 1 Then
+                ws.Copy Before:=wbNew.Sheets(1)
+            Else
+                ws.Copy After:=wbNew.Sheets(wbNew.Sheets.Count)
+            End If
+        End If
+    Next ws
+    
+    ' 删除新工作簿中默认创建的工作表
+    Application.DisplayAlerts = False
+    Do While wbNew.Sheets.Count > wbCurrent.Sheets.Count
+        wbNew.Sheets(1).Delete
+    Loop
+    Application.DisplayAlerts = True
+    
+    ' 保存新工作簿到桌面
+    wbNew.SaveAs Filename:=desktopPath & "\P_Sheets.xlsx", FileFormat:=xlOpenXMLWorkbook
+    wbNew.Close SaveChanges:=False
+    
+    ' 提示操作完成
+    MsgBox "所有名称以 'P' 开头的工作表已复制到新工作簿并保存到桌面。", vbInformation
+End Sub

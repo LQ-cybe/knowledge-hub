@@ -1,0 +1,28 @@
+﻿Sub 生成上标数据()
+    Dim Number As Long
+    Dim Line As Long
+    Dim Up As String
+    '这里需要给Number、Line、Up赋值，假设示例值如下
+    Number = 3
+    Line = 5
+    Up = "W"
+    Dim dataArray() As Variant
+    ReDim dataArray(1 To Line, 1 To Number) '重新定义二维数组大小
+    
+    Dim j As Long, i As Long
+    For j = 1 To Number
+        Dim colLetter As String
+        colLetter = Split(Columns(j).Address, ":")(0)
+        Dim X As String
+        X = Replace(colLetter, "$", "")
+        
+        For i = 1 To Line
+            dataArray(i, j) = X & Format(i, "000") & Up
+        Next i
+    Next j
+    
+    '以下是将数组内容写入工作表示例，可按需调整
+    Dim ws As Worksheet
+    Set ws = ActiveSheet
+    ws.Range("A1").Resize(Line, Number).Value = dataArray
+End Sub

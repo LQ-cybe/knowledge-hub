@@ -1,0 +1,78 @@
+﻿'总表处理：1.工作表复制多份并格式化名称
+'复制后缀名为汇总的工作表并格式化复制的表名称
+Sub CopyActiveSheetMultipleTimesname()
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+    Application.Calculation = xlCalculationAutomatic
+
+    Dim ws As Worksheet
+    Dim numCopies As Long
+    Dim inputValue As Variant
+    Dim sheetName As String
+    Dim pureNumber As String
+    Dim i As Long
+    Dim interage_sheet As Integer
+    Dim wsParam As Worksheet
+
+
+    Set wsParam = ThisWorkbook.Worksheets("参数")
+    interage_sheet = wsParam.Range("U10").Value
+
+    On Error Resume Next
+    Set ws = ThisWorkbook.Sheets(interage_sheet & "汇总")
+    On Error GoTo 0
+    If ws Is Nothing Then
+        MsgBox "当前工作簿中未找到名为" & interage_sheet & "汇总的工作表！", vbExclamation
+        GoTo Cleanup
+    End If
+
+    sheetName = ws.Name
+
+    '提取数字部分（直接去掉"汇总"后缀）
+    pureNumber = Replace(sheetName, "汇总", "")
+
+    '弹出输入框，获取用户输入的复制份数
+    inputValue = InputBox("请输入要复制的份数：", "设置复制份数", 1)
+
+    '验证输入是否有效（必须是正整数）
+    If inputValue = "" Then
+        '用户取消输入
+        GoTo Cleanup    '跳转到清理部分
+    ElseIf IsNumeric(inputValue) Then
+        numCopies = CLng(inputValue)
+        If numCopies < 1 Then
+            MsgBox "请输入有效的正整数（如1、5、10）！", vbExclamation
+            GoTo Cleanup
+        End If
+    Else
+        MsgBox "请输入有效的正整数（如1、5、10）！", vbExclamation
+        GoTo Cleanup
+    End If
+
+    '循环复制指定份数
+    For i = 1 To numCopies
+        Dim newWs As Worksheet
+        ws.Copy After:=Sheets(Sheets.Count)  '复制到所有工作表之后
+        Set newWs = ActiveSheet
+        '处理工作表名称冲突
+        On Error Resume Next
+        newWs.Name = pureNumber & "." & i
+        If Err.Number <> 0 Then
+            '如果命名失败，使用默认名称
+            newWs.Name = pureNumber & "." & i & "_" & Format(Now, "hhnnss")
+            Err.Clear
+        End If
+        On Error GoTo 0
+    Next i
+
+    '提示完成
+    '        MsgBox "已成功复制 " & numCopies & " 份""" & sheetName & """工作表！" & vbNewLine & _
+             '               "新工作表命名为：" & pureNumber & ".1 到 " & pureNumber & "." & numCopies, vbInformation
+
+Cleanup:
+    '恢复Excel设置
+    Application.ScreenUpdating = True
+    Application.EnableEvents = True
+    Application.Calculation = xlCalculationManual
+    End Sub
+

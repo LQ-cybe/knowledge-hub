@@ -1,0 +1,62 @@
+﻿'批量插入图片并调整到单元格合适大小
+Sub into_pic()
+On Error Resume Next            '忽略错误继续执行VBA代码,避免出现错误消息
+'图片路径
+pic_url = "E:\我的文档\21 16\重要资料\每日必做\表达式导入的图片"
+'图片所在的列
+pic_column_num = "C"
+'图片宽度
+pic_width = 240
+'图片高度
+pic_height = 41.88
+'表格宽度
+Range_width = 255
+'表格高度
+Range_Height = 100
+'款号所在起始的列
+k_id_column_start_num = "A"
+'颜色所在起始的列
+k_color_column_start_num = "B"
+'款号所在起始的行
+k_id_column_start_row = 2
+For i = k_id_column_start_row To 65535
+buffer_val = Range(k_id_column_start_num & i).Value
+buffer_color_val = Range(k_color_column_start_num & i).Value
+If buffer_val <> "" Then
+    ActiveSheet.Range(pic_column_num & i).Select
+    pic_urls = pic_url & "\" & buffer_val & buffer_color_val & ".jpg"
+        cColumn = ActiveCell.Column '所在列数
+        rRow = ActiveCell.Row '所在行数
+        'MsgBox (cColumn)
+        'MsgBox (rRow)
+    'Rows(i & ":" & i).RowHeight = Range_Height
+    'Columns(pic_column_num & ":" & pic_column_num).ColumnWidth = Range_width
+        ' With ActiveSheet.Pictures.Insert(pic_urls)
+        With Sheets("Sheet1").Pictures.Insert(pic_urls)  '可用
+          .ShapeRange.LockAspectRatio = msoFalse
+          .Placement = xlMoveAndSize
+          '.ShapeRange.Top = Selection.Top
+          '.ShapeRange.Left = Selection.Left
+           .ShapeRange.Left = Range(pic_column_num & i).Left
+           .ShapeRange.Top = Range(pic_column_num & i).Top
+          '.ShapeRange.Width = pic_width
+          '.ShapeRange.Height = pic_height
+          '.ShapeRange.Height = Range(pic_column_num & i).Height
+          .ShapeRange.Height = Range(pic_column_num & i).Height
+          .ShapeRange.Width = Range(pic_column_num & i).Width
+          ''''''''''''''''''''''''''
+         '   Sub Test()
+         '         With Sheets("Sheet1").Pictures.Insert("E:\我的文档\21 16\重要资料\每日必做\表达式导入的图片.jpg ")  '可用
+         '                   .ShapeRange.LockAspectRatio = msoFalse
+         '                   .Placement = xlMoveAndSize
+         '                   .ShapeRange.Left = Range("b2 ").Left
+         '                   .ShapeRange.Top = Range("b2 ").Top
+         '                   .ShapeRange.Height = Range("b2:b5 ").Height
+         '                   .ShapeRange.Width = Range("b2:c2 ").Width
+         '           End With
+         '   End Sub
+          ''''''''''''''''''''''''''
+          End With
+End If
+Next i
+End Sub

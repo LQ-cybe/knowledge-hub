@@ -1,0 +1,30 @@
+Function IsLinkedTableValid(tableName As String) As Boolean
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    On Error Resume Next
+    Set db = CurrentDb
+    Set rs = db.OpenRecordset(tableName)
+    IsLinkedTableValid = (Err.Number = 0)
+    If Not rs Is Nothing Then rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    On Error GoTo 0
+End Function
+
+'清理失效的链接表
+Sub DeleteInvalidLinkedTables()
+    Dim db As DAO.Database
+    Dim tdf As DAO.TableDef
+    Set db = CurrentDb
+    For Each tdf In db.TableDefs
+        If (tdf.Attributes And dbAttachedTable) <> 0 Then '判断是否为链接表
+            If Not IsLinkedTableValid(tdf.Name) Then '判断是否失效
+                On Error Resume Next
+                db.TableDefs.Delete tdf.Name
+                On Error GoTo 0
+            End If
+        End If
+    Next tdf
+    Set tdf = Nothing
+    Set db = Nothing
+End Sub

@@ -1,0 +1,18 @@
+Rem 表达式.Sort（Key1，Order1，Key2，Type，Order2，Key3，Order3，Header，
+Rem              OrderCustom,MatchCase,orientation,SortMethod, Dataoption1,Dataoption2, Dataoption3)
+Rem  名称名称       数据类型          说明
+Rem  Key1           Variant           指定第一个排序字段，可以是 String 或 Range（区域）区域名称;确定要排序的值
+Rem  Order1         XlSortOrder       确定 Key1 中指定值的排序顺序
+Rem  Key2           Variant           第二个排序字段;对数据透视表进行排序时不能使用
+Rem  Type           Variant           指定要排序的元素
+Rem  Order2         XlSortOrder       确定 Key2 中指定的值的排序顺序
+Rem  Key3           Variant           第三个排序字段;对数据透视表进行排序时不能使用
+Rem  Order3         XlSortOrder       确定 Key3 中指定值的排序顺序
+Rem  Header         XlYesNoGuess      指定第一行是否包含标题信息、默认值为xlNo如果希望 Excel 确定标题，指定xlGuess
+Rem  OrderCustom    Variant           指定在自定义排序次序列表中的基于一的整数偏移
+Rem  MatchCase      Variant           设置为 True 以执行区分大小写的排序;设置为 False 则执行不区分大小写的排序;不能与数据透
+Rem  Orientation    xlsortorientation 指定是应按行（默认）还是按列进行排序。  xlSortColumns 以按列排序。
+Rem  SortMethod     XlSortMethod      指定排序方法
+Rem  DataOption1    XlSortDataOption  指定如何对 Key1 中指定的范围中的文本进行排序;不适用于数据透视表排序
+Rem  Dataoption2    XlSortDataOption  指定如何对 Key2 中指定的范围中的文本进行排序;不适用于数据透视表排序
+Rem  DataOption3    XlSortDataOption  指定如何对 Key3 中指定的范围中的文本进行排序;不适用于数据透视表排序

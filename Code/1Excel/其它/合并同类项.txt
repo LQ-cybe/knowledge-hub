@@ -1,0 +1,19 @@
+Sub xss()
+    Application.ScreenUpdating = False
+    t = Timer
+    arr = Sheet1.Range("a1").CurrentRegion.Value
+    Dim d
+    Set d = CreateObject("Scripting.Dictionary")
+    For i = 2 To UBound(arr)
+        d(arr(i, 1)) = d(arr(i, 1)) & " " & arr(i, 2)
+    Next
+    ReDim brr(1 To d.Count, 1 To 2)
+    k = d.keys
+    For i = 0 To UBound(k)
+        brr(i + 1, 1) = k(i)
+        brr(i + 1, 2) = Mid(d(k(i)), 2)
+    Next
+    Sheet1.Range("d2").Resize(UBound(k) + 1, 2) = brr
+    Application.ScreenUpdating = True
+    MsgBox Format(Timer - t, "处理完毕，耗时0.00秒")
+End Sub

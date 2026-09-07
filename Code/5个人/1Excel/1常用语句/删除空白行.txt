@@ -1,0 +1,20 @@
+﻿'删除空白行
+Sub RngInput()
+    On Error GoTo line
+    Dim userRange As Range
+    Dim cellCount As Long
+    Set userRange = Application.InputBox(prompt:="请使用鼠标选择单元格区域：", Type:=8)
+    If Not userRange Is Nothing Then
+        cellCount = userRange.Cells.Count
+        '        MsgBox "你所选区域的单元格个数为: " & cellCount
+        Dim i As Long
+        ' 遍历所选区域的每一行
+        For i = userRange.Rows.Count To 1 Step -1
+            If userRange.Cells(i, 1) = "" Then
+                userRange.Cells(i, 1).EntireRow.Delete
+            End If
+        Next i
+'        MsgBox "操作完成！"
+line:
+    End If
+End Sub

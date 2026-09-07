@@ -1,0 +1,16 @@
+'name=取消合并并填充
+'officetype=excel,et
+'category=定位引用
+'description=取消选区合并单元格并将原合并内容填充到每个单元格
+
+Public Sub UnmergeAndFill()
+    Dim r As Range, v
+    On Error GoTo err1
+    Set r = Selection
+    v = r.Cells(1, 1).Value
+    r.UnMerge
+    r.Value = v
+    Exit Sub
+err1:
+    MsgBox "操作失败", vbExclamation
+End Sub

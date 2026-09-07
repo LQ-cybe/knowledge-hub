@@ -1,0 +1,30 @@
+Sub DeleteRowBasedonSearch(search As String)
+    Dim objSheet As Worksheet
+    Dim current As Range
+    Dim deleteRange As Range
+    '遍历所有Sheet
+    Application.ScreenUpdating = False
+    For Each objSheet In Worksheets
+        With objSheet.UsedRange
+            Set current = .Find(What:=search, SearchDirection:=xlPrevious)
+            '遍历查找结果
+            If Not current Is Nothing Then
+                Do
+                    Set deleteRange = current
+                    '查找下一个内容
+                    Set current = .FindPrevious(current)
+                    If deleteRange.Address = current.Address Then
+                        Set current = Nothing
+                    End If
+                    '删除上一个满足条件的内容
+                    deleteRange.EntireRow.Delete
+                Loop While Not current Is Nothing
+            End If
+        End With
+    Next
+    Application.ScreenUpdating = True
+End Sub
+'删除工作簿内的指定内容的行
+Sub DeleteRowBasedonSearchTest()
+    DeleteRowBasedonSearch "名称"
+End Sub

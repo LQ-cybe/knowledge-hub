@@ -1,0 +1,35 @@
+﻿'xlam、xla转xlsm格式
+Sub XlamToXlsm()
+    Dim strFile As Variant
+    Dim wb As Workbook
+    Dim savePath As String
+    Dim fileName As String
+    strFile = Application.GetOpenFilename( _
+                  FileFilter:="加载项 (*.xlam;*.xla), *.xlam;*.xla", _
+                  Title:="选择需要转换的xla/xlam文件")
+    If strFile = False Then
+        Exit Sub
+    End If
+    Application.DisplayAlerts = False
+    On Error Resume Next
+    Set wb = Workbooks.Open(strFile, ReadOnly:=False)
+    On Error GoTo 0
+    If wb Is Nothing Then
+        Dim addin As addin
+        Set addin = Application.AddIns.Add(strFile, False)
+        addin.Installed = True
+        Set wb = addin.Workbook
+    End If
+    wb.IsAddin = False
+    If LCase(Right(strFile, 4)) = ".xla" Then
+        savePath = Replace(strFile, ".xla", ".xlsm")
+    Else
+        savePath = Replace(strFile, ".xlam", ".xlsm")
+    End If
+    wb.SaveAs _
+        fileName:=savePath, _
+        FileFormat:=xlOpenXMLWorkbookMacroEnabled
+    wb.Close SaveChanges:=False
+    Application.DisplayAlerts = True
+    MsgBox "转换成功！" & vbCrLf & savePath, vbInformation
+End Sub

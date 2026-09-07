@@ -1,0 +1,80 @@
+﻿Function GetLatestPrice(productNumber As String, version As String) As Variant
+    Dim db As DAO.Database
+    Dim latestDate As Date
+    Dim price As Variant
+    Dim tbl_Products As String
+    
+    tbl_Products = "qry_产品最新记录"
+    
+    ' 获取数据库对象
+    On Error Resume Next
+    Set db = CurrentDb
+    If Err.Number <> 0 Then
+        GetLatestPrice = "数据库连接错误"
+        Exit Function
+    End If
+    On Error GoTo ErrorHandler
+    
+    ' 获取符合条件的最新日期
+    latestDate = GetLatestDate(db, tbl_Products, productNumber, version)
+    If IsNull(latestDate) Then
+        GetLatestPrice = "未找到记录"
+        Exit Function
+    End If
+    
+    ' 获取对应日期的价格
+    price = GetPriceByDate(db, tbl_Products, productNumber, version, latestDate)
+    If IsNull(price) Then
+        GetLatestPrice = "未找到记录"
+        Exit Function
+    End If
+    
+    GetLatestPrice = price
+    
+CleanExit:
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    GetLatestPrice = "发生错误: " & Err.Description
+    Resume CleanExit
+End Function
+
+Function GetLatestDate(db As DAO.Database, tbl_Products As String, productNumber As String, version As String) As Date
+    Dim rs As DAO.Recordset
+    Dim sql As String
+    
+    sql = "SELECT MAX([导出日期]) FROM [" & tbl_Products & "] " & _
+          "WHERE [产品料号] = '" & Replace(productNumber, "'", "''") & "' AND [版本] = '" & Replace(version, "'", "''") & "'"
+    
+    Set rs = db.OpenRecordset(sql)
+    If Not rs.EOF Then
+        GetLatestDate = rs.Fields(0).value
+    End If
+    rs.Close
+    Set rs = Nothing
+End Function
+
+Function GetPriceByDate(db As DAO.Database, tbl_Products As String, productNumber As String, version As String, latestDate As Date) As Variant
+    Dim rs As DAO.Recordset
+    Dim sql As String
+    
+    sql = "SELECT [末尾编号] FROM [" & tbl_Products & "] " & _
+          "WHERE [产品料号] = '" & Replace(productNumber, "'", "''") & "' AND [版本] = '" & Replace(version, "'", "''") & "' AND [导出日期] = #" & Format(latestDate, "yyyy-mm-dd hh:mm:ss") & "#"
+    
+    Set rs = db.OpenRecordset(sql)
+    If Not rs.EOF Then
+        GetPriceByDate = rs.Fields(0).value
+    End If
+    rs.Close
+    Set rs = Nothing
+End Function
+Sub TestGetLatestPrice()
+    Dim productNumber As String
+    Dim version As String
+    Dim result As Variant
+    productNumber = "W020000343"
+    version = "V03"
+    result = GetLatestPrice(productNumber, version)
+    MsgBox result
+End Sub

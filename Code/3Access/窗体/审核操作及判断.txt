@@ -1,0 +1,48 @@
+﻿    '审核权限判断
+Sub Audit_judgment()
+    If Me.已审核.Value = True Then
+        Me.Labelsh.Caption = "此订单已审核，无法编辑!"
+        Me.Labelsh.FontBold = True
+        Me.examineV.Caption = "反审核"
+        Me.sfrDetail.Enabled = False
+        Me.sfrDetail_1.Enabled = False
+    
+        Me.产品料号.Enabled = False
+        Me.客户料号.Enabled = False
+        Me.品名.Enabled = False
+        Me.规格.Enabled = False
+        Me.单位.Enabled = False
+    
+    Else
+        Me.Labelsh.Caption = "此订单未审核，可以编辑"
+        Me.Labelsh.FontBold = False
+        Me.examineV.Caption = "审核"
+        Me.sfrDetail.Enabled = True
+        Me.sfrDetail_1.Enabled = True
+    
+        Me.产品料号.Enabled = True
+        Me.客户料号.Enabled = True
+        Me.品名.Enabled = True
+        Me.规格.Enabled = True
+        Me.单位.Enabled = True
+    End If
+End Sub
+    '    审核过程
+Sub examine()
+    If Me.已审核.Value = True Then
+        Call counter_audit      '调用审核权限判断过程
+        Call Audit_judgment     '调用反审核过程
+    Else
+        Me.已审核.Value = True
+        Audit_judgment                                         '审核成功重新调用审核取消判断过程
+        MsgBox "审核成功!"
+        Me.examineV.Caption = "反审核"
+    End If
+    
+End Sub
+    '反审核过程
+Sub counter_audit()
+    Me.已审核.Value = False
+    Call Audit_judgment      '调用审核权限判断过程
+    MsgBox "反审核成功!"
+End Sub

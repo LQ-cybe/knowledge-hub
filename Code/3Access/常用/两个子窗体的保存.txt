@@ -1,0 +1,86 @@
+﻿'两个子窗体的保存方法
+Private Sub btnSave_Click()
+    If CanViewVBACode() Then
+        On Error GoTo 0
+    Else
+        On Error GoTo ErrorHandler
+    End If
+    
+    If Not CheckRequired(Me) Then Exit Sub
+    If Not CheckTextLength(Me) Then Exit Sub
+    If Not CheckRequired(Me.sfrDetail) Then Exit Sub
+    
+    Dim cnn: Set cnn = CurrentProject.Connection  'ADO.Connection()
+    
+    cnn.BeginTrans
+    Dim blnTransBegin As Boolean: blnTransBegin = True
+    
+    Dim strSQL: strSQL = "SELECT * FROM [tbl_成品信息] WHERE [产品料号]=" & SQLText(Me![产品料号])
+    Dim rst:    Set rst = ADO.OpenRecordset(strSQL, adLockOptimistic, cnn)
+    If rst.EOF Then rst.AddNew
+    UpdateRecord Me, rst
+    '你的自定义代码
+    'rst!Field1 = Me!Field1
+    'rst!Field2 = Me!Field2
+    rst.Update
+    rst.Close
+    
+    cnn.Execute "DELETE FROM [tbl_物料明细] WHERE [产品料号]=" & SQLText(Me![产品料号])
+    strSQL = "SELECT * FROM [tbl_物料明细] WHERE [产品料号]=" & SQLText(Me![产品料号])
+    Set rst = ADO.OpenRecordset(strSQL, adLockOptimistic, cnn)
+    Dim rstTmp: Set rstTmp = CurrentDb.OpenRecordset("TMP_tbl_物料明细")
+    Do Until rstTmp.EOF
+        rst.AddNew
+        UpdateRecord rstTmp, rst
+        '你的自定义代码
+        'rst!Field1 = Me!Field1
+        'rst!Field2 = Me!Field2
+        rst![产品料号] = Me![产品料号]
+        rst.Update
+        rstTmp.MoveNext
+    Loop
+    rst.Close
+    rstTmp.Close
+    
+    ' 保存 sfrDetail_1 关联的数据（假设关联 tbl_工序明细表）
+    cnn.Execute "DELETE FROM [tbl_工序明细] WHERE [产品料号]=" & SQLText(Me![产品料号])
+    strSQL = "SELECT * FROM [tbl_工序明细] WHERE [产品料号]=" & SQLText(Me![产品料号])
+    Set rst = ADO.OpenRecordset(strSQL, adLockOptimistic, cnn)
+    Dim rstTmpNew: Set rstTmpNew = CurrentDb.OpenRecordset("TMP_tbl_工序明细") ' 假设临时表为 TMP_tbl_工序明细
+    Do Until rstTmpNew.EOF
+        rst.AddNew
+        UpdateRecord rstTmpNew, rst
+        rst![产品料号] = Me![产品料号]
+        rst.Update
+        rstTmpNew.MoveNext
+    Loop
+    rst.Close
+    rstTmpNew.Close
+    
+    cnn.CommitTrans
+    blnTransBegin = False
+    
+    RequeryDataObject gsfrList
+    MsgBoxEx LoadString("Saved Successfully."), vbInformation
+    
+    If Me.DataEntry Then
+        Me.InitData
+    Else
+        DoCmd.Close acForm, Me.Name, acSaveNo
+    End If
+    
+ExitHere:
+    Set rst = Nothing
+    Set cnn = Nothing
+    Set rstTmp = Nothing
+    Set rstTmpNew = Nothing
+    Exit Sub
+    
+ErrorHandler:
+    If blnTransBegin Then
+        cnn.RollbackTrans
+        blnTransBegin = False
+    End If
+    MsgBoxEx Err.Description, vbCritical
+    Resume ExitHere
+End Sub

@@ -1,0 +1,21 @@
+Function GetMaxValueInBase(digits As Integer, base As Integer) As Variant                '自定义函数：计算序列号位数能产生的数据量
+    If base < 2 Or base > 36 Then
+        GetMaxValueInBase = "无效的进制，进制范围应为2到36"
+        Exit Function
+    End If
+    Dim result As Variant
+    If digits = 1 Then
+        result = base - 1
+    Else
+        result = base ^ digits - 1
+    End If
+    '如果结果较小，可以用数值类型表示，否则用字符串表示
+If result <= 2147483647 Then
+    GetMaxValueInBase = CLng(result)
+Else
+    GetMaxValueInBase = CStr(result)
+End If
+End Function
+Sub TestGetMaxValueInBase()                                                 '序列号位数能产生的数据量
+    MsgBox GetMaxValueInBase(4, 34)
+End Sub

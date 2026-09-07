@@ -1,0 +1,11 @@
+'name=选区下方求和
+'officetype=excel,et,wps,word,ppt,wpp
+'category=个人常用
+'description=在选区下方插入求和公式（仅对数值列）
+
+Public Sub QuickSum()
+    Dim r As Range
+    On Error Resume Next
+    Set r = Selection
+    r.Offset(r.Rows.Count, 0).Resize(1, 1).Formula = "=SUM(" & r.Address(False, False) & ")"
+End Sub

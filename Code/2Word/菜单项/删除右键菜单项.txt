@@ -1,0 +1,47 @@
+﻿'删除右键菜单项
+Sub DeleteRightClickMenuItem()
+    Dim cmdBar As CommandBar
+    Dim ctrl As CommandBarControl
+    Dim itemTitle As String
+    itemTitle = "-"
+    
+    On Error Resume Next
+    Set cmdBar = Application.CommandBars("Text")
+    For Each ctrl In cmdBar.Controls
+        If Replace(ctrl.Caption, "&", "") = itemTitle Then
+            ctrl.Delete
+'            MsgBox "已删除菜单项：" & itemTitle
+            Exit Sub
+        End If
+    Next ctrl
+'    MsgBox "未找到菜单项：" & itemTitle
+End Sub
+
+'批量删除右键菜单项
+Sub DeleteRightClickMenuItems()
+    Dim cmdBar As CommandBar
+    Dim ctrl As CommandBarControl
+    Dim items As Variant
+    Dim item As Variant
+    Dim found As Boolean
+    
+    items = Array("翻译", "其他功能1", "其他功能2") ' 在这里添加需要删除的菜单项标题
+    
+    On Error Resume Next
+    Set cmdBar = Application.CommandBars("Text")
+    For Each item In items
+        found = False
+        For Each ctrl In cmdBar.Controls
+            If Replace(ctrl.Caption, "&", "") = item Then
+                ctrl.Delete
+                found = True
+                Exit For
+            End If
+        Next ctrl
+        If found Then
+            MsgBox "已删除菜单项：" & item
+        Else
+            MsgBox "未找到菜单项：" & item
+        End If
+    Next item
+End Sub

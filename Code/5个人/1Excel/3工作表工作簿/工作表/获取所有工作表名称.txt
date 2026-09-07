@@ -1,0 +1,8 @@
+Sub LoopSheetsAndGetNames()
+    Dim ws As Worksheet
+    For Each ws In ThisWorkbook.Sheets
+        Dim sheetName As String
+        sheetName = ws.Name
+        MsgBox "工作表名称：" & sheetName
+    Next ws
+End Sub

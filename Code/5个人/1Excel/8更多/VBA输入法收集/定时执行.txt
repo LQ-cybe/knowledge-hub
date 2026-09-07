@@ -1,0 +1,8 @@
+Public atime
+Sub autorun()
+    On Error Resume Next:    jg = 4:    atime = Now + TimeValue("00:00:" & Format(jg, "00"))
+    If Sheet1.CheckBox1.Value = True Then Call XXX:               Application.OnTime atime, "autorun" Else Application.OnTime atime, "autorun", , False
+End Sub
+Sub auto_close()
+    On Error Resume Next: Application.OnTime atime, "autorun", , False
+End Sub

@@ -1,0 +1,14 @@
+﻿''删除A列单元格字符数位0或空值的行
+Sub DeleteRowsWithShortText()
+    Dim lastRow As Long
+ lastRow = Cells(Rows.Count, 1).End(xlUp).Row
+    Dim i As Long
+    ' 从第 106 行开始，倒序循环到第 11 行
+    For i = lastRow To 4 Step -1
+        ' 检查 F 列对应行单元格内字符的长度
+        If Len(Cells(i, "B").Value) < 2 Then
+            ' 如果字符长度小于 2，删除整行
+            Cells(i, "A").EntireRow.Delete
+        End If
+    Next i
+End Sub

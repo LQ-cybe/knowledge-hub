@@ -1,0 +1,3 @@
+Function vbaTRUNC(ByVal num As Double, Optional num_digits As Long = 0) As Double
+    vbaTRUNC = Fix(num * 10 ^ num_digits) / 10 ^ num_digits
+End Function

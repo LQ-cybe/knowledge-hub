@@ -1,0 +1,35 @@
+Sub DeleteCodeAfterSpecificLine(ModuleName As String, specificCode As String)
+    Dim vbComp As VBComponent
+    Dim codeMod As CodeModule
+    Dim lineNum As Integer
+    Dim lineCount As Integer
+    
+    ' 获取指定名称的模块
+    On Error Resume Next
+    Set vbComp = ThisDocument.Parent.VBProject.VBComponents(ModuleName)
+    On Error GoTo 0
+    
+    If vbComp Is Nothing Then
+'        MsgBox "指定的模块不存在。"
+'        Debug.Print "未找到指定的模块"
+        Exit Sub
+    End If
+    
+    ' 获取模块的代码模块
+    Set codeMod = vbComp.CodeModule
+    
+    ' 查找指定代码所在的行
+    lineNum = FindLineWithCode(codeMod, specificCode)
+    
+    If lineNum = 0 Then
+        '        MsgBox "未找到指定的代码。"
+'        Debug.Print "未找到指定的代码"
+        Exit Sub
+    End If
+    
+    ' 获取代码总行数
+    lineCount = codeMod.CountOfLines
+    
+    ' 删除指定代码行之后的所有代码行
+    codeMod.DeleteLines lineNum + 1, lineCount - lineNum
+End Sub

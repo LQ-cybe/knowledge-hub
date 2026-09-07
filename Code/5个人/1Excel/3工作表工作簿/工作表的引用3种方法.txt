@@ -1,0 +1,28 @@
+'工作表标签顺序的代号，这里是标签上底4个的工作表
+Private Sub Workbook_Open()
+    ThisWorkbook.Sheets(4).ScrollArea = "$A$1:$S$54"
+End Sub
+
+'工作表名称
+Private Sub Workbook_Open()
+    ThisWorkbook.Sheets("数据报表").ScrollArea = "$A$1:$S$54"  ' 替换为实际表名
+End Sub
+
+'工作表代号，修改表名称不影响
+Private Sub Workbook_Open()
+    Sheet4.ScrollArea = "$A$1:$S$54"  
+End Sub
+
+Sub 查看所有表信息()
+    Dim ws As Worksheet
+    For Each ws In ThisWorkbook.Worksheets
+        Debug.Print "代码名称: " & ws.CodeName & " → 显示名称: " & ws.Name
+    Next
+End Sub
+
+MsgBox ThisWorkbook.Sheets(4).Name  ' 弹出第4个表的“显示名称”，立刻知道对不对
+
+引用方式	规则	是否会因用户操作失效？	典型场景
+按 “显示名称”（标签名）	Sheets("采购订单") / Worksheets("采购订单")	会！用户改标签名（如改成 “订单”）就失效	需和用户交互，明确知道标签名时用
+按 “标签序号”	Sheets(3) / Worksheets(3)	会！用户拖动标签改变顺序就失效	极少用，除非表格顺序绝对不变
+按 “代码名称”	Sheet1（VBA 编辑器里括号外的名称）	不会！用户改标签名也不影响	写代码时最推荐，精准稳定

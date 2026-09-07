@@ -1,0 +1,20 @@
+﻿Option Explicit
+Function PY(TT As String) As Variant '自定义函数，目的：把一组汉字变为一组汉字拼音的第一个字母。
+Dim i%, temp$
+    PY = ""
+    For i = 1 To Len(TT)
+         temp = Asc(Mid$(TT, i, 1))
+         If temp > 255 Or temp < 0 Then   '是汉字吗？
+             PY = PY & pinyin(Mid$(TT, i, 1)) '转化为拼音首字母，
+         Else
+             PY = PY & LCase(Mid$(TT, i, 1))  '转化英文字母
+         End If
+    Next i
+End Function
+Function pinyin(myStr As String) As Variant '自定义函数，目的：把单个汉字变为拼音的第一个字母。
+    On Error Resume Next
+    myStr = StrConv(myStr, vbNarrow)
+    If Asc(myStr) > 0 Or Err.Number = 1004 Then pinyin = ""
+    pinyin = Application.WorksheetFunction.VLookup(myStr, [{"吖","A";"八","B";"嚓","C";"咑","D";"鵽","E";"发","F";"猤","G";"铪","H";"夻","J";"咔","K";"垃","L";"嘸","M";"旀","N";"噢","O";"妑","P";"七","Q";"囕","R";"仨","S";"他","T";"屲","W";"夕","X";"丫","Y";"帀","Z"}], 2)
+End Function
+'=PY(A1)

@@ -1,0 +1,53 @@
+﻿'导出所有模块
+Sub ExportAllStandardModuleCode()
+    Dim vbe As VBIDE.vbe
+    Dim vbProj As VBIDE.VBProject
+    Dim vbComp As VBIDE.VBComponent
+    Dim codeMod As VBIDE.CodeModule
+    Dim fileNum As Integer
+    Dim filePath As String
+    Dim lineCount As Integer
+    Dim lineText As String
+    Dim folderPath As String
+    
+   ' 设置导出文件夹路径，需根据实际情况修改
+    folderPath = "D:\Access模块汇总"
+    
+   ' 获取VBA工程对象
+    On Error Resume Next
+    Set vbe = Application.vbe
+    Set vbProj = vbe.ActiveVBProject
+    On Error GoTo 0
+    
+    If vbe Is Nothing Or vbProj Is Nothing Then
+        MsgBox "无法获取VBA工程对象。"
+        Exit Sub
+    End If
+    
+   ' 遍历所有组件
+    For Each vbComp In vbProj.VBComponents
+       ' 检查是否为标准模块
+        If vbComp.Type = vbext_ct_StdModule Then
+            Set codeMod = vbComp.CodeModule
+            lineCount = codeMod.CountOfLines
+           ' 生成导出文件路径
+            filePath = folderPath & "\" & vbComp.Name & ".bas"
+           ' 打开文件用于写入
+            fileNum = FreeFile
+            Open filePath For Output As #fileNum
+           ' 写入模块代码
+            For i = 1 To lineCount
+                lineText = codeMod.Lines(i, 1)
+                Print #fileNum, lineText
+            Next i
+           ' 关闭文件
+            Close #fileNum
+        End If
+    Next vbComp
+    
+   ' 清理对象
+    Set codeMod = Nothing
+    Set vbComp = Nothing
+    Set vbProj = Nothing
+    Set vbe = Nothing
+End Sub

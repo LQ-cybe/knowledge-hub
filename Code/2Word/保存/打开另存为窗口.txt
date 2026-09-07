@@ -1,0 +1,3 @@
+ActiveDocument.SaveAs2 _
+    FileName:="C:\Documents\MyDocument.docx", _
+    FileFormat:=wdFormatXMLDocument

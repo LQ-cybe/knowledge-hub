@@ -1,0 +1,70 @@
+Function ExportSheetToUTF8Txt(sheetName As String, Optional rangeToExport As Range) As Boolean
+    Dim wb As Workbook
+    Dim ws As Worksheet
+    Dim data As Variant
+    Dim i As Long, j As Long
+    Dim filePath As String
+    Dim found As Boolean
+    Dim stream As Object '使用后期绑定，声明为Object
+    Dim visibleRange As Range '新增变量用于存储可见单元格范围
+
+   '假设当前工作簿为目标工作簿
+    Set wb = ThisWorkbook
+
+   '遍历所有工作表，检查是否存在指定名称的工作表，同时处理隐藏工作表
+    found = False
+    For Each ws In wb.Sheets
+        If ws.Name = sheetName Then
+            Set ws = ws
+            found = True
+            Exit For
+        End If
+    Next ws
+
+    If Not found Then
+        ExportSheetToUTF8Txt = False
+        Exit Function
+    End If
+
+   '如果未指定区域，则使用整个工作表
+    If rangeToExport Is Nothing Then
+        Set rangeToExport = ws.UsedRange
+    End If
+
+   '获取筛选后可见单元格的范围
+    On Error Resume Next
+    Set visibleRange = rangeToExport.SpecialCells(xlCellTypeVisible)
+    On Error GoTo 0
+    If visibleRange Is Nothing Then
+        Set visibleRange = rangeToExport '如果没有筛选，就使用原始范围
+    End If
+
+    data = visibleRange.Value '从可见单元格范围获取数据
+
+   '构建文件路径，使用工作表名称作为文件名
+    filePath = ThisWorkbook.Path & "\" & ws.Name & ".txt"
+
+   '创建ADODB.Stream对象
+    Set stream = CreateObject("ADODB.Stream")
+    With stream
+       .Type = 2 'adTypeText
+       '尝试不同的UTF - 8字符集指定方式
+       .Charset = "utf-8" '尝试小写形式
+       '.Charset = "65001" 'UTF - 8的代码页表示
+       .Open
+        For i = 1 To UBound(data, 1)
+            For j = 1 To UBound(data, 2)
+               .WriteText data(i, j)
+                If j < UBound(data, 2) Then
+                   .WriteText " " '将分隔符改为空格
+                End If
+            Next j
+           .WriteText vbCrLf
+        Next i
+       .SaveToFile filePath, 2 'adSaveCreateOverWrite
+       .Close
+    End With
+
+    Set stream = Nothing
+    ExportSheetToUTF8Txt = True
+End Function

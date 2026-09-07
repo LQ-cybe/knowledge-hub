@@ -1,0 +1,27 @@
+Option Explicit
+' 模块级变量，用于控制调试开关
+Private debugMode As Boolean
+' 设置调试模式状态的函数
+Public Function SetDebugMode(ByVal isDebug As Boolean)
+    debugMode = isDebug
+End Function
+' 调试输出函数
+Public Sub DebugPrint(ByVal message As String)
+    If debugMode Then
+        Debug.Print message
+    End If
+End Sub
+Sub ExampleProcedure()
+    ' 设置调试模式为开启
+    Call SetDebugMode(True)
+    Dim num1 As Integer
+    Dim num2 As Integer
+    num1 = 10
+    num2 = 20
+    ' 调试输出
+    Call DebugPrint("num1的值为：" & num1)
+    Call DebugPrint("num2的值为：" & num2)
+    Dim result As Integer
+    result = num1 + num2
+    Call DebugPrint("num1和num2相加的结果为：" & result)
+End Sub

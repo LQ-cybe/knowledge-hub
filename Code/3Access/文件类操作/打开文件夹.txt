@@ -1,0 +1,4 @@
+﻿    '打开文件夹
+    Dim folderPath As String
+    folderPath = "C:\CHDEV"
+    Shell "explorer.exe " & folderPath, vbNormalFocus

@@ -1,0 +1,228 @@
+' 需要引用 "Microsoft Visual Basic for Applications Extensibility 5.3"
+'提取所有模块和函数/过程信息
+Sub LogProceduresToTable()
+    On Error GoTo ErrorHandler
+    
+    Dim vbProj As VBIDE.VBProject
+    Dim vbComp As VBIDE.VBComponent
+    Dim codeMod As VBIDE.CodeModule
+    Dim procName As String
+    Dim procType As String
+    Dim procStartLine As Long
+    Dim lineCount As Long
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim lineText As String
+    Dim commentText As String
+    Dim currentLine As Long
+    Dim procKind As VBIDE.vbext_ProcKind
+    
+    ' 创建或打开表
+    Set db = CurrentDb()
+    
+    ' 检查表是否存在
+    On Error Resume Next
+    Dim tableExists As Boolean
+    tableExists = False
+    Dim tdf As DAO.TableDef
+    For Each tdf In db.TableDefs
+        If tdf.Name = "ProceduresList" Then
+            tableExists = True
+            Exit For
+        End If
+    Next tdf
+    
+    ' 如果表不存在则创建
+    If Not tableExists Then
+        db.Execute "CREATE TABLE ProceduresList (" & _
+                   "ModuleName TEXT(255), " & _
+                   "ProcedureName TEXT(255), " & _
+                   "ProcedureType TEXT(50), " & _
+                   "StartLine LONG, " & _
+                   "LineCount LONG, " & _
+                   "Comment MEMO);"
+    End If
+    
+    ' 确保Comment字段存在
+    Dim fieldExists As Boolean
+    fieldExists = False
+    Set rs = db.OpenRecordset("ProceduresList", dbOpenDynaset)
+    
+    For Each fld In rs.Fields
+        If fld.Name = "Comment" Then
+            fieldExists = True
+            Exit For
+        End If
+    Next fld
+    
+    If Not fieldExists Then
+        rs.Close
+        db.Execute "ALTER TABLE ProceduresList ADD COLUMN Comment MEMO;"
+    End If
+    On Error GoTo ErrorHandler
+    
+    Set rs = db.OpenRecordset("ProceduresList", dbOpenDynaset)
+    
+    ' 获取当前VB项目
+    Set vbProj = Application.VBE.ActiveVBProject
+    
+    ' 遍历所有组件
+    For Each vbComp In vbProj.VBComponents
+        If vbComp.Type = vbext_ct_StdModule Or vbComp.Type = vbext_ct_ClassModule Then
+            Set codeMod = vbComp.CodeModule
+            
+            ' 遍历所有行，寻找过程定义
+            currentLine = 1
+            Do While currentLine < codeMod.CountOfLines
+                ' 获取当前行文本
+                lineText = codeMod.Lines(currentLine, 1)
+                
+                ' 检查是否为过程定义行
+                If IsProcedureDefinition(lineText, procName, procType) Then
+                    procStartLine = currentLine
+                    
+                    ' 获取过程类型对应的procKind
+                    Select Case procType
+                        Case "Sub"
+                            procKind = vbext_pk_Proc
+                        Case "Function"
+                            procKind = vbext_pk_Function
+                        Case Else ' Property
+                            procKind = vbext_pk_PropertyGet ' 默认使用Get类型
+                    End Select
+                    
+                    ' 获取过程行数
+                    On Error Resume Next
+                    lineCount = codeMod.ProcCountLines(procName, procKind)
+                    If Err.Number <> 0 Then
+                        Debug.Print "获取过程行数错误: " & Err.Description & " - 过程: " & procName & ", 类型: " & procType
+                        lineCount = 0
+                        Err.Clear
+                    End If
+                    On Error GoTo ErrorHandler
+                    
+                    ' 获取过程前的注释
+                    commentText = GetProcedureComment(codeMod, procStartLine)
+                    
+                    ' 写入记录
+                    rs.AddNew
+                    rs!ModuleName = vbComp.Name
+                    rs!ProcedureName = procName
+                    rs!ProcedureType = procType
+                    rs!startLine = procStartLine
+                    rs!lineCount = lineCount
+                    rs!Comment = commentText
+                    rs.Update
+                    
+                    ' 移动到下一行继续扫描
+                    currentLine = currentLine + 1
+                Else
+                    ' 继续检查下一行
+                    currentLine = currentLine + 1
+                End If
+            Loop
+        End If
+    Next vbComp
+    
+    rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    MsgBox "完成！过程信息已记录到表中。"
+    Exit Sub
+    
+ErrorHandler:
+    MsgBox "错误 " & Err.Number & ": " & Err.Description & vbCrLf & _
+           "位置: " & Erl
+    Resume Next
+End Sub
+
+' 检查是否为过程定义行，并提取过程名和类型
+Function IsProcedureDefinition(lineText As String, ByRef procName As String, ByRef procType As String) As Boolean
+    lineText = Trim(lineText)
+    
+    ' 检查是否为Sub过程
+    If Left(lineText, 3) = "Sub" And InStr(lineText, "(") > 0 Then
+        procName = Trim(Mid(lineText, 5, InStr(lineText, "(") - 5))
+        procType = "Sub"
+        IsProcedureDefinition = True
+        Exit Function
+    End If
+    
+    ' 检查是否为Function过程
+    If Left(lineText, 8) = "Function" And InStr(lineText, "(") > 0 Then
+        procName = Trim(Mid(lineText, 10, InStr(lineText, "(") - 10))
+        procType = "Function"
+        IsProcedureDefinition = True
+        Exit Function
+    End If
+    
+    ' 检查是否为Property过程
+    If Left(lineText, 8) = "Property" Then
+        Dim propType As String
+        Dim propName As String
+        Dim spacePos As Long
+        
+        spacePos = InStr(9, lineText, " ")
+        If spacePos > 0 Then
+            propType = Trim(Mid(lineText, 9, spacePos - 9))
+            If InStr(lineText, "(") > 0 Then
+                propName = Trim(Mid(lineText, spacePos + 1, InStr(lineText, "(") - spacePos - 1))
+            Else
+                propName = Trim(Mid(lineText, spacePos + 1))
+            End If
+            
+            If propName <> "" Then
+                procName = propName
+                procType = "Property " & propType
+                IsProcedureDefinition = True
+                Exit Function
+            End If
+        End If
+    End If
+    
+    IsProcedureDefinition = False
+End Function
+
+' 获取过程前的注释文本
+Function GetProcedureComment(codeMod As VBIDE.CodeModule, procStartLine As Long) As String
+    Dim commentText As String
+    Dim currentLine As Long
+    
+    commentText = ""
+    currentLine = procStartLine - 1
+    
+    ' 向上查找，直到找到非注释行或文件开头
+    Do While currentLine > 0
+        Dim lineText As String
+        lineText = codeMod.Lines(currentLine, 1)
+        
+        ' 如果是空行，继续检查上一行
+        If Trim(lineText) = "" Then
+            currentLine = currentLine - 1
+            GoTo NextLine
+        End If
+        
+        ' 如果是注释行，添加到注释文本
+        If Left(Trim(lineText), 1) = "'" Then
+            ' 提取注释内容（去除单引号）
+            Dim commentLine As String
+            commentLine = Trim(Mid(lineText, 2))
+            
+            ' 将当前注释行添加到开头（保持正确顺序）
+            If commentText = "" Then
+                commentText = commentLine
+            Else
+                commentText = commentLine & vbCrLf & commentText
+            End If
+            
+            currentLine = currentLine - 1
+        Else
+            ' 不是注释行，停止查找
+            Exit Do
+        End If
+        
+NextLine:
+    Loop
+    
+    GetProcedureComment = commentText
+End Function

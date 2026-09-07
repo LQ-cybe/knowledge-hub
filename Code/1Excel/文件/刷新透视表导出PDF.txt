@@ -1,0 +1,16 @@
+'刷新透视表导出PDF
+Sub RefreshPivotAndExportPDF()
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets(2)
+
+    ' 刷新
+    ws.PivotTables("ptSales").RefreshTable
+
+    ' 导出
+    ws.ExportAsFixedFormat _
+            Type:=xlTypePDF, _
+            Filename:=ThisWorkbook.Path & "\SalesReport.pdf", _
+            Quality:=xlQualityStandard
+
+    MsgBox "已导出至：" & ThisWorkbook.Path & "\SalesReport.pdf"
+End Sub

@@ -1,0 +1,7 @@
+﻿'破解工作簿的保护密码
+Sub test()
+ActiveWorkbook.Sheets.Copy
+For Each sh In ActiveWorkbook.Sheets
+sh.Visible = True
+Next
+End Sub

@@ -1,0 +1,3 @@
+﻿Dim loginUser As String loginUser = Environ("Username")
+MsgBox "当前Windows登录用户：" & loginUser 
+

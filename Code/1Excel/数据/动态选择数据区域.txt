@@ -1,0 +1,14 @@
+﻿'动态选择数据区域    
+Dim lastCol As Integer
+    Dim lastRow As Integer
+    Dim StartRow As Integer
+    Dim startCol As Integer
+    Dim endCol As Integer
+    Dim endRow As Integer
+    StartRow = 105                                             '起始行号
+    startCol = 1                                               'A列对应的列号为1
+    lastCol = Range("G1").Value + 1                            'N列对应的列号为14
+    lastRow = Range("C1").Value * Range("E1").Value * 2 + 2    '假设Y为20，代表20行
+    endCol = startCol + lastCol - 1
+    endRow = StartRow + lastRow - 1
+    Range(Cells(StartRow, startCol), Cells(endRow, endCol)).Select

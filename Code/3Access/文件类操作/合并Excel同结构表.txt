@@ -1,0 +1,30 @@
+﻿    'EXCEL文档中的多个结构相同的表合并为一个表
+Public Sub MergeWorkSheets(strWrkBookName As String)
+    Dim objExcelApp As Object
+    Dim objWorkbook As Object
+    Dim objWorkSheet As Object
+    Dim strSQL As String
+    Set objExcelApp = CreateObject("Excel.application", "")
+    objExcelApp.Visible = False
+    Set objWorkbook = objExcelApp.Workbooks.Open(strWrkBookName)
+    DoCmd.SetWarnings False
+    For Each objWorkSheet In objWorkbook.Worksheets
+        'Debug.Print objWorkSheet.Name
+        If IsNull(DLookup("[Id]", "[MSysObjects]", "[Type]=1 AND [Name]='tempTable'")) Then
+            strSQL = "Select * INTO tempTable FROM [Excel 12.0 XML;HDR=YES;DATABASE=" & strWrkBookName & "].[" & objWorkSheet.Name & "$];"
+        Else
+            strSQL = "Insert INTO tempTable Select * FROM [Excel 12.0 XML;HDR=YES;DATABASE=" & strWrkBookName & "].[" & objWorkSheet.Name & "$];"
+        End If
+        DoCmd.RunSQL strSQL
+    Next
+    objWorkbook.Close True
+    objExcelApp.Quit
+    strSQL = "Select * INTO [Excel 12.0 XML;HDR=YES;DATABASE=" & CurrentProject.Path & "\合并结果输出.xlsx].[合并] FROM tempTable;"
+    DoCmd.RunSQL strSQL
+    DoCmd.DeleteObject acTable, "tempTable"
+    'DoCmd.TransferDatabase acExport, "dBase 5.0", Access.CurrentProject.Path, acTable, "tempTable", "DBFTable", False, False
+    DoCmd.SetWarnings True
+    Set objWorkSheet = Nothing
+    Set objWorkbook = Nothing
+    Set objExcelApp = Nothing
+End Sub

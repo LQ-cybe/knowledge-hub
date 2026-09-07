@@ -1,0 +1,21 @@
+'一对多查找
+'Lookups(查找值,表格区域,返回值列数,分隔符)
+
+'lookup_value 查找值
+'table_array 查找区域
+'col_index_num 那列查找
+'separator 分割符 默认";"
+Public Function LookUpS(lookup_value As String, table_array As Range, col_index_num As Long, Optional separator As String = ";") As String
+         Dim irow As Long
+         Dim arr As Variant, i As Long
+         With ActiveSheet
+             irow = .Cells(1048576, table_array.Columns(1).Column).End(3).Row
+             arr = table_array.Resize(irow - table_array.Row + 1)
+             For i = 1 To UBound(arr)
+                 If arr(i, 1) = lookup_value Then
+                     SLookUp = SLookUp & separator & arr(i, col_index_num)
+                 End If
+             Next
+             LookUpS = Mid(SLookUp, Len(separator) + 1)
+         End With
+     End Function

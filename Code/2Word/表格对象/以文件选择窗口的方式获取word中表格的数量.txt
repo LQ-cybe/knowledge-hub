@@ -1,0 +1,40 @@
+﻿Dim filePath As String
+'弹出文件选择窗口
+Sub SelectWordFile()
+'    Dim filePath As String
+    Dim fd As FileDialog
+    Set fd = Application.FileDialog(msoFileDialogFilePicker) ' 创建文件选择对话框对象
+    With fd
+       .Filters.Clear ' 清除默认的文件筛选器
+       .Filters.Add "Word文件", "*.docx" ' 添加只显示docx格式文件的筛选器
+       .AllowMultiSelect = False ' 不允许选择多个文件，只选一个，如果想选多个可设置为True
+        If .Show = -1 Then ' 如果用户点击了确定按钮（返回值为 -1表示成功选择文件）
+            filePath = .SelectedItems(1) ' 获取用户选择的第一个文件路径（即使只选一个文件也用SelectedItems(1)获取）
+        End If
+    End With
+    Set fd = Nothing ' 释放对象资源
+    
+    If filePath <> "" Then
+        MsgBox "你选择的文件路径是：" & filePath
+    Else
+'        MsgBox "你未选择任何文件，请重新操作。"
+    End If
+End Sub
+
+Sub ReadWordTableCount1()
+    Dim wordApp As Object
+    Dim wordDoc As Object
+    Dim tableCount As Integer
+    SelectWordFile '调用文件选择窗口程序
+    Set wordApp = CreateObject("Word.Application")
+    wordApp.Visible = False '可设置为False使其后台运行
+    '打开Word文档
+    Set wordDoc = wordApp.Documents.Open(filePath)
+    '获取表格个数
+    tableCount = wordDoc.Tables.Count
+    '关闭Word文档并退出Word应用程序
+    wordDoc.Close
+    wordApp.Quit
+    '消息框返回文档中表格的个数
+    MsgBox "该Word文件中表格的个数为：" & tableCount
+End Sub

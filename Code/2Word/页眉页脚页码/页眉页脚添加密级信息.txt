@@ -1,0 +1,43 @@
+Sub 页眉页脚添加密级信息()
+    'InputBox函数
+    Dim 密级 As String
+    密级 = "加密"
+    Dim s As Section
+    For Each s In ActiveDocument.Sections
+        s.Range.Paragraphs(1).Range.Select
+        If s.PageSetup.DifferentFirstPageHeaderFooter = -1 And s.PageSetup.OddAndEvenPagesHeaderFooter = -1 Then    '首页不同、奇偶页不同
+            WriteHeader 密级
+            Pagenum = Selection.Information(wdActiveEndAdjustedPageNumber)
+            Selection.GoTo wdGoToPage, wdGoToFirst, Pagenum + 1
+            WriteHeader 密级
+            Selection.GoTo wdGoToPage, wdGoToFirst, Pagenum + 2
+            WriteHeader 密级
+        End If
+        If s.PageSetup.DifferentFirstPageHeaderFooter = -1 And s.PageSetup.OddAndEvenPagesHeaderFooter = 0 Then    '首页不同、奇偶页相同
+            WriteHeader 密级
+            Pagenum = Selection.Information(wdActiveEndAdjustedPageNumber)
+            Selection.GoTo wdGoToPage, wdGoToFirst, Pagenum + 1
+            WriteHeader 密级
+        End If
+        If s.PageSetup.DifferentFirstPageHeaderFooter = 0 And s.PageSetup.OddAndEvenPagesHeaderFooter = -1 Then    '首页相同、奇偶页不同
+            WriteHeader 密级
+            Pagenum = Selection.Information(wdActiveEndAdjustedPageNumber)
+            Selection.GoTo wdGoToPage, wdGoToFirst, Pagenum + 1
+            WriteHeader 密级
+        End If
+        If s.PageSetup.DifferentFirstPageHeaderFooter = 0 And s.PageSetup.OddAndEvenPagesHeaderFooter = 0 Then    '首页相同、奇偶页不同
+            WriteHeader 密级
+        End If
+    Next
+End Sub
+Sub WriteHeader(密级)
+    With Application.ActiveWindow.ActivePane.View
+        .SeekView = wdSeekCurrentPageHeader                    '进入当前页面的页眉
+        '.SeekView = wdSeekCurrentPageFooter                    '进入当前页面的页脚
+        '//查找关键字ABC
+        Selection.HomeKey wdStory
+        Selection.TypeText 密级
+        Selection.Font.Name = "黑体"
+        .SeekView = wdSeekMainDocument                         '退出页眉页脚视图
+    End With
+End Sub

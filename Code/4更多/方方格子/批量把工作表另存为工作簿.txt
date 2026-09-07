@@ -1,0 +1,102 @@
+Attribute VB_Name = "A006批量把工作表另存为工作簿"
+'先运行A004，生成SheetNames工作表，然后标记要合并的工作表，运行下面的程序
+
+Sub SaveMarkedSheetsToWorkbooks()
+    Dim wsList As Worksheet
+    Dim targetFolder As String
+    Dim lastRow As Long, i As Long
+    Dim sourceWs As Worksheet, newWb As Workbook
+    Dim wsName As String, newWbName As String
+    Dim savePath As String
+    
+    ' 设置目标文件夹（用户选择）
+    With Application.FileDialog(msoFileDialogFolderPicker)
+        .Title = "选择保存位置"
+        If .Show <> -1 Then Exit Sub ' 用户取消
+        targetFolder = .SelectedItems(1)
+        If Right(targetFolder, 1) <> "\" Then targetFolder = targetFolder & "\"
+    End With
+    
+    ' 设置包含列表的工作表（假设当前工作表）
+    Set wsList = ActiveSheet
+    lastRow = wsList.Cells(wsList.Rows.Count, "B").End(xlUp).Row
+      
+    Application.ScreenUpdating = False
+    
+    ' 计数器
+    Dim savedCount As Long: savedCount = 0
+    
+    ' 遍历列表
+    For i = 2 To lastRow
+        If UCase(Trim(wsList.Cells(i, "C").Value)) = "Y" Then
+            wsName = Trim(wsList.Cells(i, "B").Value)
+            newWbName = Trim(wsList.Cells(i, "D").Value)
+            
+            ' 检查工作表是否存在
+            On Error Resume Next
+            Set sourceWs = ActiveWorkbook.Worksheets(wsName)
+            On Error GoTo 0
+            
+            If Not sourceWs Is Nothing Then
+                On Error Resume Next
+                Set newWb = Nothing
+                
+                ' 复制工作表到新工作簿
+                sourceWs.Copy
+                Set newWb = ActiveWorkbook
+                
+                ' 构建保存路径（确保文件名有效）
+                newWbName = CleanFileName(newWbName) ' 清理非法字符
+                If newWbName = "" Then newWbName = "Sheet_" & wsName ' 默认名称
+                savePath = targetFolder & newWbName & ".xlsx"
+                
+                ' 检查文件是否已存在
+                If Dir(savePath) <> "" Then
+                    savePath = targetFolder & newWbName & "_" & Format(Now, "yyyymmdd_hhmmss") & ".xlsx"
+                End If
+                
+                ' 保存工作簿
+                Application.DisplayAlerts = False
+                newWb.SaveAs Filename:=savePath, FileFormat:=xlOpenXMLWorkbook
+                newWb.Close False
+                Application.DisplayAlerts = True
+                
+                If Err.Number = 0 Then
+                    savedCount = savedCount + 1
+                Else
+                    MsgBox "保存失败: " & wsName & " 为 " & newWbName & vbCrLf & _
+                           "错误: " & Err.Description, vbExclamation
+                    Err.Clear
+                End If
+                On Error GoTo 0
+            Else
+                MsgBox "工作表不存在: " & wsName, vbExclamation
+            End If
+        End If
+    Next i
+    
+    ' 恢复设置
+    Application.ScreenUpdating = True
+    
+    MsgBox "已完成保存 " & savedCount & " 个工作表到指定文件夹", vbInformation
+End Sub
+
+' 辅助函数：清理文件名中的非法字符
+Function CleanFileName(strName As String) As String
+    Dim illegalChars As String
+    illegalChars = "\/:*?""<>|" ' Windows文件名非法字符
+    
+    Dim i As Long
+    For i = 1 To Len(illegalChars)
+        strName = Replace(strName, Mid(illegalChars, i, 1), "_")
+    Next i
+    
+    ' 去除首尾空格
+    strName = Trim(strName)
+    
+    ' 如果为空则返回默认名称
+    If strName = "" Then strName = "Workbook"
+    
+    CleanFileName = strName
+End Function
+

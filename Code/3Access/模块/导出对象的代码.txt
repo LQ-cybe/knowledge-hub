@@ -1,0 +1,1 @@
+﻿Application.SaveAsText acForm, "frm_A创建变码数据", "d:\test.txt"

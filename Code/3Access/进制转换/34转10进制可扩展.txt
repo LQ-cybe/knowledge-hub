@@ -1,0 +1,21 @@
+﻿'34进制转换10进制，可扩展为其他进制
+'在查询中使用：DecimalValue: Base34ToDecimal([Base34Field])
+'在表单控件中使用：=Base34ToDecimal([SomeField])
+Function Base34ToDecimal(base34Str)
+    Dim charSet
+    charSet = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+    Dim decimalValue
+    decimalValue = 0
+    Dim i
+    For i = 1 To Len(base34Str)
+        Dim char
+        char = Mid(base34Str, i, 1)
+        Dim charIndex
+        charIndex = InStr(charSet, char) - 1
+        decimalValue = decimalValue * 34 + charIndex
+    Next
+    Base34ToDecimal = decimalValue
+End Function
+Sub Basc34ToBase10()
+MsgBox Base34ToDecimal("RF1R")
+End Sub

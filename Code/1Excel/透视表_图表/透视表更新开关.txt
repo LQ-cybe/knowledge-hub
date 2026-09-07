@@ -1,0 +1,6 @@
+﻿'暂停数据透视表更新
+Sub PivotTablesManualUpdate()
+    ActiveSheet.PivotTables("PivotTable1").ManualUpdate = True
+    'Place your macro code here
+    ActiveSheet.PivotTables("PivotTable1").ManualUpdate = False
+End Sub

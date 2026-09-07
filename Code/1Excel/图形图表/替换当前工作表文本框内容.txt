@@ -1,0 +1,23 @@
+﻿'替换当前工作表文本框内容
+Sub exceloffice()
+    On Error Resume Next
+    Dim oWK As Worksheet
+    Set oWK = ActiveSheet
+    Dim sOldText As String, sNewText As String
+    sOldText = "弃方(到弃土坑K32+535.870"
+    sNewText = "弃方(到弃土坑3合同K34+550"
+    
+    Dim oSP As Shape
+    Dim sText As String
+    
+    ' 遍历当前表所有形状，只替换文本框
+    For Each oSP In oWK.Shapes
+        With oSP
+            If .Type = msoTextBox Then
+                sText = .TextFrame2.TextRange.Text
+                .TextFrame2.TextRange.Text = Replace(sText, sOldText, sNewText)
+            End If
+        End With
+    Next
+    MsgBox " 当前工作表文本框替换完成！", vbInformation
+End Sub

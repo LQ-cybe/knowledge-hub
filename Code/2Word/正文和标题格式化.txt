@@ -1,0 +1,116 @@
+
+Sub 标题正文设置()
+    Dim i As Paragraph, j As Range
+    ' Application.ScreenUpdating = False
+    Selection.Font.Bold = False                                '去掉加粗
+    Selection.Font.ColorIndex = wdBlack
+    For Each i In Selection.Range.Paragraphs
+        If i.Style = "标题 1" Then
+            For Each j In i.Range.Characters
+                j.Bold = False
+                If j Like "[a-zA-Z]" = True Or j Like "[0-9]" = True Or j = "." Or j = "-" Or j = "(" Or j = ")" Then
+                    j.Font.Name = "Times New Roman"            '字体改为新罗马
+                    j.Font.Size = 15
+                ElseIf j Like "[一-龢]" Then
+                    j.Font.Name = "黑体"                         '字体
+                    j.Font.Size = 15                           '15小三 '改为12号字体 小四,10.5五号字体,二号为22
+                Else
+                    j.Font.Size = 15                           '改为12号字体 小四,10.5五号字体,二号为22
+                End If
+            Next j
+            i.Alignment = wdAlignParagraphCenter
+            i.LineSpacingRule = wdLineSpaceMultiple
+            i.LineSpacing = LinesToPoints(1.5)                 '1.5倍行距
+            '段落后面空0行
+            i.SpaceAfter = Word.Application.LinesToPoints(0)
+            '段落前面空0行
+            i.SpaceBefore = Word.Application.LinesToPoints(0)
+        ElseIf i.Style = "标题 2" Then
+            For Each j In i.Range.Characters
+                j.Bold = False
+                If j Like "[a-zA-Z]" = True Or j Like "[0-9]" = True Or j = "." Or j = "-" Or j = "(" Or j = ")" Then
+                    j.Font.Name = "Times New Roman"            '字体改为新罗马
+                    j.Font.Size = 14                           '四号
+                ElseIf j Like "[一-龢]" Then
+                    j.Font.Name = "黑体"                         '字体
+                    j.Font.Size = 14                           '四号
+                Else
+                    j.Font.Size = 14                           '四号
+                End If
+            Next j
+            i.Alignment = wdAlignParagraphJustify              '两端对齐
+            i.LineSpacingRule = wdLineSpaceMultiple
+            i.LineSpacing = LinesToPoints(1.5)                 '1.5倍行距
+            '段落后面空0行
+            i.SpaceAfter = Word.Application.LinesToPoints(0)
+            '段落前面空0行
+            i.SpaceBefore = Word.Application.LinesToPoints(0)
+        ElseIf i.Style = "标题 3" Then
+            For Each j In i.Range.Characters
+                j.Bold = False
+                If j Like "[a-zA-Z]" = True Or j Like "[0-9]" = True Or j = "." Or j = "-" Or j = "(" Or j = ")" Then
+                    j.Font.Name = "Times New Roman"            '字体改为新罗马
+                    j.Font.Size = 14                           '四号
+                ElseIf j Like "[一-龢]" Then
+                    j.Font.Name = "黑体"                         '字体
+                    j.Font.Size = 14                           '四号
+                Else
+                    j.Font.Size = 14                           '四号
+                End If
+            Next j
+            i.Alignment = wdAlignParagraphJustify              '两端对齐
+            i.LineSpacingRule = wdLineSpaceMultiple
+            i.LineSpacing = LinesToPoints(1.5)                 '1.5倍行距
+            '段落后面空0行
+            i.SpaceAfter = Word.Application.LinesToPoints(0)
+            '段落前面空0行
+            i.SpaceBefore = Word.Application.LinesToPoints(0)
+        ElseIf i.Style = "标题 4" Then
+            For Each j In i.Range.Characters
+                j.Bold = False
+                If j Like "[a-zA-Z]" = True Or j Like "[0-9]" = True Or j = "." Or j = "-" Or j = "(" Or j = ")" Then
+                    j.Font.Name = "Times New Roman"            '字体改为新罗马
+                    j.Font.Size = 12                           '小四号
+                ElseIf j Like "[一-龢]" Then
+                    j.Font.Name = "黑体"                         '字体
+                    j.Font.Size = 12                           '小四号
+                Else
+                    j.Font.Size = 12                           '小四号
+                End If
+            Next j
+            i.Alignment = wdAlignParagraphJustify              '两端对齐
+            i.LineSpacingRule = wdLineSpaceMultiple
+            i.LineSpacing = LinesToPoints(1.5)                 '1.5倍行距
+            '段落后面空0行
+            i.SpaceAfter = Word.Application.LinesToPoints(0)
+            '段落前面空0行
+            i.SpaceBefore = Word.Application.LinesToPoints(0)
+        ElseIf i.Style = "正文" Then
+            For Each j In i.Range.Characters
+                j.Bold = False
+                If j.OMaths.Count = 0 Then                     '不是公式
+                    ' j.Font.Italic = False '取消斜体
+                    If j Like "[a-zA-Z]" = True Or j Like "[0-9]" = True Or j = "." Or j = "-" Or j = "(" Or j = ")" Or j = "%" Or j = "~" Or j = "≤" Or j = "/" Or j = "&" Then
+                        j.Font.Name = "Times New Roman"        '字体改为新罗马
+                        j.Font.Size = 12                       '小四号
+                    ElseIf j Like "[一-龢]" Or j = "（" Or j = "）" Then
+                        j.Font.Name = "宋体"                     '字体
+                        j.Font.Size = 12                       '小四号
+                    Else
+                        j.Font.Size = 12                       '小四号
+                    End If
+                Else                                           '是公式
+                    j.Font.Size = 12
+                End If
+            Next j
+            i.Alignment = wdAlignParagraphJustify              '两端对齐
+            i.LineSpacingRule = wdLineSpaceMultiple
+            i.LineSpacing = LinesToPoints(1.5)                 '1.5倍行距
+            '段落后面空0行
+            i.SpaceAfter = Word.Application.LinesToPoints(0)
+            '段落前面空0行
+            i.SpaceBefore = Word.Application.LinesToPoints(0)
+        End If
+    Next i
+    ' Application.ScreenUpdating = True
+End Sub

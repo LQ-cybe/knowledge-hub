@@ -1,0 +1,116 @@
+﻿'需引用Microsoft Visual Basic for Applications Extensibility 5.3
+' 主过程：从指定目录导入所有VBA模块+窗体到当前活动工作簿
+' 导入目录和你的导出代码匹配：桌面\VBA导出文件\模块\  桌面\VBA导出文件\窗体\
+Sub 导入所有VBA组件()
+    Dim fso As Object
+    Dim strRootPath As String, strModulePath As String, strFormPath As String
+    Dim moduleFile As Object, formFile As Object
+    Dim fileExt As String, compName As String
+    Dim importCount As Integer ' 统计导入成功数量
+    
+    ' 初始化对象和计数
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    importCount = 0
+    On Error Resume Next ' 捕获文件读取/导入错误
+    
+    ' 1. 设置导入根路径（和你的导出代码完全匹配，可自行修改）
+    strRootPath = CreateObject("WScript.Shell").SpecialFolders("Desktop") & "\VBA导出文件\"
+    strModulePath = strRootPath & "模块\"  ' 模块（.bas）存放目录
+    strFormPath = strRootPath & "窗体\"    ' 窗体（.frm/.frx）存放目录
+    
+    ' 2. 检查根目录是否存在，不存在则提示并退出
+    If Not fso.FolderExists(strRootPath) Then
+        MsgBox "导入目录不存在！" & vbCrLf & strRootPath & vbCrLf & "请先执行「导出所有VBA组件」创建目录并放入文件", vbCritical, "路径错误"
+        Exit Sub
+    End If
+    
+    ' 3. 导入【模块/类模块】（.bas文件）
+    If fso.FolderExists(strModulePath) Then
+        For Each moduleFile In fso.GetFolder(strModulePath).Files
+            fileExt = LCase(fso.GetExtensionName(moduleFile.path))
+            ' 仅处理.bas文件
+            If fileExt = "bas" Then
+                ' 获取组件名称（去掉文件名后缀）
+                compName = fso.GetBaseName(moduleFile.path)
+                ' 先删除同名组件（避免重复导入报错）
+                Call DeleteVBComponent(compName)
+                ' 导入模块到当前工作簿
+                ThisWorkbook.VBProject.VBComponents.Import moduleFile.path
+                If err.Number = 0 Then importCount = importCount + 1
+                err.Clear ' 清除错误标识
+            End If
+        Next moduleFile
+    End If
+    
+    ' 4. 导入【用户窗体】（.frm文件，自动关联.frx资源文件）
+    If fso.FolderExists(strFormPath) Then
+        For Each formFile In fso.GetFolder(strFormPath).Files
+            fileExt = LCase(fso.GetExtensionName(formFile.path))
+            ' 仅处理.frm文件（导入frm会自动加载同名frx资源）
+            If fileExt = "frm" Then
+                ' 获取组件名称（去掉文件名后缀）
+                compName = fso.GetBaseName(formFile.path)
+                ' 先删除同名窗体（避免重复导入报错）
+                Call DeleteVBComponent(compName)
+                ' 导入窗体到当前工作簿
+                ThisWorkbook.VBProject.VBComponents.Import formFile.path
+                If err.Number = 0 Then importCount = importCount + 1
+                err.Clear ' 清除错误标识
+            End If
+        Next formFile
+    End If
+    
+    ' 5. 导入完成提示
+    If importCount > 0 Then
+        MsgBox "VBA组件导入成功！" & vbCrLf & _
+               "共导入：" & importCount & " 个组件" & vbCrLf & _
+               "模块路径：" & strModulePath & vbCrLf & _
+               "窗体路径：" & strFormPath, vbInformation, "导入完成"
+    Else
+        MsgBox "未找到可导入的VBA文件（.bas/.frm），请检查目录是否有文件", vbExclamation, "无文件可导入"
+    End If
+    
+    ' 释放对象
+    Set fso = Nothing
+    Set moduleFile = Nothing
+    Set formFile = Nothing
+End Sub
+
+' 辅助过程：删除指定名称的VBA组件（避免重复导入）
+Private Sub DeleteVBComponent(compName As String)
+    Dim vbc As VBComponent
+    On Error Resume Next
+    ' 遍历组件，找到同名则删除
+    For Each vbc In ThisWorkbook.VBProject.VBComponents
+        If vbc.Name = compName Then
+            ThisWorkbook.VBProject.VBComponents.Remove vbc
+            Exit For
+        End If
+    Next vbc
+    Set vbc = Nothing
+End Sub
+
+' 【可选】单独导入指定单个模块/窗体（按需使用）
+' 用法：修改filePath为具体文件路径，如「C:\桌面\VBA导出文件\模块\我的模块.bas」
+Sub 导入单个VBA组件()
+    Dim filePath As String
+    Dim fso As Object, compName As String
+
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    ' 自定义要导入的文件路径（手动修改这行）
+    filePath = CreateObject("WScript.Shell").SpecialFolders("Desktop") & "\VBA导出文件\模块\主模块.bas"
+
+    ' 检查文件是否存在
+    If Not fso.FileExists(filePath) Then
+        MsgBox "文件不存在！" & vbCrLf & filePath, vbCritical
+        Exit Sub
+    End If
+
+    ' 删除同名组件，再导入
+    compName = fso.GetBaseName(filePath)
+    Call DeleteVBComponent(compName)
+    ThisWorkbook.VBProject.VBComponents.Import filePath
+
+    MsgBox "单个组件导入成功！" & vbCrLf & filePath, vbInformation
+    Set fso = Nothing
+End Sub

@@ -1,0 +1,4 @@
+    Dim cbo As MSForms.ComboBox
+    Set ws = ThisWorkbook.Sheets("序列号")
+     Set cbo = ws.OLEObjects("ComboBox2").Object
+ cbo.ListFillRange = "JZLX"

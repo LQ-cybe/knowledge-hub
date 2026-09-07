@@ -1,0 +1,48 @@
+﻿'导出当前工程所有组件（模块、类模块、窗体）
+Sub ExportCurrentVBAComponents()
+    Dim VBProj As Object
+    Dim VBComp As Object
+    Dim fso As Object
+    Dim targetPath As String
+    Dim exportCount As Integer
+    
+    ' 获取当前VBA工程
+    On Error Resume Next
+    Set VBProj = Application.VBE.ActiveVBProject
+    
+    If VBProj Is Nothing Then
+        MsgBox "无法获取当前VBA工程！" & vbCrLf & _
+               "请在VBA编辑器中打开你的GMS项目", vbCritical
+        Exit Sub
+    End If
+    On Error GoTo 0
+    
+    ' 创建导出文件夹D:\Adobe\源码脚本\CDR插件
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    targetPath = Environ$("USERPROFILE") & "\Desktop\VBA_Backup_" & Format(Now, "YYYYMMDD_HHMMSS") & "\"
+'    targetPath = "D:\Adobe\源码脚本\CDR插件\备份文件\VBA_Backup_" & Format(Now, "YYYYMMDD_HHMMSS") & "\"
+    fso.CreateFolder targetPath
+    
+    exportCount = 0
+    
+    ' 导出所有组件
+    For Each VBComp In VBProj.VBComponents
+        On Error Resume Next
+        Select Case VBComp.Type
+            Case 1, 2  ' 模块、类模块
+                VBComp.Export targetPath & VBComp.name & ".bas"
+                exportCount = exportCount + 1
+            Case 3  ' 窗体
+                VBComp.Export targetPath & VBComp.name & ".frm"
+                exportCount = exportCount + 1
+        End Select
+        On Error GoTo 0
+    Next VBComp
+    
+    MsgBox "导出完成！" & vbCrLf & _
+           "导出 " & exportCount & " 个组件" & vbCrLf & _
+           "位置：" & targetPath
+    
+    Set fso = Nothing
+    Set VBProj = Nothing
+End Sub

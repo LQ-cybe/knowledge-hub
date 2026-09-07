@@ -1,0 +1,8 @@
+'VBE工具栏的开关切换
+Application.VBE.CommandBars(1).Enabled = True  '菜单栏:顶部的菜单栏
+Application.VBE.CommandBars(2).Enabled = True  '工具条:标准
+Application.VBE.CommandBars(3).Enabled = True  '工具条:调试
+Application.VBE.CommandBars(4).Enabled = True  '工具条:调试
+Application.VBE.CommandBars(5).Enabled = True  '工具条:用户窗体
+Application.VBE.CommandBars(6).Enabled = True  '工具条:编辑
+Application.VBE.CommandBars(7).Enabled = True  '工具条:My toolbar

@@ -1,0 +1,43 @@
+﻿'修改数据库文件密码
+Private Sub btnSelect_Click()
+    On Error GoTo ErrorHandler
+    With Application.FileDialog(3)
+        .AllowMultiSelect = False
+        .Filters.Clear
+        .Filters.Add "Excel文件", "*.mdb;*.accdb"
+        If .Show Then Me.strFilePath = .SelectedItems(1)
+    End With
+Exithere:
+    Exit Sub
+ErrorHandler:
+    MsgBox Err.Description
+    Resume Exithere
+End Sub
+Private Sub btnEdit_Click()
+    On Error GoTo ErrorHandler
+    Dim Db As DAO.Database
+    If IsNull(Me.strFilePath) Then
+        MsgBox "请先选择Access文件！", vbExclamation
+        Exit Sub
+    End If
+    If IsNull(Me.oldPwd) Then
+        MsgBox "请先填写旧密码！", vbExclamation
+        Me.oldPwd.SetFocus
+        Exit Sub
+    End If
+    If IsNull(Me.newPwd) Then
+        MsgBox "请先填写新密码！", vbExclamation
+        Me.newPwd.SetFocus
+        Exit Sub
+    End If
+    Set Db = OpenDatabase(Me.strFilePath, True, _
+            False, ";pwd=" & Me.oldPwd)
+    Db.NewPassword Me.oldPwd, Me.newPwd
+    Db.Close
+    MsgBox "密码修改成功！", vbInformation
+Exithere:
+    Exit Sub
+ErrorHandler:
+    MsgBox Err.Description
+    Resume Exithere
+End Sub

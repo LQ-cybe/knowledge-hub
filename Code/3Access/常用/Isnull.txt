@@ -1,0 +1,5 @@
+    If IsNull(Me.中间码) Then
+Me.Label_zjm.Caption = 0
+    Else
+    Me.Label_zjm.Caption = Len(Me.中间码.value)
+    End If

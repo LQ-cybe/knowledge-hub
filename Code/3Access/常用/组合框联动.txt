@@ -1,0 +1,16 @@
+﻿'组合框联动
+Private Sub Combo1_AfterUpdate()
+    Me.Combo2.RowSource = "SELECT 产品料号 FROM tbl_产品信息 WHERE 客户名称 = '" & Me.Combo1.Value & "'"
+    Me.Combo2.Requery
+    Me.Combo5.RowSource = "SELECT 产品料号 FROM tbl_产品信息 WHERE 客户名称 = '" & Me.Combo1.Value & "'"
+    Me.Combo5.Requery
+    Me.Combo5.SetFocus
+    Me.Combo5.Dropdown
+End Sub
+Private Sub Combo5_AfterUpdate()
+    Dim searchText As String
+    searchText = Me.Combo5.Text
+    Me.Combo5.RowSource = "SELECT 产品料号 FROM tbl_产品信息 WHERE 产品料号 LIKE '*" & searchText & "*' AND 客户名称 = '" & Me.Combo1.Value & "'"
+    Me.Combo5.Requery
+    '    Debug.Print searchText
+End Sub

@@ -1,0 +1,44 @@
+﻿Option Explicit
+'经典菜单栏 
+'创建自定义菜单按钮
+Sub AddInCustomCommandControl1()
+    Dim oCB As CommandBar
+    Dim oCBB As CommandBarButton
+    Call ClearMyCustomMenu
+    Set oCB = Application.CommandBars("Worksheet Menu Bar")
+    Set oCBB = oCB.Controls.Add(Type:=msoControlButton)
+    With oCBB
+        .Caption = "新增命令"
+        .FaceId = 100
+        .Style = msoButtonIconAndCaption
+        .OnAction = "MyButtonClick"
+        .Tag = "MyCustomMenuTag"
+    End With
+End Sub
+Sub MyButtonClick()
+    MsgBox "你点击了自定义菜单按钮！", vbInformation
+End Sub
+' 【彻底清除你创建的无效菜单按钮】
+Sub ClearMyCustomMenu()
+    Dim cb As CommandBar
+    Dim ctl As CommandBarControl
+    On Error Resume Next
+    For Each cb In Application.CommandBars
+        For Each ctl In cb.Controls
+            If ctl.Tag = "MyCustomMenuTag" Then
+                ctl.Delete
+            End If
+        Next ctl
+    Next cb
+    On Error GoTo 0
+End Sub
+'ThisWorkbook工作簿代码
+Private Sub Workbook_Open()
+    ' 打开加载宏时自动创建菜单
+    Call AddInCustomCommandControl1
+End Sub
+Private Sub Workbook_BeforeClose(Cancel As Boolean)
+    ' 关闭时自动删除按钮，不残留
+    Call ClearMyCustomMenu
+End Sub
+

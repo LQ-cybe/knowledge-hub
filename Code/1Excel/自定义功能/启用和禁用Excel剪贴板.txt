@@ -1,0 +1,77 @@
+'禁用剪切、复制和粘贴：https://mp.weixin.qq.com/s/hFACeEkKZCTZpilPf5Fvdg
+' 切换剪切、复制、粘贴和特殊粘贴功能的状态
+Sub ToggleEditOperations(Allow As Boolean)
+    ' 启用/禁用菜单项：剪切、复制、粘贴、特殊粘贴
+    Call EnableMenuOption(21, Allow) ' 剪切
+    Call EnableMenuOption(19, Allow) ' 复制
+    Call EnableMenuOption(22, Allow) ' 粘贴
+    Call EnableMenuOption(755, Allow) ' 特殊粘贴
+    
+    ' 启用/禁用拖放功能
+    Application.CellDragAndDrop = Allow
+    
+    ' 启用/禁用快捷键：剪切、复制、粘贴
+    With Application
+        Select Case Allow
+            Case False
+                .OnKey "^c", "EditOperationsDisabled" ' Ctrl+C
+                .OnKey "^v", "EditOperationsDisabled" ' Ctrl+V
+                .OnKey "^x", "EditOperationsDisabled" ' Ctrl+X
+                .OnKey "+{DEL}", "EditOperationsDisabled" ' Shift+Delete
+                .OnKey "^{INSERT}", "EditOperationsDisabled" ' Ctrl+Insert
+            Case True
+                .OnKey "^c" ' 恢复默认快捷键
+                .OnKey "^v"
+                .OnKey "^x"
+                .OnKey "+{DEL}"
+                .OnKey "^{INSERT}"
+        End Select
+    End With
+End Sub
+
+' 启用/禁用指定的菜单项
+Sub EnableMenuOption(ctlId As Integer, Enabled As Boolean)
+    Dim cmdBar As CommandBar
+    Dim cmdControl As CommandBarControl
+    For Each cmdBar In Application.CommandBars
+        If cmdBar.Name <> "Clipboard" Then
+            Set cmdControl = cmdBar.FindControl(ID:=ctlId, recursive:=True)
+            If Not cmdControl Is Nothing Then cmdControl.Enabled = Enabled
+        End If
+    Next cmdBar
+End Sub
+
+'可以把下面的代码放在工作簿事件中，就可以工作簿打开时自动禁用剪切、复制和粘贴功能
+' 当用户尝试执行禁用的操作时显示的消息
+Sub EditOperationsDisabled()
+    MsgBox "抱歉！此工作簿中已禁用剪切、复制和粘贴功能！"
+End Sub
+' 启用剪切、复制和粘贴功能
+Sub EnableEditOperations()
+    ToggleEditOperations True
+End Sub
+
+' 禁用剪切、复制和粘贴功能
+Sub DisableEditOperations()
+    ToggleEditOperations False
+End Sub
+
+' 工作簿激活时禁用编辑功能
+Private Sub Workbook_Activate()
+    Call ToggleEditOperations(False)
+End Sub
+
+' 工作簿关闭前恢复编辑功能
+Private Sub Workbook_BeforeClose(Cancel As Boolean)
+    Call ToggleEditOperations(True)
+End Sub
+
+' 工作簿失焦时恢复编辑功能
+Private Sub Workbook_Deactivate()
+    Call ToggleEditOperations(True)
+End Sub
+
+' 工作簿打开时禁用编辑功能
+Private Sub Workbook_Open()
+    Call ToggleEditOperations(False)
+End Sub

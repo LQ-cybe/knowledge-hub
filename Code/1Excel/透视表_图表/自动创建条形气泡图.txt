@@ -1,0 +1,183 @@
+﻿Sub 自动创建气泡图()
+    ' 定义图表相关对象变量
+    Dim sht As Worksheet, cht As Chart, ser As Series, dat As DataLabels, chtobj As ChartObject, po As Point
+    Dim ax As Axis, ay As Axis, ax2 As Axis, leg As Legend, legkey As LegendKey
+    
+    ' 定义数据数组与循环变量
+    Dim X1, Y1, X2, Y2, Z2, i
+    Dim lastRow As Long
+    
+    ' 指定工作表：绘制气泡图
+    Set sht = ThisWorkbook.Sheets("绘制气泡图")
+    
+    ' 自动获取B列最后一行数据行号（动态适配数据长度）
+    lastRow = sht.Cells(sht.Rows.Count, "B").End(xlUp).Row
+    
+    ' 读取数据：X1=A列分类名称，Y1=B列数值
+    X1 = Application.Transpose(sht.Range("A2:A" & lastRow).Value)
+    Y1 = Application.Transpose(sht.Range("B2:B" & lastRow).Value)
+    
+    ' 定义气泡图所需数组，长度与Y1保持一致（解决下标越界）
+    ReDim X2(1 To UBound(Y1))
+    ReDim Y2(1 To UBound(Y1))
+    ReDim Z2(1 To UBound(Y1))
+    
+    ' 循环处理每一行数据
+    For i = 1 To UBound(Y1)
+        Y1(i) = Y1(i) * 1                   ' 确保数值为数字格式
+        X2(i) = 1000                        ' 散点图X固定值（让气泡靠右对齐）
+        Y2(i) = i - 0.5                     ' 散点图Y坐标，对应条形图高度位置
+        Z2(i) = Round(Y1(i) / Application.Sum(Y1) * 200, 2) ' 计算占比，决定气泡大小
+    Next i
+    
+    ' 在工作表A11位置创建图表对象，宽500，高300
+    Set chtobj = sht.ChartObjects.Add(sht.Range("A11").Left, 0, 500, 300)
+    Set cht = chtobj.Chart
+    
+    ' 开始设置图表整体样式
+    With cht
+        ' 设置条形图之间的间距
+        .ChartGroups(1).GapWidth = 50
+        
+        '  设置图表区域（整个图表外框）样式
+        With .ChartArea
+            .Format.Fill.ForeColor.ObjectThemeColor = msoThemeColorAccent1  ' 填充主题色1
+            .Format.Fill.ForeColor.Brightness = 0.98                        ' 亮度
+            .Format.Line.Visible = msoFalse                                 ' 图表外框无边框
+            ' 设置图表区域字体样式
+            With .Format.TextFrame2.TextRange.Font
+                .Bold = True                ' 加粗
+                .name = "等线"              ' 字体
+                .Fill.ForeColor.ObjectThemeColor = msoThemeColorAccent1  ' 字体颜色
+            End With
+        End With
+        
+        '  设置绘图区（内部画图区域）样式
+        With .PlotArea
+            With .Format.Line
+                .Visible = msoTrue                             ' 显示边框
+                .Weight = 2                                    ' 边框粗细
+                .ForeColor.ObjectThemeColor = msoThemeColorAccent2  ' 边框颜色
+            End With
+            .Format.Fill.ForeColor.ObjectThemeColor = msoThemeColorAccent1  ' 填充色
+            .Format.Fill.ForeColor.Brightness = 0.98                        ' 亮度
+        End With
+        
+        '  添加第一个系列：横向条形图（显示数值）
+        Set ser = .SeriesCollection.NewSeries
+        With ser
+            .AxisGroup = xlPrimary               ' 使用主坐标轴
+            .ChartType = xlBarClustered          ' 图表类型：横向条形图
+            .name = sht.Range("B1").Value        ' 系列名称=B1标题
+            .XValues = X1                       ' X轴：分类名称
+            .Values = Y1                         ' Y轴：数值
+            .HasDataLabels = True                ' 显示数据标签
+            
+            ' 设置数据标签样式
+            Set dat = .DataLabels
+            With dat
+                .Position = xlLabelPositionInsideBase  ' 标签位置：内侧基部
+                ' 标签字体
+                With .Format.TextFrame2.TextRange.Font
+                    .Bold = True
+                    .name = "Arial"
+                    .Size = 9
+                    .Fill.ForeColor.ObjectThemeColor = msoThemeColorAccent2
+                    .Fill.ForeColor.Brightness = 0.95
+                End With
+            End With
+        End With
+        
+        '  添加第二个系列：散点图（显示气泡+占比）
+        Set ser = .SeriesCollection.NewSeries
+        With ser
+            .AxisGroup = xlSecondary                ' 使用次坐标轴
+            .ChartType = xlXYScatter                 ' 图表类型：散点图
+            .name = "占比"                           ' 系列名称
+            .XValues = X2                            ' 气泡X坐标
+            .Values = Y2                             ' 气泡Y坐标
+            .MarkerStyle = xlMarkerStyleCircle       ' 标记样式：圆形
+            .MarkerForegroundColor = cht.ChartArea.Format.TextFrame2.TextRange.Font.Fill.ForeColor.RGB '气泡颜色
+            .HasDataLabels = True                    ' 显示占比标签
+            
+            ' 设置占比标签样式
+            Set dat = .DataLabels
+            With dat
+                .Position = xlLabelPositionRight     ' 标签在右侧
+                With .Format.TextFrame2.TextRange.Font
+                    .Bold = True
+                    .name = "Arial"
+                    .Size = 9
+                    .Fill.ForeColor.ObjectThemeColor = msoThemeColorAccent1
+                End With
+            End With
+            
+            ' 循环设置每个气泡大小 + 显示占比
+            For i = 1 To .Points.Count
+                Set po = .Points(i)
+                po.MarkerSize = Z2(i)  ' 根据Z2设置气泡大小
+                .DataLabels(i).Format.TextFrame2.TextRange.Text = Format(Z2(i) / 200, "0.00%") '显示百分比
+            Next i
+            
+            .Format.Line.Visible = msoFalse  ' 散点图无线条
+        End With
+        
+        '  图表标题
+        .HasTitle = True
+        With .ChartTitle
+            .Caption = "XXXXX分析"
+            .Format.TextFrame2.TextRange.Font.Size = 12
+        End With
+        
+        '  设置次坐标轴（垂直，用于气泡定位）
+        Set ax2 = .Axes(xlValue, xlSecondary)
+        With ax2
+            .Format.Line.ForeColor.ObjectThemeColor = msoThemeColorAccent1
+            .Format.Line.Weight = 2
+            .MinimumScale = Application.Min(Y2) - 0.5  ' 最小值
+            .MaximumScale = Application.Max(Y2) + 0.5  ' 最大值
+            .TickLabels.NumberFormatLocal = ";;;"       ' 隐藏刻度文字
+            .MajorTickMark = xlTickMarkNone             ' 无刻度线
+        End With
+        
+        '  设置分类轴（水平X轴）
+        Set ax = .Axes(xlCategory)
+        With ax
+            .Format.Line.ForeColor.ObjectThemeColor = msoThemeColorAccent1
+            .Format.Line.Weight = 2
+            .MajorTickMark = xlTickMarkNone
+            .HasMajorGridlines = True
+            
+            ' 网格线样式：虚线
+            With .MajorGridlines.Format.Line
+                .ForeColor.ObjectThemeColor = msoThemeColorAccent2
+                .ForeColor.Brightness = 0.6
+                .DashStyle = msoLineDash
+                .Weight = 0.5
+            End With
+        End With
+        
+        '  设置数值轴（垂直Y轴）
+        Set ay = .Axes(xlValue)
+        With ay
+            .Format.Line.ForeColor.ObjectThemeColor = msoThemeColorAccent1
+            .Format.Line.Weight = 2
+            .HasMajorGridlines = True
+            
+            ' 网格线样式
+            With .MajorGridlines.Format.Line
+                .ForeColor.ObjectThemeColor = msoThemeColorAccent2
+                .ForeColor.Brightness = 0.6
+                .DashStyle = msoLineDash
+                .Weight = 0.5
+            End With
+            .MajorTickMark = xlTickMarkNone
+        End With
+        
+        '  图例位置
+        Set leg = .Legend
+        With leg
+            .Position = xlLegendPositionTop  ' 图例显示在顶部
+        End With
+    End With
+End Sub

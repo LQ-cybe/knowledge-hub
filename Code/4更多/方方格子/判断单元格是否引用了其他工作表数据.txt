@@ -1,0 +1,17 @@
+'下面函数用于判断单元格是否引用了其他工作表数据
+Public Function ISSHEETDATA(myCell As Range) As Boolean
+    If myCell.HasFormula And InStr(myCell.Formula, "!") > 0 Then
+        ISSHEETDATA = True
+    Else
+        ISSHEETDATA = False
+    End If
+End Function
+
+'下面函数用来判断单元格是否引用了其他外部工作簿数据
+Public Function ISWORKBOOKDATA(myCell As Range) As Boolean
+    If myCell.HasFormula And InStr(myCell.Formula, "xls") > 0 Then
+        ISWORKBOOKDATA = True
+    Else
+        ISWORKBOOKDATA = False
+    End If
+End Function

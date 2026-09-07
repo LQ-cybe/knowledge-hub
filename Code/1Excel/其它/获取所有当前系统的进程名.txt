@@ -1,0 +1,9 @@
+﻿    '获取所有当前系统的进程名
+Sub exceloffice()
+    strComputer = "."
+    Set objWMIServices = GetObject("winmgmts:\\" & strComputer & "\root\CIMV2")
+    Set colSWbemObjectSet = objWMIServices.InstancesOf("Win32_Process")
+    For Each SWbemObject In colSWbemObjectSet
+        Debug.Print SWbemObject.Name
+    Next
+End Sub

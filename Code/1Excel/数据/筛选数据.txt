@@ -1,0 +1,66 @@
+'筛选数据
+Sub CustomFilter()
+    Dim sourceRange As Range
+    Dim filterGroupRange As Range
+    Dim current As Range
+    Dim filter As String
+    Dim filterArray As Variant
+    Dim isExist As Variant
+    Dim targetFilterArray As Variant
+
+    With ActiveSheet
+        Set sourceRange = .Range("A1:D10")   ' 活动表的数据筛选范围
+        Set filterGroupRange = .Range("C2:C10") ' 活动表的筛选分组范围
+    End With
+    
+    filter = InputBox("请输入需要过滤的字符串")
+    If Len(Trim(filter)) > 0 Then ' 去除首尾空格，避免"A "匹配不到"A"
+        If sourceRange.AutoFilter Then sourceRange.AutoFilter
+        For Each current In filterGroupRange
+            If Trim(current.Value) <> "" Then ' 跳过空单元格
+                filterArray = Split(current.Value, ",")
+                ' 清理数组：去空格、转大写、去空值（解决"A"匹配不到"a"/"A "的问题）
+                filterArray = CleanFilterArray(filterArray)
+                isExist = Application.Match(UCase(Trim(filter)), filterArray, 0)
+                If Not IsError(isExist) Then
+                    targetFilterArray = filterArray ' 匹配成功，获取筛选数组
+                    Exit For
+                End If
+            End If
+        Next current
+        
+        ' 仅当找到匹配数组时执行筛选（避免空数组筛选）
+        If Not IsEmpty(targetFilterArray) Then
+            sourceRange.AutoFilter Field:=3, _
+                Criteria1:=targetFilterArray, Operator:=xlFilterValues
+'            MsgBox "筛选成功！" & vbCrLf & "关键词：" & filter & vbCrLf & "筛选值：" & Join(targetFilterArray, ",")
+        Else
+            MsgBox "未找到包含[" & filter & "]的分组，筛选无效！"
+        End If
+    End If
+End Sub
+
+' 辅助函数：清理筛选数组（去空格、转大写、去空值）
+Private Function CleanFilterArray(arr As Variant) As Variant
+    Dim tempArr() As String
+    Dim i As Integer, j As Integer
+    Dim val As String
+    
+    j = 0
+    ReDim tempArr(0 To UBound(arr))
+    
+    For i = 0 To UBound(arr)
+        val = UCase(Trim(arr(i))) ' 转大写+去空格，统一匹配规则
+        If val <> "" Then ' 跳过空值
+            tempArr(j) = val
+            j = j + 1
+        End If
+    Next i
+    
+    If j > 0 Then
+        ReDim Preserve tempArr(0 To j - 1)
+        CleanFilterArray = tempArr
+    Else
+        CleanFilterArray = Empty
+    End If
+End Function

@@ -1,0 +1,48 @@
+﻿'导出到桌面AI文件
+Sub ExportToAI()
+' 2025/9/19 修改：自动获取当前文档名并导出到桌面
+    Dim expopt As StructExportOptions
+    Dim expflt As ExportFilter
+    Dim docName As String
+    Dim desktopPath As String
+    Dim exportPath As String
+
+    ' 检查是否有打开的文档
+    If ActiveDocument Is Nothing Then
+        MsgBox "请先打开一个文档", vbExclamation
+        Exit Sub
+    End If
+
+    ' 获取当前文档文件名（不含扩展名）
+    docName = Left(ActiveDocument.Name, InStrRev(ActiveDocument.Name, ".") - 1)
+
+    ' 获取桌面路径
+    desktopPath = Environ("USERPROFILE") & "\Desktop\"
+
+    ' 构建完整导出路径（包含文件名和AI扩展名）
+    exportPath = desktopPath & docName & ".ai"
+
+    ' 配置导出选项
+    Set expopt = CreateStructExportOptions
+    expopt.UseColorProfile = True
+
+    ' 执行导出
+    Set expflt = ActiveDocument.ExportEx(exportPath, cdrAI, cdrAllPages, expopt)
+
+    ' 设置AI导出过滤器参数
+    With expflt
+        .Version = 9    ' 对应Illustrator CS5版本
+        .TextAsCurves = False
+        .PreserveTransparency = True
+        .ConvertSpotColors = False
+        .SimulateOutlines = False
+        .SimulateFills = False
+        .IncludePlacedImages = True
+        .IncludePreview = True
+        .EmbedColorProfile = True
+        .Finish    ' 完成导出
+    End With
+
+'    ' 提示导出完成
+'    MsgBox "已成功导出到：" & vbCrLf & exportPath, vbInformation
+End Sub

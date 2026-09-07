@@ -1,0 +1,7 @@
+﻿Sub Delete图表()
+Dim ws As Worksheet
+Set ws = ThisWorkbook.Worksheets("Sheet1")    '指定数据源工作表
+ws.ChartObjects.Delete     '删除工作表上已经存在的图表
+    Set ws = Nothing
+End Sub
+

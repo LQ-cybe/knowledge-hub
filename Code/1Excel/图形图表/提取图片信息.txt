@@ -1,0 +1,25 @@
+Sub 提取照片属性()
+    Dim fd As FileDialog
+    Set fd = Application.FileDialog(msoFileDialogFolderPicker)
+    If fd.Show = -1 Then GetDirectory = fd.SelectedItems(1)
+    Dim Item As Long, RowCount As Long, i As Long
+    Dim FileName As Object, ObjShell As Object, ObiFolder As Object
+    Set ObjShell = CreateObject("shell.Application")
+    Set ObiFolder = ObjShell.Namespace(GetDirectory)
+    On Error Resume Next
+    Application.ScreenUpdating = False
+        RowCount = 1
+       For Each FileName In ObiFolder.Items
+        Item = 0
+        RowCount = RowCount + 1
+        For i = 0 To 33
+            If i < 6 Or i = 12 Or (i > 29 And i < 33) Then
+                Item = Item + 1
+                Cells(RowCount, Item) = ObiFolder.getdetailsof(FileName, i)
+                If RowCount = 2 Then Cells(1, Item) = ObiFolder.getdetailsof(ObiFolder.Items, i)
+            End If
+        Next i
+    Next FileName
+    Set fd = Nothing
+    Application.ScreenUpdating = True
+End Sub

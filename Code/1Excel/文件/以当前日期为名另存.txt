@@ -1,0 +1,13 @@
+'name=以当前日期为名另存
+'officetype=excel,et,wps
+'category=工作簿
+'description=以当前日期为文件名另存当前工作簿
+
+Public Sub SaveAsDateName()
+    Dim p As String, n As String
+    p = ThisWorkbook.Path
+    If p = "" Then p = Application.DefaultFilePath
+    n = Format(Date, "yyyy-mm-dd") & ".xlsx"
+    ThisWorkbook.SaveCopyAs p & "\" & n
+    MsgBox "已另存为: " & n, vbInformation
+End Sub

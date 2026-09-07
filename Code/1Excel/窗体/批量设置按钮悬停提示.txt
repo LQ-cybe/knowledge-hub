@@ -1,0 +1,9 @@
+﻿' 批量设置按钮悬停提示
+Private Sub UserForm_Initialize()
+    With Me
+        .CommandButton1.ControlTipText = "导出到桌面AI文件并最小化"
+        .CommandButton2.ControlTipText = "导出到桌面PDF文件并最小化"
+        .CommandButton3.ControlTipText = "所有文字转曲"
+	'在这里继续添加其它按按钮提示信息
+    End With
+End Sub

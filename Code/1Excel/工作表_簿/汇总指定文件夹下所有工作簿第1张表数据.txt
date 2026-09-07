@@ -1,0 +1,81 @@
+' 合并当前文件夹下所有工作簿到的第1张工作表数据
+Sub MergeWorkbooks()
+Dim fldPath As String
+    Dim p As String, f As String
+    Dim wb As Workbook
+    Dim arr As Variant
+    Dim i As Long, j As Long, m As Long
+    Dim brr As Variant
+    Dim fileName As String
+    Dim colCount As Long
+    Dim fName As String
+        With Application.FileDialog(msoFileDialogFolderPicker)
+        .Title = "请选择要合并的文件夹"
+        If .Show <> -1 Then
+            MsgBox "未选择文件夹，退出！", vbExclamation
+            Exit Sub
+        End If
+        fldPath = .SelectedItems(1) & "\"
+    End With
+    ' 关闭卡顿
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+    Application.Calculation = xlCalculationManual
+    
+    ' 路径
+    p = ThisWorkbook.Path & "\"
+    f = Dir(p & "*.xls*")
+    m = 0
+    
+    ' 先定义超大数组（动态）
+    ReDim brr(1 To 100000, 1 To 100) ' 足够大
+    
+    Do While f <> ""
+        If f <> ThisWorkbook.Name Then
+            On Error Resume Next
+            Set wb = Workbooks.Open(fileName:=p & f, ReadOnly:=True)
+            On Error GoTo 0
+            
+            If Not wb Is Nothing Then
+                ' 取第一个工作表有效数据
+                With wb.Sheets(1)
+                    If .[B4].CurrentRegion.Rows.Count >= 2 Then
+                        arr = .[B4].CurrentRegion
+                        colCount = UBound(arr, 2)
+                        
+                        ' 循环读取（从第2行开始）
+                        For i = 2 To UBound(arr)
+                            m = m + 1
+                            brr(m, 1) = Split(f, ".xls")(0)   ' 工作簿名
+                            brr(m, 2) = .Name                 ' 工作表名
+                            
+                            ' 复制数据
+                            For j = 1 To colCount
+                                If j + 2 <= UBound(brr, 2) Then
+                                    brr(m, j + 2) = arr(i, j)
+                                End If
+                            Next j
+                        Next i
+                    End If
+                End With
+                
+                wb.Close SaveChanges:=False
+                Set wb = Nothing
+            End If
+        End If
+        f = Dir()
+    Loop
+    
+    ' 写入结果
+    If m > 0 Then
+        ThisWorkbook.Sheets(1).[A3].CurrentRegion.Offset(1).ClearContents
+        ThisWorkbook.Sheets(1).[A4].Resize(m, 100) = brr
+    End If
+    
+    ' 恢复环境
+    Application.ScreenUpdating = True
+    Application.EnableEvents = True
+    Application.Calculation = xlCalculationAutomatic
+    
+    MsgBox "合并完成！共合并 " & m & " 行数据", vbInformation
+End Sub

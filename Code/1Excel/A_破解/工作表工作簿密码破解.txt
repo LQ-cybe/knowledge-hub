@@ -1,0 +1,13 @@
+﻿Sub 工作表密码破解()
+    Dim sht As Worksheet
+    For Each sht In Worksheets
+        sht.Protect AllowFiltering:=True
+        sht.Unprotect
+    Next
+End Sub
+Sub 工作簿密码破解()
+    ActiveWorkbook.Sheets.Copy
+        For Each sh In ActiveWorkbook.Sheets
+        sh.Visible = True
+    Next
+End Sub

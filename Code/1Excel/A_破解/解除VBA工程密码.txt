@@ -1,0 +1,7 @@
+'解除VBA工程保护密码
+Sub RemoveVBAPassword()
+    Dim wb As Workbook
+    Set wb = ThisWorkbook
+    wb.VBProject.Protection = vbext_pp_none
+    MsgBox "VBA工程保护密码已成功移除！"
+End Sub

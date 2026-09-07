@@ -1,0 +1,50 @@
+' 批量替换
+Sub BatchReplace_UserSelect()
+    Dim sht As Worksheet
+    Dim rngData As Range, rngMap As Range
+    Dim lastRow As Long
+    Dim i As Long
+    On Error Resume Next
+    Set rngData = Application.InputBox("请选择要进行替换的数据区域：", "选择目标区域", Type:=8)
+    On Error GoTo 0
+    
+    If rngData Is Nothing Then
+'        MsgBox "未选择目标区域，操作已取消。", vbExclamation
+        Exit Sub
+    End If
+    
+    Set sht = rngData.Worksheet
+    On Error Resume Next
+    Set rngMap = Application.InputBox("请选择映射数据区域（包含【待替换内容】和【替换后内容】）：", "选择映射区域", Type:=8)
+    On Error GoTo 0
+    
+    If rngMap Is Nothing Then
+'        MsgBox "未选择映射区域，操作已取消。", vbExclamation
+        Exit Sub
+    End If
+    If rngMap.Columns.Count < 2 Then
+        MsgBox "映射区域必须包含至少两列（待替换内容 + 替换后内容）！", vbCritical
+        Exit Sub
+    End If
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    lastRow = rngMap.Rows.Count
+    For i = 1 To lastRow
+        Dim oldVal As Variant, newVal As Variant
+        oldVal = rngMap.Cells(i, 1).Value
+        newVal = rngMap.Cells(i, 2).Value
+        
+        If Trim(oldVal) <> "" And Trim(newVal) <> "" Then
+            rngData.Replace _
+                What:=oldVal, _
+                Replacement:=newVal, _
+                LookAt:=xlWhole, _
+                MatchCase:=False, _
+                SearchOrder:=xlByRows, _
+                ReplaceFormat:=False
+        End If
+    Next i
+    Application.ScreenUpdating = True
+    Application.DisplayAlerts = True
+    MsgBox "批量替换完成！", vbInformation
+End Sub

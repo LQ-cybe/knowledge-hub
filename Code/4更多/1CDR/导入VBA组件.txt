@@ -1,0 +1,166 @@
+﻿' 使用 Shell32 的文件夹浏览对话框
+Sub ImportVBAComponentsFromFolder()
+    Dim VBProj As Object
+    Dim fso As Object
+    Dim folderPath As String
+    Dim file As Object
+    Dim folder As Object
+    Dim importCount As Integer
+    Dim skipCount As Integer
+    Dim fileName As String
+    Dim fileExt As String
+    Dim compName As String
+    Dim existingComp As Object
+    Dim overwriteAll As Variant
+    Dim overwriteThis As Integer
+    
+    ' 获取当前VBA工程
+    On Error Resume Next
+    Set VBProj = Application.VBE.ActiveVBProject
+    
+    If VBProj Is Nothing Then
+        MsgBox "无法获取当前VBA工程！" & vbCrLf & _
+               "请在VBA编辑器中打开你的项目", vbCritical
+        Exit Sub
+    End If
+    On Error GoTo 0
+    
+    ' 使用 Shell32 选择文件夹
+    folderPath = ShellBrowseForFolder("请选择包含VBA组件的文件夹")
+    
+    If folderPath = "" Then
+        MsgBox "未选择文件夹，操作取消", vbInformation
+        Exit Sub
+    End If
+    
+    ' 创建文件系统对象
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    
+    ' 检查文件夹是否存在
+    If Not fso.FolderExists(folderPath) Then
+        MsgBox "文件夹不存在：" & folderPath, vbCritical
+        Exit Sub
+    End If
+    
+    Set folder = fso.GetFolder(folderPath)
+    
+    importCount = 0
+    skipCount = 0
+    overwriteAll = Empty
+    
+    ' 遍历文件夹中的所有文件
+    For Each file In folder.Files
+        fileName = file.Name
+        fileExt = LCase(fso.GetExtensionName(fileName))
+        
+        Select Case fileExt
+            Case "bas", "frm", "cls"
+                compName = fso.GetBaseName(fileName)
+                
+                ' 修复：正确检查组件是否存在
+                On Error Resume Next
+                Set existingComp = VBProj.VBComponents(compName)
+                If Err.Number <> 0 Then
+                    ' 组件不存在，清除错误继续
+                    Err.Clear
+                    Set existingComp = Nothing
+                End If
+                On Error GoTo 0
+                
+                ' 如果组件存在，处理覆盖逻辑
+                If Not existingComp Is Nothing Then
+                    If IsEmpty(overwriteAll) Then
+                        overwriteThis = MsgBox("组件 '" & compName & "' 已存在，是否覆盖？" & vbCrLf & _
+                                               "是(Y) - 覆盖此组件" & vbCrLf & _
+                                               "否(N) - 跳过此组件" & vbCrLf & _
+                                               "全部是(A) - 覆盖所有同名组件" & vbCrLf & _
+                                               "全部否(N) - 跳过所有同名组件", _
+                                               vbYesNoCancel + vbQuestion, "组件已存在")
+                        
+                        Select Case overwriteThis
+                            Case vbYes  ' 仅覆盖当前
+                                overwriteAll = False
+                            Case vbNo   ' 仅跳过当前
+                                skipCount = skipCount + 1
+                                GoTo NextFile
+                            Case vbCancel  ' 取消操作
+                                Exit Sub
+                            Case Else
+                                GoTo NextFile
+                        End Select
+                    ElseIf overwriteAll = True Then
+                        ' 已经选择了"全部否"，跳过
+                        skipCount = skipCount + 1
+                        GoTo NextFile
+                    End If
+                    
+                    ' 修复：安全删除已存在的组件
+                    On Error Resume Next
+                    ' 方法1：通过索引删除
+                    Dim idx As Integer
+                    For idx = 1 To VBProj.VBComponents.Count
+                        If VBProj.VBComponents(idx).Name = compName Then
+                            VBProj.VBComponents.Remove VBProj.VBComponents(idx)
+                            Exit For
+                        End If
+                    Next idx
+                    
+                    If Err.Number <> 0 Then
+                        ' 如果上面的方法失败，尝试方法2
+                        Err.Clear
+                        VBProj.VBComponents.Remove VBProj.VBComponents(compName)
+                    End If
+                    
+                    If Err.Number <> 0 Then
+                        MsgBox "无法删除现有组件：" & compName & vbCrLf & "错误：" & Err.Description, vbExclamation
+                        Err.Clear
+                        skipCount = skipCount + 1
+                        GoTo NextFile
+                    End If
+                    On Error GoTo 0
+                End If
+                
+                ' 导入组件
+                On Error Resume Next
+                VBProj.VBComponents.Import file.Path
+                If Err.Number = 0 Then
+                    importCount = importCount + 1
+                Else
+                    MsgBox "导入失败：" & fileName & vbCrLf & "错误：" & Err.Description, vbExclamation
+                    Err.Clear
+                    skipCount = skipCount + 1
+                End If
+                On Error GoTo 0
+        End Select
+NextFile:
+    Next file
+    
+    MsgBox "导入完成！" & vbCrLf & _
+           "成功导入：" & importCount & " 个组件" & vbCrLf & _
+           "跳过：" & skipCount & " 个组件" & vbCrLf & _
+           "来源文件夹：" & folderPath, vbInformation
+    
+    Set fso = Nothing
+    Set VBProj = Nothing
+End Sub
+
+' Shell32 文件夹浏览函数（无需引用）
+Function ShellBrowseForFolder(ByVal dialogTitle As String) As String
+    Dim shell As Object
+    Dim folder As Object
+    
+    On Error Resume Next
+    Set shell = CreateObject("Shell.Application")
+    Set folder = shell.BrowseForFolder(0, dialogTitle, 0, 0)
+    
+    If Not folder Is Nothing Then
+        ShellBrowseForFolder = folder.Self.Path
+    Else
+        ShellBrowseForFolder = ""
+    End If
+    
+    Set folder = Nothing
+    Set shell = Nothing
+    On Error GoTo 0
+End Function
+

@@ -1,0 +1,74 @@
+﻿Option Explicit
+Sub AA()
+'excel2003屏蔽菜单、工具栏等代码大全
+On Error Resume Next
+Application.CommandBars(1).Controls("工具(&T)").Controls("宏(&M)").Enabled = False '工具-宏变成灰色，如忘了变回来，工具-自定义-工具栏选项-工作表菜单栏-重新设置即可
+'Application.CommandBars("ply").Controls("查看代码(&V)").Enabled = False '右键工作表标签"查看代码"为灰色
+'Application.CommandBars("Document").Controls("查看代码(&V)").Enabled = False '右键工作薄"查看代码"为灰色
+'常用的屏蔽代码：
+Application.CommandBars("Worksheet Menu Bar").Enabled = False '屏蔽菜单栏
+Application.DisplayFormulaBar = False '屏蔽编辑栏
+Application.DisplayStatusBar = False '屏蔽状态栏
+Application.CommandBars("Standard").Visible = False '屏蔽常用工具栏，右键可选
+Application.CommandBars("Formatting").Visible = False '屏蔽格式工具栏，右键可选
+Application.CommandBars("Standard").Enabled = False '去除常用工具栏，右键也删掉
+Application.CommandBars("Formatting").Enabled = False '去除格式工具栏，右键也删掉
+Application.CommandBars("Toolbar list").Enabled = False '屏蔽右键工具栏
+Application.CommandBars("cell").Enabled = False '屏蔽单元格右键单击
+Application.CommandBars("Column").Enabled = False '屏蔽列右键单击
+Application.CommandBars("Row").Enabled = False '屏蔽行右键单击
+Application.Assistant.Visible = False '应用程序的辅助的可见
+Application.CommandBars.DisableCustomize = True '去除右键工具栏中的"自定义"
+ActiveWindow.DisplayHeadings = False '屏蔽行号列标
+ActiveWindow.DisplayWorkbookTabs = False '屏蔽工作表标签
+ActiveWindow.DisplayVerticalScrollBar = False '屏蔽垂直滚动条
+ActiveWindow.DisplayHorizontalScrollBar = False '屏蔽水平滚动条
+Application.CommandBars("ply").Enabled = False '屏蔽工作表标签右键单击
+Application.CommandBars("Visual basic").Enabled = False '屏蔽应用程序的<命令块>("Visual basic" )的激活
+Application.OnKey "%{f11}", " " '屏蔽组合键ALT+F11，%代表ALT
+Application.OnKey "%{F11}" '解除屏蔽ALT+F11
+Application.OnKey "%{f8}", " " '屏蔽组合键ALT+F8
+Application.OnKey "%{f8}" '解除屏蔽ALT+F8
+Application.OnKey "^{f11}", "VBEdit" '屏蔽组合键Ctrl+F11,插入宏表，^代表Ctrl
+Application.OnKey "^{f11}" '恢复组合键Ctrl+F11,插入宏表
+Application.OnKey "^f", " " '屏蔽组合键Ctrl+F，查找
+Application.OnKey "^h", " " '屏蔽组合键Ctrl+H，替换
+Application.OnKey "^{Break}", " " '屏蔽CTRL+Break中断
+Application.OnKey "^{Break}" '解除CTRL+Break中断
+'屏蔽"菜单"中的项：
+'Application.CommandBars(1).Controls("文件(&F)").Enabled = False '屏蔽文件菜单
+Application.CommandBars(1).Controls("编辑(&E)").Enabled = False '屏蔽编辑菜单
+Application.CommandBars(1).Controls("视图(&V)").Enabled = False '屏蔽视图菜单
+Application.CommandBars(1).Controls("插入(&I)").Enabled = False '屏蔽插入菜单
+Application.CommandBars(1).Controls("格式(&O)").Enabled = False '屏蔽格式菜单
+Application.CommandBars(1).Controls("工具(&T)").Enabled = False '屏蔽工具菜单
+Application.CommandBars(1).Controls("数据(&D)").Enabled = False '屏蔽数据菜单
+Application.CommandBars(1).Controls("窗口(&W)").Enabled = False '屏蔽窗口菜单
+Application.CommandBars(1).Controls("帮助(&H)").Enabled = False '屏蔽帮助菜单
+'屏蔽"菜单"中的子项：
+Application.CommandBars(1).Controls("编辑(&E)").Controls("填充(&I)").Enabled = False '屏蔽"编辑"菜单中的"填充"项
+Application.CommandBars(1).Controls("工具(&T)").Controls("选项(&O)…").Visible = False '去除工具-选项
+Application.CommandBars(1).Controls("工具(&T)").Controls("选项(&O)…").Enabled = False '工具-选项变灰色
+'禁用粘贴:
+Application.CommandBars("Cell").Controls("粘贴(&P)").Enabled = False '禁用右键粘贴
+Application.CommandBars("Cell").Controls("选择性粘贴(&S)…").Enabled = False
+Application.CommandBars(1).Controls("编辑(&E)").Controls("粘贴(&P)").Enabled = False
+Application.CommandBars(1).Controls("编辑(&E)").Controls("选择性粘贴(&S)…").Enabled = False
+Application.CommandBars(1).Controls("编辑(&E)").Controls("office 剪贴板(&B)…").Enabled = False
+Application.CommandBars(3).Controls("粘贴(&P)").Enabled = False
+Application.CommandBars.DisableCustomize = True
+Application.CommandBars(1).Controls("工具(&T)").Controls("自定义(&C)…").Enabled = False
+Application.OnKey "^v", "" '禁用键盘"Ctrl+V"
+Application.OnKey "^v" '恢复键盘"Ctrl+V"
+Application.CommandBars.DisableAskAQuestionDropdown = True '去除工作表右上角的帮助栏
+Application.CommandBars("Reviewing").Visible = False '屏蔽审阅
+Application.CommandBars("Formula Auditing").Visible = False '屏蔽公式审核
+Application.CommandBars("Control Toolbox").Visible = False '屏蔽控件工具箱
+Application.CommandBars("Stop Recording").Visible = False '屏蔽录制宏
+Application.CommandBars("Forms").Visible = False '屏蔽窗体
+Application.CommandBars("Drawing").Visible = False '屏蔽绘图
+'屏蔽/解除整段代码：
+'视图-》工具栏-》编辑，选中代码，然后在编辑的工具栏里"设置注释块和"解除注释块"按钮
+Application.EnableCancelKey = xlDisabled '应用程序的EnableCancelKey=完全禁用"取消"键捕获功能
+Application.EnableCancelKey = xlInterrupt '应用程序的EnableCancelKey=中断当前运行程序，用户可进行调试或结束程序的运行
+End Sub

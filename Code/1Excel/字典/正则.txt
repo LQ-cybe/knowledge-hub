@@ -1,0 +1,43 @@
+'函数ZZ功能，根据正规表达式，替换或判断或提取字符串
+'参数 str 源字符串
+'参数 Parttern 正则表达式字符串
+'参数 ActionID  函数功能 1正则方法一，替换符合正规表达式的字符
+                        '2正则方法二 判断是否有符合正规表达式
+                        '3正则方法三,提取符合正规表达式的字符
+'参数 Repstr 指定替换的字符，可选项，默认为空
+Function ZZ(Str As String, Parttern As String, ActionID As Integer, Optional RepStr As String = "")
+    Dim regex As Object
+    Set regex = CreateObject("vbscript.regexp")
+    With regex
+        .Global = True
+        .IgnoreCase = True
+        .MultiLine = True
+        .Pattern = Parttern
+    End With
+    Select Case ActionID
+        Case 1:
+            ZZ = regex.Replace(Str, RepStr)
+        Case 2:
+            ZZ = regex.test(Str)
+        Case 3:
+            Dim matches As Object
+            Set matches = regex.Execute(Str)
+            For Each Match In matches
+                ZZ = ZZ & Match.Value
+            Next
+    End Select
+End Function
+'**************************附常用几个正规表达式**********************************************************
+'匹配中文字符 [\u4e00-\u9fa5]
+'匹配双字节字符(包括汉字在内)：[^\x00-\xff]
+'匹配空白行的正则表达式：\n\s*\r
+'匹配HTML标记的正则表达式：<(\S*?)[^>]*>.*?</\1>|<.*? />
+'匹配首尾空白字符的正则表达式：^\s*|\s*$ 可以用来删除行首行尾的空白字符(包括空格、制表符、换页符等等)，非常有用的表达式
+'匹配Email地址的正则表达式：\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*
+'匹配网址URL的正则表达式：[a-zA-z]+://[^\s]*
+'匹配帐号是否合法(字母开头，允许5-16字节，允许字母数字下划线)：^[a-zA-Z][a-zA-Z0-9_]{4,15}$
+'匹配国内电话号码：\d{3}-\d{8}|\d{4}-\d{7} 匹配形式如 0511-4405222 或 021-87888822
+'匹配腾讯QQ号：[1-9][0-9]{4,}
+'匹配中国邮政编码：[1-9]\d{5}(?!\d)
+'匹配身份证：\d{15}|\d{18}
+'匹配ip地址：\d+\.\d+\.\d+\.\d+

@@ -1,0 +1,44 @@
+﻿'提取日期编码的记录并定义为数组，封装成自定义函数便于调用
+Function GetDateCode(codeType As String, dateNum As Integer) As Variant
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim arr1(2 To 32) As Variant
+    Dim arr2(2 To 32) As Variant
+    Dim i As Integer
+    
+    ' 打开当前数据库
+    Set db = CurrentDb()
+    ' 假设表名为 qry_日期编码，可按需修改
+    Set rs = db.OpenRecordset("SELECT * FROM qry_日期编码")
+    
+    ' 检查记录集是否为空
+    If Not (rs.EOF And rs.BOF) Then
+        rs.MoveFirst
+        ' 将第一条记录的第 2 到 32 列存入 arr1
+        For i = 2 To 32
+            arr1(i) = rs.Fields(i)
+        Next i
+        
+        ' 移动到下一条记录
+        rs.MoveNext
+        ' 将第二条记录的第 2 到 32 列存入 arr2
+        For i = 2 To 32
+            arr2(i) = rs.Fields(i)
+        Next i
+    End If
+    
+    ' 根据编号类型和日期参数返回对应编码
+    Select Case codeType
+        Case "数字码"
+            GetDateCode = arr1(dateNum)
+        Case "字母码"
+            GetDateCode = arr2(dateNum)
+        Case Else
+            GetDateCode = "无效的编号类型"
+    End Select
+    
+    ' 关闭记录集和数据库
+    rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+End Function

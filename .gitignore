@@ -1,0 +1,14 @@
+# 依赖与构建产物
+node_modules/
+web/dist/
+web/node_modules/
+server/node_modules/
+
+# 数据库运行时文件（WAL/SHM 不提交，主库保留备份）
+server/data/*.db-wal
+server/data/*.db-shm
+
+# 日志与临时文件
+*.log
+.DS_Store
+Thumbs.db

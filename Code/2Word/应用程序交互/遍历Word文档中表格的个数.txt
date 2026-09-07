@@ -1,0 +1,26 @@
+﻿Sub ReadWordTableCount()
+    Dim wordApp As Object
+    Dim wordDoc As Object
+    Dim tableCount As Integer
+    Dim filePath As String
+    
+    '设置Word文件的路径
+    filePath = "D:\Documents\我的数据源\新建文件夹 (2)\汇聚2023生产指令单3423.doc" '替换为实际的Word文件路径
+    
+    '创建Word应用程序对象
+    Set wordApp = CreateObject("Word.Application")
+    wordApp.Visible = False '可设置为False使其后台运行
+    
+    '打开Word文档
+    Set wordDoc = wordApp.Documents.Open(filePath)
+    
+    '获取表格个数
+    tableCount = wordDoc.Tables.Count
+    
+    '关闭Word文档并退出Word应用程序
+    wordDoc.Close
+    wordApp.Quit
+    
+    '在Excel中显示表格个数
+    MsgBox "该Word文件中表格的个数为：" & tableCount
+End Sub

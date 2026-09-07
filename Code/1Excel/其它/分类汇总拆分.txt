@@ -1,0 +1,36 @@
+Sub ·Ö±í()
+    Dim d
+    On Error Resume Next
+    Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    r = [a65536].End(3).Row
+    c = Cells(1, 256).End(xlToLeft).Column
+    arr = Range(Cells(2, 1), Cells(r, c))
+    a = Range(Cells(1, 1), Cells(1, c))
+    Set d = CreateObject("Scripting.dictionary")
+    For i = 1 To UBound(arr)
+        d(arr(i, 1)) = 1
+    Next
+    t = 1
+    q = d.keys
+    For i = 1 To d.Count
+        Worksheets.Add
+        ActiveWorkbook.Worksheets(q(i - 1)).Delete
+        ActiveSheet.Name = q(i - 1)
+        [a1].Resize(1, c) = Application.Transpose(Application.Transpose(a))
+        For j = 1 To UBound(arr)
+            If Trim(arr(j, 1)) = q(i - 1) Then
+                t = t + 1
+                For k = 1 To c
+                    ActiveSheet.Cells(t, k) = arr(j, k)
+                Next
+            End If
+        Next
+        t = 1
+        Worksheets(q(i - 1)).Copy
+        ActiveWorkbook.SaveAs ThisWorkbook.Path & "\" & q(i - 1) & ".xls"
+        ActiveWorkbook.Close True
+        ActiveWorkbook.Worksheets(q(i - 1)).Delete
+    Next
+    Set d = Nothing
+End Sub

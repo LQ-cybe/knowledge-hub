@@ -1,0 +1,14 @@
+﻿    '遍历所有已使用的引用
+Private Sub aas()
+    Dim i As Integer
+    i = 2
+    With Sheet1
+        For Each refed In ThisWorkbook.VBProject.References
+            .Cells(i, 1) = refed.Name
+            .Cells(i, 2) = refed.GUID
+            .Cells(i, 3) = refed.Major
+            .Cells(i, 4) = refed.Minor
+            i = i + 1
+        Next
+    End With
+End Sub

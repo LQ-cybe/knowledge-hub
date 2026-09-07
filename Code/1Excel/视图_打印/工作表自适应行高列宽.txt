@@ -1,0 +1,9 @@
+﻿'工作表自适应行高列宽
+Sub AdaptiveRowHeightAndRowWidth_sheet()
+    Dim oWK As Worksheet
+    Set oWK = Excel.ActiveSheet
+    With oWK
+        .Rows.AutoFit
+        .Columns.AutoFit
+    End With
+End Sub

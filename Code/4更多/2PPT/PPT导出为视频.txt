@@ -1,0 +1,6 @@
+﻿Sub PPT导出为视频()
+    Dim oP As Presentation
+    Set oP = PowerPoint.ActivePresentation
+    sFileName = oP.Path & "\temp.mp4"
+    oP.CreateVideo sFileName, True
+End Sub

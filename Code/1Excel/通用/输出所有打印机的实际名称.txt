@@ -1,0 +1,19 @@
+'输出所有打印机的实际名称
+Sub ListAllPrintersWithPorts_WMI()
+    Dim objWMIService As Object
+    Dim colPrinters As Object
+    Dim objPrinter As Object
+    Dim i As Integer
+    
+    ' 连接 WMI 服务
+    Set objWMIService = GetObject("winmgmts:\\.\root\cimv2")
+    ' 查询所有打印机
+    Set colPrinters = objWMIService.ExecQuery("Select * From Win32_Printer")
+    
+    ' 遍历打印机列表
+    i = 1
+    For Each objPrinter In colPrinters
+        Debug.Print i & ". " & objPrinter.Name & " | Port: " & objPrinter.PortName
+        i = i + 1
+    Next
+End Sub

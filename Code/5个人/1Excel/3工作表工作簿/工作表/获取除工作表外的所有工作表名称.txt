@@ -1,0 +1,24 @@
+﻿'获取除工作表外的所有工作表名称
+Sub GetSheetNamesExceptSummary()
+    Dim ws As Worksheet
+    Dim i As Long
+    Dim targetSheet As Worksheet
+    
+    ' 设置目标工作表，这里假设是"汇总"，你可以根据实际情况修改
+    On Error Resume Next
+    Set targetSheet = ThisWorkbook.Sheets("汇总")
+    If targetSheet Is Nothing Then
+        MsgBox "未找到名为'汇总表'的工作表，请检查！"
+        Exit Sub
+    End If
+    On Error GoTo 0
+    
+    i = 2 ' 从A2单元格开始写入
+    For Each ws In ThisWorkbook.Sheets
+        If ws.Name <> "汇总" Then
+            targetSheet.Cells(i, 1).Value = ws.Name
+            i = i + 1
+        End If
+    Next ws
+End Sub
+

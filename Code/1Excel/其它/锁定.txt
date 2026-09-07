@@ -1,0 +1,17 @@
+Sub Ëø()
+    Dim sh As Worksheet
+    Dim t$, n$
+    t = "H:\Desktop\01\"
+    n = Dir(t & "*.xls")
+    While n <> ""
+        With Workbooks.Open(t & n)
+            .Save
+            For Each sh In Worksheets
+                Worksheets(sh.Name).Protect ("123")
+            Next
+            ActiveWorkbook.Close True
+        End With
+        n = Dir
+        Wend
+        MsgBox "Ëø¶¨Íê±Ï", vbOKOnly, "Tip:"
+    End Sub

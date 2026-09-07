@@ -1,0 +1,13 @@
+'name=列出工作表名
+'officetype=excel,et
+'category=工作簿
+'description=将当前工作簿所有工作表名称列出到活动单元格起的一列
+
+Public Sub ListSheetNames()
+    Dim sh As Worksheet, i As Long
+    i = 0
+    For Each sh In ThisWorkbook.Worksheets
+        ActiveCell.Offset(i, 0).Value = sh.Name
+        i = i + 1
+    Next sh
+End Sub

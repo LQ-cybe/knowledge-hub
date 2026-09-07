@@ -1,0 +1,9 @@
+﻿Dim response As VbMsgBoxResult
+response = MsgBox("你确定要执行此操作吗？", vbYesNo + vbQuestion, "确认操作")
+If response = vbYes Then
+    '在这里编写用户点击“是”后要执行的代码
+    MsgBox "你点击了是，执行相应操作。"
+Else
+    '在这里编写用户点击“否”后要执行的代码
+    MsgBox "你点击了否，不执行操作。"
+End If

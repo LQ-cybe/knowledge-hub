@@ -1,0 +1,9 @@
+Function SEARCHN(Text As String, Search As String, N As Integer) '第N次出现位置
+    Dim k As Integer
+    Dim i As Integer
+    k = 0
+    For i = 1 To N
+        k = InStr(k + 1, Text, Search, vbBinaryCompare)
+    Next
+    SEARCHN = k
+End Function

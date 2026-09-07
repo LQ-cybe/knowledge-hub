@@ -1,0 +1,18 @@
+ActiveSheet.Protect Password:="123" '保护当前工作表，密码为123
+
+ActiveSheet.Unprotect Password:="123" '解除当前工作表的保护，密码为123
+
+Sub ProtectCurrentSheet()
+    ' 检查当前活动工作表是否已经受到保护
+    If Not ActiveSheet.ProtectContents Then
+        ' 如果未受保护，则对当前活动工作表进行保护
+        ' 设置保护密码为 "123"
+        ' 允许用户进行选择锁定单元格、选择未锁定单元格和排序操作
+        ActiveSheet.Protect Password:="123"
+        ' 提示用户当前工作表已成功保护
+        MsgBox "当前工作表已保护，密码为123。", vbInformation
+    Else
+        ' 如果已经受保护，则提示用户
+        MsgBox "当前工作表已经处于保护状态。", vbExclamation
+    End If
+End Sub

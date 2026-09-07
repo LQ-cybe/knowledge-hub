@@ -1,0 +1,134 @@
+﻿'排序
+Sub SortWithDictionaryKeepRowData()
+    Dim time1 As Date
+    time1 = Now()
+    Dim customOrder As Object
+    Set customOrder = CreateObject("Scripting.Dictionary")
+
+    ' 创建自定义排序映射
+    Dim customList1 As Variant
+    Dim customList2 As Variant
+
+    ' 这里只显示部分内容，您需要替换为完整的列表
+    customList1 = Array("A-1-W", "A-2-W", "A-3-W", "A-4-W", "A-5-W", "A-6-W", "A-7-W", "A-8-W", "A-9-W", "A-10-W", "A-11-W", "A-12-W", "A-13-W", "A-14-W", "A-15-W", "A-16-W", "A-17-W", "A-18-W", "A-19-W", "A-20-W", "A-21-W", "A-22-W", "A-23-W", "A-24-W", "A-25-W", "A-26-W", "A-27-W", "A-28-W", "A-29-W", "A-30-W", "A-31-W", "A-32-W", "A-33-W", "A-34-W", "A-35-W", "A-36-W", "A-37-W", "A-38-W", "A-39-W", "A-40-W", _
+                        "A-1-X", "A-2-X", "A-3-X", "A-4-X", "A-5-X", "A-6-X", "A-7-X", "A-8-X", "A-9-X", "A-10-X", "A-11-X", "A-12-X", "A-13-X", "A-14-X", "A-15-X", "A-16-X", "A-17-X", "A-18-X", "A-19-X", "A-20-X", "A-21-X", "A-22-X", "A-23-X", "A-24-X", "A-25-X", "A-26-X", "A-27-X", "A-28-X", "A-29-X", "A-30-X", "A-31-X", "A-32-X", "A-33-X", "A-34-X", "A-35-X", "A-36-X", "A-37-X", "A-38-X", "A-39-X", "A-40-X", _
+                        "AA-1", "AA-2", "AA-3", "AA-4", "AA-5", "AA-6", "AA-7", "AA-8", "AA-9", "AA-10", "AA-11", "AA-12", "AA-13", "AA-14", "AA-15", "AA-16", "AA-17", "AA-18", "AA-19", "AA-20", _
+                        "B-1-W", "B-2-W", "B-3-W", "B-4-W", "B-5-W", "B-6-W", "B-7-W", "B-8-W", "B-9-W", "B-10-W", "B-11-W", "B-12-W", "B-13-W", "B-14-W", "B-15-W", "B-16-W", "B-17-W", "B-18-W", "B-19-W", "B-20-W", "B-21-W", "B-22-W", "B-23-W", "B-24-W", "B-25-W", "B-26-W", "B-27-W", "B-28-W", "B-29-W", "B-30-W", "B-31-W", "B-32-W", "B-33-W", "B-34-W", "B-35-W", "B-36-W", "B-37-W", "B-38-W", "B-39-W", "B-40-W", _
+                        "B-1-X", "B-2-X", "B-3-X", "B-4-X", "B-5-X", "B-6-X", "B-7-X", "B-8-X", "B-9-X", "B-10-X", "B-11-X", "B-12-X", "B-13-X", "B-14-X", "B-15-X", "B-16-X", "B-17-X", "B-18-X", "B-19-X", "B-20-X", "B-21-X", "B-22-X", "B-23-X", "B-24-X", "B-25-X", "B-26-X", "B-27-X", "B-28-X", "B-29-X", "B-30-X", "B-31-X", "B-32-X", "B-33-X", "B-34-X", "B-35-X", "B-36-X", "B-37-X", "B-38-X", "B-39-X", "B-40-X", _
+                        "BB-1", "BB-2", "BB-3", "BB-4", "BB-5", "BB-6", "BB-7", "BB-8", "BB-9", "BB-10", "BB-11", "BB-12", "BB-13", "BB-14", "BB-15", "BB-16", "BB-17", "BB-18", "BB-19", "BB-20", _
+                        "C-1-W", "C-2-W", "C-3-W", "C-4-W", "C-5-W", "C-6-W", "C-7-W", "C-8-W", "C-9-W", "C-10-W", "C-11-W", "C-12-W", "C-13-W", "C-14-W", "C-15-W", "C-16-W", "C-17-W", "C-18-W", "C-19-W", "C-20-W", "C-21-W", "C-22-W", "C-23-W", "C-24-W", "C-25-W", "C-26-W", "C-27-W", "C-28-W", "C-29-W", "C-30-W", "C-31-W", "C-32-W", "C-33-W", "C-34-W", "C-35-W", "C-36-W", "C-37-W", "C-38-W", "C-39-W", "C-40-W", _
+                        "C-1-X", "C-2-X", "C-3-X", "C-4-X", "C-5-X", "C-6-X", "C-7-X", "C-8-X", "C-9-X", "C-10-X", "C-11-X", "C-12-X", "C-13-X", "C-14-X", "C-15-X", "C-16-X", "C-17-X", "C-18-X", "C-19-X", "C-20-X", "C-21-X", "C-22-X", "C-23-X", "C-24-X", "C-25-X", "C-26-X", "C-27-X", "C-28-X", "C-29-X", "C-30-X", "C-31-X", "C-32-X", "C-33-X", "C-34-X", "C-35-X", "C-36-X", "C-37-X", "C-38-X", "C-39-X", "C-40-X", _
+                        "CC-1", "CC-2", "CC-3", "CC-4", "CC-5", "CC-6", "CC-7", "CC-8", "CC-9", "CC-10", "CC-11", "CC-12", "CC-13", "CC-14", "CC-15", "CC-16", "CC-17", "CC-18", "CC-19", "CC-20", _
+                        "D-1-W", "D-2-W", "D-3-W", "D-4-W", "D-5-W", "D-6-W", "D-7-W", "D-8-W", "D-9-W", "D-10-W", "D-11-W", "D-12-W", "D-13-W", "D-14-W", "D-15-W", "D-16-W", "D-17-W", "D-18-W", "D-19-W", "D-20-W", "D-21-W", "D-22-W", "D-23-W", "D-24-W", "D-25-W", "D-26-W", "D-27-W", "D-28-W", "D-29-W", "D-30-W", "D-31-W", "D-32-W", "D-33-W", "D-34-W", "D-35-W", "D-36-W", "D-37-W", "D-38-W", "D-39-W", "D-40-W", _
+                        "D-1-X", "D-2-X", "D-3-X", "D-4-X", "D-5-X", "D-6-X", "D-7-X", "D-8-X", "D-9-X", "D-10-X", "D-11-X", "D-12-X", "D-13-X", "D-14-X", "D-15-X", "D-16-X", "D-17-X", "D-18-X", "D-19-X", "D-20-X", "D-21-X", "D-22-X", "D-23-X", "D-24-X", "D-25-X", "D-26-X", "D-27-X", "D-28-X", "D-29-X", "D-30-X", "D-31-X", "D-32-X", "D-33-X", "D-34-X", "D-35-X", "D-36-X", "D-37-X", "D-38-X", "D-39-X", "D-40-X", _
+                        "DD-1", "DD-2", "DD-3", "DD-4", "DD-5", "DD-6", "DD-7", "DD-8", "DD-9", "DD-10", "DD-11", "DD-12", "DD-13", "DD-14", "DD-15", "DD-16", "DD-17", "DD-18", "DD-19", "DD-20", _
+                        "E-1-W", "E-2-W", "E-3-W", "E-4-W", "E-5-W", "E-6-W", "E-7-W", "E-8-W", "E-9-W", "E-10-W", "E-11-W", "E-12-W", "E-13-W", "E-14-W", "E-15-W", "E-16-W", "E-17-W", "E-18-W", "E-19-W", "E-20-W", "E-21-W", "E-22-W", "E-23-W", "E-24-W", "E-25-W", "E-26-W", "E-27-W", "E-28-W", "E-29-W", "E-30-W", "E-31-W", "E-32-W", "E-33-W", "E-34-W", "E-35-W", "E-36-W", "E-37-W", "E-38-W", "E-39-W", "E-40-W", _
+                        "E-1-X", "E-2-X", "E-3-X", "E-4-X", "E-5-X", "E-6-X", "E-7-X", "E-8-X", "E-9-X", "E-10-X", "E-11-X", "E-12-X", "E-13-X", "E-14-X", "E-15-X", "E-16-X", "E-17-X", "E-18-X", "E-19-X", "E-20-X", "E-21-X", "E-22-X", "E-23-X", "E-24-X", "E-25-X", "E-26-X", "E-27-X", "E-28-X", "E-29-X", "E-30-X", "E-31-X", "E-32-X", "E-33-X", "E-34-X", "E-35-X", "E-36-X", "E-37-X", "E-38-X", "E-39-X", "E-40-X", _
+                        "EE-1", "EE-2", "EE-3", "EE-4", "EE-5", "EE-6", "EE-7", "EE-8", "EE-9", "EE-10", "EE-11", "EE-12", "EE-13", "EE-14", "EE-15", "EE-16", "EE-17", "EE-18", "EE-19", "EE-20")
+
+    customList2 = Array("F-1-W", "F-2-W", "F-3-W", "F-4-W", "F-5-W", "F-6-W", "F-7-W", "F-8-W", "F-9-W", "F-10-W", "F-11-W", "F-12-W", "F-13-W", "F-14-W", "F-15-W", "F-16-W", "F-17-W", "F-18-W", "F-19-W", "F-20-W", "F-21-W", "F-22-W", "F-23-W", "F-24-W", "F-25-W", "F-26-W", "F-27-W", "F-28-W", "F-29-W", "F-30-W", "F-31-W", "F-32-W", "F-33-W", "F-34-W", "F-35-W", "F-36-W", "F-37-W", "F-38-W", "F-39-W", "F-40-W", _
+                        "F-1-X", "F-2-X", "F-3-X", "F-4-X", "F-5-X", "F-6-X", "F-7-X", "F-8-X", "F-9-X", "F-10-X", "F-11-X", "F-12-X", "F-13-X", "F-14-X", "F-15-X", "F-16-X", "F-17-X", "F-18-X", "F-19-X", "F-20-X", "F-21-X", "F-22-X", "F-23-X", "F-24-X", "F-25-X", "F-26-X", "F-27-X", "F-28-X", "F-29-X", "F-30-X", "F-31-X", "F-32-X", "F-33-X", "F-34-X", "F-35-X", "F-36-X", "F-37-X", "F-38-X", "F-39-X", "F-40-X", _
+                        "FF-1", "FF-2", "FF-3", "FF-4", "FF-5", "FF-6", "FF-7", "FF-8", "FF-9", "FF-10", "FF-11", "FF-12", "FF-13", "FF-14", "FF-15", "FF-16", "FF-17", "FF-18", "FF-19", "FF-20", _
+                        "G-1-W", "G-2-W", "G-3-W", "G-4-W", "G-5-W", "G-6-W", "G-7-W", "G-8-W", "G-9-W", "G-10-W", "G-11-W", "G-12-W", "G-13-W", "G-14-W", "G-15-W", "G-16-W", "G-17-W", "G-18-W", "G-19-W", "G-20-W", "G-21-W", "G-22-W", "G-23-W", "G-24-W", "G-25-W", "G-26-W", "G-27-W", "G-28-W", "G-29-W", "G-30-W", "G-31-W", "G-32-W", "G-33-W", "G-34-W", "G-35-W", "G-36-W", "G-37-W", "G-38-W", "G-39-W", "G-40-W", _
+                        "G-1-X", "G-2-X", "G-3-X", "G-4-X", "G-5-X", "G-6-X", "G-7-X", "G-8-X", "G-9-X", "G-10-X", "G-11-X", "G-12-X", "G-13-X", "G-14-X", "G-15-X", "G-16-X", "G-17-X", "G-18-X", "G-19-X", "G-20-X", "G-21-X", "G-22-X", "G-23-X", "G-24-X", "G-25-X", "G-26-X", "G-27-X", "G-28-X", "G-29-X", "G-30-X", "G-31-X", "G-32-X", "G-33-X", "G-34-X", "G-35-X", "G-36-X", "G-37-X", "G-38-X", "G-39-X", "G-40-X", _
+                        "GG-1", "GG-2", "GG-3", "GG-4", "GG-5", "GG-6", "GG-7", "GG-8", "GG-9", "GG-10", "GG-11", "GG-12", "GG-13", "GG-14", "GG-15", "GG-16", "GG-17", "GG-18", "GG-19", "GG-20", _
+                        "H-1-W", "H-2-W", "H-3-W", "H-4-W", "H-5-W", "H-6-W", "H-7-W", "H-8-W", "H-9-W", "H-10-W", "H-11-W", "H-12-W", "H-13-W", "H-14-W", "H-15-W", "H-16-W", "H-17-W", "H-18-W", "H-19-W", "H-20-W", "H-21-W", "H-22-W", "H-23-W", "H-24-W", "H-25-W", "H-26-W", "H-27-W", "H-28-W", "H-29-W", "H-30-W", "H-31-W", "H-32-W", "H-33-W", "H-34-W", "H-35-W", "H-36-W", "H-37-W", "H-38-W", "H-39-W", "H-40-W", _
+                        "H-1-X", "H-2-X", "H-3-X", "H-4-X", "H-5-X", "H-6-X", "H-7-X", "H-8-X", "H-9-X", "H-10-X", "H-11-X", "H-12-X", "H-13-X", "H-14-X", "H-15-X", "H-16-X", "H-17-X", "H-18-X", "H-19-X", "H-20-X", "H-21-X", "H-22-X", "H-23-X", "H-24-X", "H-25-X", "H-26-X", "H-27-X", "H-28-X", "H-29-X", "H-30-X", "H-31-X", "H-32-X", "H-33-X", "H-34-X", "H-35-X", "H-36-X", "H-37-X", "H-38-X", "H-39-X", "H-40-X", _
+                        "HH-1", "HH-2", "HH-3", "HH-4", "HH-5", "HH-6", "HH-7", "HH-8", "HH-9", "HH-10", "HH-11", "HH-12", "HH-13", "HH-14", "HH-15", "HH-16", "HH-17", "HH-18", "HH-19", "HH-20", _
+                        "I-1-W", "I-2-W", "I-3-W", "I-4-W", "I-5-W", "I-6-W", "I-7-W", "I-8-W", "I-9-W", "I-10-W", "I-11-W", "I-12-W", "I-13-W", "I-14-W", "I-15-W", "I-16-W", "I-17-W", "I-18-W", "I-19-W", "I-20-W", "I-21-W", "I-22-W", "I-23-W", "I-24-W", "I-25-W", "I-26-W", "I-27-W", "I-28-W", "I-29-W", "I-30-W", "I-31-W", "I-32-W", "I-33-W", "I-34-W", "I-35-W", "I-36-W", "I-37-W", "I-38-W", "I-39-W", "I-40-W", _
+                        "I-1-X", "I-2-X", "I-3-X", "I-4-X", "I-5-X", "I-6-X", "I-7-X", "I-8-X", "I-9-X", "I-10-X", "I-11-X", "I-12-X", "I-13-X", "I-14-X", "I-15-X", "I-16-X", "I-17-X", "I-18-X", "I-19-X", "I-20-X", "I-21-X", "I-22-X", "I-23-X", "I-24-X", "I-25-X", "I-26-X", "I-27-X", "I-28-X", "I-29-X", "I-30-X", "I-31-X", "I-32-X", "I-33-X", "I-34-X", "I-35-X", "I-36-X", "I-37-X", "I-38-X", "I-39-X", "I-40-X", _
+                        "II-1", "II-2", "II-3", "II-4", "II-5", "II-6", "II-7", "II-8", "II-9", "II-10", "II-11", "II-12", "II-13", "II-14", "II-15", "II-16", "II-17", "II-18", "II-19", "II-20", _
+                        "J-1-W", "J-2-W", "J-3-W", "J-4-W", "J-5-W", "J-6-W", "J-7-W", "J-8-W", "J-9-W", "J-10-W", "J-11-W", "J-12-W", "J-13-W", "J-14-W", "J-15-W", "J-16-W", "J-17-W", "J-18-W", "J-19-W", "J-20-W", "J-21-W", "J-22-W", "J-23-W", "J-24-W", "J-25-W", "J-26-W", "J-27-W", "J-28-W", "J-29-W", "J-30-W", "J-31-W", "J-32-W", "J-33-W", "J-34-W", "J-35-W", "J-36-W", "J-37-W", "J-38-W", "J-39-W", "J-40-W", _
+                        "J-1-X", "J-2-X", "J-3-X", "J-4-X", "J-5-X", "J-6-X", "J-7-X", "J-8-X", "J-9-X", "J-10-X", "J-11-X", "J-12-X", "J-13-X", "J-14-X", "J-15-X", "J-16-X", "J-17-X", "J-18-X", "J-19-X", "J-20-X", "J-21-X", "J-22-X", "J-23-X", "J-24-X", "J-25-X", "J-26-X", "J-27-X", "J-28-X", "J-29-X", "J-30-X", "J-31-X", "J-32-X", "J-33-X", "J-34-X", "J-35-X", "J-36-X", "J-37-X", "J-38-X", "J-39-X", "J-40-X", _
+                        "JJ-1", "JJ-2", "JJ-3", "JJ-4", "JJ-5", "JJ-6", "JJ-7", "JJ-8", "JJ-9", "JJ-10", "JJ-11", "JJ-12", "JJ-13", "JJ-14", "JJ-15", "JJ-16", "JJ-17", "JJ-18", "JJ-19", "JJ-20", _
+                        "TW1", "TW2", "TW3", "TW4", "TW5", "TW6", "TW7", "TW8", "TW9", "TW10", "TX1", "TX2", "TX3", "TX4", "TX5", "TX6", "TX7", "TX8", "TX9", "TX10", "A-LH", "A-TM1", "A-TM2")
+
+
+    ' 合并两个列表并创建排序映射
+    Dim i As Long, orderIndex As Long
+    orderIndex = 1
+
+    ' 添加第一个列表到字典
+    For i = LBound(customList1) To UBound(customList1)
+        customOrder(customList1(i)) = orderIndex
+        orderIndex = orderIndex + 1
+    Next i
+
+    ' 添加第二个列表到字典
+    For i = LBound(customList2) To UBound(customList2)
+        customOrder(customList2(i)) = orderIndex
+        orderIndex = orderIndex + 1
+    Next i
+
+    ' 获取整个数据范围
+    Dim ws As Worksheet
+    Set ws = ActiveSheet
+
+    Dim lastRow As Long
+    Dim lastCol As Long
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    lastCol = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+
+    ' 对整个数据范围进行排序
+    SortEntireRangeWithDictionary ws.Range(ws.Cells(1, 1), ws.Cells(lastRow, lastCol)), customOrder
+    MsgBox "耗时:" & Format(Now() - time1, "hh:mm:ss")
+End Sub
+
+' 使用字典顺序对整个数据范围进行排序
+Sub SortEntireRangeWithDictionary(rng As Range, orderDict As Object)
+    Dim ws As Worksheet
+    Set ws = rng.Worksheet
+
+    ' 创建临时工作表用于排序
+    Dim tempWs As Worksheet
+    Set tempWs = ThisWorkbook.Worksheets.Add
+
+    ' 复制整个数据范围到临时工作表
+    rng.Copy tempWs.Range("A1")
+
+    ' 获取临时工作表中的数据范围
+    Dim lastRow As Long
+    Dim lastCol As Long
+    With tempWs
+        lastRow = .Cells(.Rows.Count, 1).End(xlUp).Row
+        lastCol = .Cells(1, .Columns.Count).End(xlToLeft).Column
+    End With
+
+    ' 在临时工作表的最后一列之后添加排序辅助列
+    Dim sortCol As Long
+    sortCol = lastCol + 1
+
+    ' 为每一行添加排序值
+    Dim i As Long
+    For i = 1 To lastRow
+        Dim cellValue As String
+        cellValue = CStr(tempWs.Cells(i, 1).Value)    ' 假设第一列是排序依据
+
+        If orderDict.Exists(cellValue) Then
+            tempWs.Cells(i, sortCol).Value = orderDict(cellValue)
+        Else
+            tempWs.Cells(i, sortCol).Value = 999999    ' 不在字典中的项放在最后
+        End If
+    Next i
+
+    ' 按辅助列排序整个数据范围
+    With tempWs.Sort
+        .SortFields.Clear
+        .SortFields.Add Key:=tempWs.Cells(1, sortCol), Order:=xlAscending
+        .SetRange tempWs.Range(tempWs.Cells(1, 1), tempWs.Cells(lastRow, sortCol))
+        .Header = xlNo    ' 根据实际情况调整，xlYes含标题
+        .Apply
+    End With
+
+    ' 复制排序后的数据（不包括辅助列）回原始工作表
+    tempWs.Range(tempWs.Cells(1, 1), tempWs.Cells(lastRow, lastCol)).Copy
+    rng.PasteSpecial xlPasteValues
+
+    ' 删除临时工作表
+    Application.DisplayAlerts = False
+    tempWs.Delete
+    Application.DisplayAlerts = True
+
+    ' 清除剪贴板
+    Application.CutCopyMode = False
+End Sub

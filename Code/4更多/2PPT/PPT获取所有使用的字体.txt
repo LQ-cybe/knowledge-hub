@@ -1,0 +1,11 @@
+﻿Sub PPT获取所有使用的字体()
+    Dim oP As Presentation
+    Set oP = PowerPoint.ActivePresentation
+    Dim oF As Font
+    For Each oF In oP.Fonts
+       With oF
+        Debug.Print .Name
+        Debug.Print .NameFarEast
+       End With
+    Next
+End Sub

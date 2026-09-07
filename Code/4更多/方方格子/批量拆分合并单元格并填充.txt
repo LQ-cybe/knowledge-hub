@@ -1,0 +1,42 @@
+Attribute VB_Name = "A002批量拆分合并单元格并填充"
+Option Explicit
+
+'批量拆分合并单元格并填充
+Sub UnmergeAndFillCells()
+    Dim rng As Range
+    Dim mergedArea As Range
+    Dim Cell As Range
+    Dim mergeValue As Variant
+    
+    ' 检查是否选中了单元格
+    If Selection Is Nothing Then
+        MsgBox "请先选择一列数据", vbExclamation
+        Exit Sub
+    End If
+    
+    ' 确保只处理单列
+    Set rng = Intersect(Selection, Selection.EntireColumn)
+    If rng Is Nothing Then
+        MsgBox "请只选择一列数据", vbExclamation
+        Exit Sub
+    End If
+    
+    Application.ScreenUpdating = False
+    
+    ' 遍历所有单元格
+    For Each Cell In rng
+        ' 检查是否是合并单元格的一部分
+        If Cell.MergeCells Then
+            ' 获取合并区域和值
+            Set mergedArea = Cell.MergeArea
+            mergeValue = mergedArea.Cells(1, 1).Value
+            ' 取消合并
+            mergedArea.UnMerge
+            ' 填充所有原合并区域的单元格
+            mergedArea.Value = mergeValue
+        End If
+    Next Cell
+    
+    Application.ScreenUpdating = True
+    MsgBox "取消合并并填充完成!", vbInformation
+End Sub

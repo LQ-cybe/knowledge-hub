@@ -1,0 +1,28 @@
+﻿    '将A:F列的每行数据拆分为单个工作簿，保留标题行
+Sub 合并()
+    Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    Application.AskToUpdateLinks = False
+    Application.Calculation = xlManual
+    
+    Application.ScreenUpdating = False
+    Dim arr, BookName$, arr1, book As Workbook, pathn
+    pathn = ThisWorkbook.Path
+    arr = Range(Cells(1, 1), Cells(1, "F"))     '第一行的第一列到第一行的F列
+    For i = 2 To 20
+        BookName = Cells(i, 1)
+        arr1 = Range(Cells(i, 1), Cells(i, "F"))    '数据区域第一列到F列
+        Workbooks.Add
+        Set book = ActiveWorkbook
+        book.Worksheets(1).Cells(1, 1).Resize(1, UBound(arr, 2)) = arr
+        book.Worksheets(1).Cells(2, 1).Resize(1, UBound(arr1, 2)) = arr1
+        book.SaveAs (pathn & "\" & BookName)
+        book.Close
+    Next i
+    Application.ScreenUpdating = True
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+    Application.AskToUpdateLinks = True
+    Application.Calculation = xlAutomatic
+    
+End Sub

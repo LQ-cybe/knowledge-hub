@@ -1,0 +1,23 @@
+﻿'清除未显示的命令栏
+Sub AA()
+Dim bar As CommandBar
+' 遍历 Excel 里所有的命令栏（菜单、工具栏、右键菜单都算）
+For Each bar In Application.CommandBars
+    ' 判断条件：
+    ' 1. bar.BuiltIn = False → 不是Excel自带的（是你自定义创建的）
+    ' 2. bar.Visible = False → 并且是隐藏的
+    If Not bar.BuiltIn And Not bar.Visible Then
+        bar.Delete
+    End If
+Next
+End Sub
+'删除所有自定义菜单（不管是否隐藏）
+Sub ClearAllCustomCommandBars()
+    Dim bar As CommandBar
+    For Each bar In Application.CommandBars
+        If Not bar.BuiltIn Then
+            bar.Delete
+        End If
+    Next
+'    MsgBox " 所有自定义菜单已清理完成！"
+End Sub

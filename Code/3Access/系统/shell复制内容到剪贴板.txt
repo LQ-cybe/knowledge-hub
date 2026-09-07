@@ -1,0 +1,11 @@
+'shell调用剪贴板复制内容
+Sub CopyStringToClipboardshell(strText As String)
+    Dim objShell As Object
+    Set objShell = CreateObject("WScript.Shell")
+    objShell.Run "cmd /c echo " & Chr(34) & strText & Chr(34) & " | clip", 0, True
+    Set objShell = Nothing
+End Sub
+Sub 测试复制文本_Shell版()
+    CopyStringToClipboardshell "通过Shell命令复制的内容"
+    msgbox "已通过 Shell 命令复制！", vbInformation
+End Sub

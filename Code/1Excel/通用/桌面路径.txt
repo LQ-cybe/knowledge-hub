@@ -1,0 +1,3 @@
+'无论是哪个用户登录，都是桌面    
+Dim savePath As String
+    savePath = Environ("USERPROFILE") & "\Desktop\" & sheetName & "流水码.txt"

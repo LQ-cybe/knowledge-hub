@@ -1,0 +1,8 @@
+'    自定义函数，提取文本框的字符数，为空值则返回0
+    Public Function CalculateSuffixLength(suffixCode As Variant) As Integer
+    If IsNull(suffixCode) Then
+        CalculateSuffixLength = 0
+    Else
+        CalculateSuffixLength = Len(suffixCode)
+    End If
+End Function

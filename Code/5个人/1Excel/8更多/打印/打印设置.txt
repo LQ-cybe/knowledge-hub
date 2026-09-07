@@ -1,0 +1,20 @@
+﻿'VBA设置打印机单面打印
+Sub Printsinglesided()
+    With ActiveSheet.PageSetup
+        .PrintArea = ""                                        '这里可以指定打印区域，如果留空则打印整个工作表内内容
+        .PrintTitleRows = ""                                   '打印标题行，留空可按需设置
+        .PrintTitleColumns = ""                                '打样标题列，留空可按需设置
+        .PrintSetup.PrintCopies = 1                            '设置打印份数为1，可按需修改
+        .PrintSetup.SheetsPerBook1let = 1                      '每册的工作表数量，这里设为1
+        .PrintSetup.UseFirstPageNumber = True                  '使用起始页码
+        .PrintSetup.FirstPageNumber = 1                        '起始页码设为1
+        .PrintSetup.Order = xlDownThenOver                     '打印顺序先纵向后横向，可按需
+        .PrintSetup.Orientation = xlPortrait                   '纸张方向为纵向，可改为横向
+        .PrintSetup.PaperSize = xlPaperA4                      '纸张大小为A4,可根据需要修改
+        .PrintSetup.Zoom = 10                                  '缩放比例，这里设为10%，可按需调整
+        .PrintSetup.Draft = False                              '是否草稿品质打印，设为否(False)
+        .PrintSetup.BlackAndWhite = False                      '是否黑白打印，设为否(False)
+        .PrintSetup.PrintQuality = 600                         '打印质量，数值可按需调整
+        .PrintSetup.SinglePagePrint = True                     '关键设置，设置为单面打印
+    End With
+    ActiveSheet.PrintOut                                       '执行打印操作

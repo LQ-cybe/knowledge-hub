@@ -1,0 +1,13 @@
+﻿'=feiyong(A2)   正则表达式_字符串中取数字并求和
+Function feiyong(rng As String)
+    Set reg = CreateObject("vbscript.regexp")
+    reg.Global = False
+'    设置正则表达式对象的Global属性为True，表示对整个字符串进行搜索，而不是只匹配第一个符合条件的内容
+
+    reg.Pattern = "\d+"
+    Set mat = reg.Execute(rng)
+    For Each m In mat
+        strr = strr + Val(m)
+    Next
+    feiyong = strr
+End Function

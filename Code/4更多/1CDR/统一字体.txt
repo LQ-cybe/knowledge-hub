@@ -1,0 +1,46 @@
+﻿Sub ChangeSelectedTextToHeiti()
+    Dim s As Shape
+    Dim textRng As textRange
+    Dim fontName As String
+    Dim selectedCount As Integer
+    Dim shapeType As Integer
+
+    '设置字体名称（根据系统实际字体名称调整）
+    fontName = "黑体"
+
+    '检查是否有活动文档
+    If ActiveDocument Is Nothing Then
+        MsgBox "没有打开的文档！"
+        Exit Sub
+    End If
+
+    '检查是否有选中的对象
+    If ActiveSelection.Shapes.Count = 0 Then
+        MsgBox "请先选择要修改字体的文本对象！"
+        Exit Sub
+    End If
+
+    selectedCount = 0
+
+    '遍历选中的所有形状
+    For Each s In ActiveSelection.Shapes
+        shapeType = s.Type
+        If shapeType = cdrTextShape Then
+            On Error Resume Next '暂时保留忽略字体错误
+            With s.Text
+               '设置整个文本范围的字体
+                Set textRng = .Story
+                textRng.Font = fontName
+            End With
+            selectedCount = selectedCount + 1
+            On Error GoTo 0 '恢复正常错误处理
+        End If
+    Next s
+
+    If selectedCount = 0 Then
+        MsgBox "选中的对象中没有文本对象！"
+    Else
+        'MsgBox "已完成 " & selectedCount & " 个选中文本对象的字体修改！"
+    End If
+End Sub
+

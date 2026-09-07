@@ -1,0 +1,124 @@
+Attribute VB_Name = "A005合并格式相同的工作表"
+'先运行A004，生成SheetNames工作表，然后标记要合并的工作表，运行下面的程序
+
+Sub MergeSheetsWithArrayOptimized()
+    ' 步骤1：询问用户表头行数
+    Dim headerRows As Long
+    headerRows = Application.InputBox("请输入表头行数：", "表头设置", 1, Type:=1)
+    If headerRows < 0 Then Exit Sub
+    
+    ' 步骤2：获取要合并的工作表列表
+    Dim wsList As Worksheet
+    Set wsList = ActiveSheet
+    
+    Dim lastRow As Long
+    lastRow = wsList.Cells(wsList.Rows.Count, "B").End(xlUp).Row
+    
+    ' 收集要合并的工作表名称
+    Dim sheetsToMerge() As String, mergeCount As Long
+    ReDim sheetsToMerge(1 To lastRow - 1) ' 最大可能数量
+    
+    Dim i As Long, wsName As String
+    For i = 2 To lastRow
+        If UCase(Trim(wsList.Cells(i, "C").Value)) = "Y" Then
+            wsName = Trim(wsList.Cells(i, "B").Value)
+            If Evaluate("ISREF('" & wsName & "'!A1)") Then ' 检查工作表是否存在
+                mergeCount = mergeCount + 1
+                sheetsToMerge(mergeCount) = wsName
+            End If
+        End If
+    Next i
+    
+    If mergeCount = 0 Then
+        MsgBox "没有有效的可合并工作表", vbExclamation
+        Exit Sub
+    End If
+    
+    ' 步骤3：创建结果工作表
+    Dim newWs As Worksheet
+    On Error Resume Next
+    Set newWs = ThisWorkbook.Worksheets("合并结果")
+    On Error GoTo 0
+    
+    If Not newWs Is Nothing Then
+        Application.DisplayAlerts = False
+        newWs.Delete
+        Application.DisplayAlerts = True
+    End If
+    
+    Set newWs = ActiveWorkbook.Worksheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    newWs.Name = "合并结果"
+    
+    ' 步骤4：读取所有数据到数组集合
+    Dim dataArrays() As Variant
+    ReDim dataArrays(1 To mergeCount)
+    
+    Dim totalRows As Long, maxCols As Long
+    Dim firstWs As Worksheet
+    Set firstWs = ActiveWorkbook.Worksheets(sheetsToMerge(1))
+    
+    ' 获取列数和表头
+    maxCols = firstWs.Cells(headerRows, firstWs.Columns.Count).End(xlToLeft).Column
+    
+    ' 复制表头
+    newWs.Cells(headerRows, 1).Value = "来源工作表"
+    firstWs.Range(firstWs.Cells(1, 1), firstWs.Cells(headerRows, maxCols)).Copy newWs.Range("B1")
+    
+    ' 读取每个工作表的数据到独立数组
+    For i = 1 To mergeCount
+        With ActiveWorkbook.Worksheets(sheetsToMerge(i))
+            Dim lastDataRow As Long
+            lastDataRow = .Cells(.Rows.Count, 1).End(xlUp).Row
+            
+            If lastDataRow > headerRows Then
+                ' 读取整个数据区域到数组（添加来源表名列）
+                Dim tempArray() As Variant
+                tempArray = .Range(.Cells(headerRows + 1, 1), .Cells(lastDataRow, maxCols)).Value
+                
+                ' 创建带来源表名的数组
+                Dim combinedArray() As Variant
+                ReDim combinedArray(1 To UBound(tempArray, 1), 1 To UBound(tempArray, 2) + 1)
+                
+                ' 填充数组
+                For j = 1 To UBound(tempArray, 1)
+                    combinedArray(j, 1) = sheetsToMerge(i) ' 来源表名
+                    For k = 1 To UBound(tempArray, 2)
+                        combinedArray(j, k + 1) = tempArray(j, k)
+                    Next k
+                Next j
+                
+                dataArrays(i) = combinedArray
+                totalRows = totalRows + UBound(combinedArray, 1)
+            End If
+        End With
+    Next i
+    
+    ' 步骤5：合并所有数组到最终数组
+    Dim finalArray() As Variant
+    ReDim finalArray(1 To totalRows, 1 To maxCols + 1)
+    
+    Dim currentRow As Long: currentRow = 1
+    For i = 1 To mergeCount
+        If Not IsEmpty(dataArrays(i)) Then
+            Dim arrRows As Long
+            arrRows = UBound(dataArrays(i), 1)
+            
+            For j = 1 To arrRows
+                For k = 1 To maxCols + 1
+                    finalArray(currentRow, k) = dataArrays(i)(j, k)
+                Next k
+                currentRow = currentRow + 1
+            Next j
+        End If
+    Next i
+    
+    ' 一次性写入结果
+    If currentRow > 1 Then
+        newWs.Range("A1")(headerRows + 1, 1).Resize(totalRows, maxCols + 1).Value = finalArray
+    End If
+    
+    ' 自动调整列宽
+    newWs.UsedRange.Columns.AutoFit
+    
+    MsgBox "成功合并 " & mergeCount & " 个工作表数据", vbInformation
+End Sub

@@ -1,0 +1,307 @@
+'遍历IdMso对照表
+Sub 遍历内置功能信息()
+    Excel.Application.ScreenUpdating = False
+    Dim oCB As CommandBar
+    Dim oCBC As CommandBarControl
+    Dim oWK As Worksheet
+    Set oWK = ActiveSheet
+    oWK.Cells.Clear
+    Dim arr
+    Dim iCol As Integer
+    arr = VBA.Array("菜单英文名称", "菜单中文名称", "菜单内的控件ID", "菜单内的控件标题", "菜单内的控件类型")
+    iCol = UBound(arr) + 1
+    oWK.Range("a1").Resize(1, iCol) = arr
+    i = 2
+    For Each oCB In Excel.Application.CommandBars
+        '遍历每个菜单栏
+        With oCB
+            For Each oCBC In .Controls
+                '遍历每个控件
+                sCBName = .Name
+                sCBNameLocal = .NameLocal
+                With oCBC
+                    '控件id
+                    sID = .id
+                    '控件标题
+                    sCBCName = .caption
+                    '控件类型
+                    iType = .Type
+                End With
+                With oWK
+                    .Cells(i, 1) = sCBName
+                    .Cells(i, 2) = sCBNameLocal
+                    .Cells(i, 3) = sID
+                    .Cells(i, 4) = sCBCName
+                    .Cells(i, 5) = iType
+                    i = i + 1
+                End With
+            Next
+        End With
+    Next
+    oWK.Columns.AutoFit
+    Excel.Application.ScreenUpdating = True
+End Sub
+
+' 常用IdMso对照表（基于微软官方文档）
+Function GetIdMsoFromInfo(menuName As String, caption As String, id As Long) As String
+    ' 优先通过ID匹配
+    Select Case id
+        ' VBA/宏相关
+        Case 1695: GetIdMsoFromInfo = "VisualBasic"
+        Case 184: GetIdMsoFromInfo = "MacroRecord"
+        Case 186: GetIdMsoFromInfo = "Macros"
+        Case 3627: GetIdMsoFromInfo = "MacroSecurity"
+        Case 548: GetIdMsoFromInfo = "ControlToolbox"
+        Case 1605: GetIdMsoFromInfo = "DesignMode"
+        Case 3631: GetIdMsoFromInfo = "ScriptEditor"
+        
+        ' 常用编辑命令
+        Case 19: GetIdMsoFromInfo = "Copy"
+        Case 21: GetIdMsoFromInfo = "Cut"
+        Case 22: GetIdMsoFromInfo = "Paste"
+        Case 128: GetIdMsoFromInfo = "Undo"
+        Case 129: GetIdMsoFromInfo = "Redo"
+        
+        ' 格式命令
+        Case 172: GetIdMsoFromInfo = "Bold"
+        Case 173: GetIdMsoFromInfo = "Italic"
+        Case 174: GetIdMsoFromInfo = "Underline"
+        
+        ' 文件命令
+        Case 3: GetIdMsoFromInfo = "FileSave"
+        Case 4: GetIdMsoFromInfo = "FileSaveAs"
+        Case 19: GetIdMsoFromInfo = "FileOpen"
+        Case 21: GetIdMsoFromInfo = "FilePrint"
+        
+        Case Else
+            ' 尝试从标题生成
+            GetIdMsoFromInfo = GenerateIdMsoFromCaption(caption)
+    End Select
+End Function
+Sub ExportAllCommandBarControls()
+    ' 功能：导出所有命令栏控件信息，包含MsoControlType枚举说明
+    ' 作者：基于QQ1722187970的代码完善
+    
+    Excel.Application.ScreenUpdating = False
+    
+    Dim oCB As CommandBar
+    Dim oCBC As CommandBarControl
+    Dim oWK As Worksheet
+    Dim i As Long
+    Dim sCBName As String, sCBNameLocal As String
+    Dim sID As String, sCBCName As String, iType As Integer
+    Dim sTypeName As String, sTypeDesc As String
+    
+    ' 设置输出工作表
+    Set oWK = ActiveSheet
+    oWK.Cells.Clear
+    
+    ' 定义表头（增加两列：类型名称、类型说明）
+    Dim arr
+    Dim iCol As Integer
+    arr = VBA.Array("菜单英文名称", "菜单中文名称", "控件ID", "控件标题", "控件类型代码", _
+                    "控件类型名称", "控件类型说明", "可能对应的idMso")
+    iCol = UBound(arr) + 1
+    oWK.Range("A1").Resize(1, iCol) = arr
+    
+    ' 设置表头格式
+    With oWK.Range("A1").Resize(1, iCol)
+        .Font.Bold = True
+        .Interior.Color = RGB(198, 224, 180)
+        .HorizontalAlignment = xlCenter
+    End With
+    
+    i = 2 ' 数据起始行
+    
+    ' 遍历所有命令栏
+    For Each oCB In Excel.Application.CommandBars
+        With oCB
+            ' 只处理有控件的命令栏
+            If .Controls.Count > 0 Then
+                For Each oCBC In .Controls
+                    ' 获取基本信息
+                    sCBName = .Name
+                    sCBNameLocal = .NameLocal
+                    
+                    With oCBC
+                        sID = .id
+                        sCBCName = .caption
+                        iType = .Type
+                        
+                        ' 根据MsoControlType枚举获取类型名称和说明
+                        GetControlTypeInfo iType, sTypeName, sTypeDesc
+                    End With
+                    
+                    ' 写入数据
+                    With oWK
+                        .Cells(i, 1) = sCBName
+                        .Cells(i, 2) = sCBNameLocal
+                        .Cells(i, 3) = sID
+                        .Cells(i, 4) = sCBCName
+                        .Cells(i, 5) = iType
+                        .Cells(i, 6) = sTypeName
+                        .Cells(i, 7) = sTypeDesc
+                        .Cells(i, 8) = GuessIdMso(sCBName, sCBCName, sID) ' 猜测可能的idMso
+                    End With
+                    
+                    i = i + 1
+                Next oCBC
+                
+                ' 在不同菜单之间空一行
+                i = i + 1
+            End If
+        End With
+    Next oCB
+    
+    ' 自动调整列宽
+    oWK.Columns("A:H").AutoFit
+    oWK.Columns("H").ColumnWidth = 25 ' idMso列宽大一些
+    
+    Excel.Application.ScreenUpdating = True
+    
+    MsgBox "共导出 " & (i - 2) & " 个控件信息", vbInformation, "完成"
+End Sub
+
+' 辅助函数：获取MsoControlType枚举的详细信息
+Private Sub GetControlTypeInfo(ByVal iType As Integer, ByRef typeName As String, ByRef typeDesc As String)
+    Select Case iType
+    Case 1  ' msoControlButton
+        typeName = "msoControlButton"
+        typeDesc = "按钮 - 可执行命令"
+    Case 2  ' msoControlEdit
+        typeName = "msoControlEdit"
+        typeDesc = "编辑框 - 可输入文本"
+    Case 3  ' msoControlDropdown
+        typeName = "msoControlDropdown"
+        typeDesc = "下拉框 - 从列表选择"
+    Case 4  ' msoControlComboBox
+        typeName = "msoControlComboBox"
+        typeDesc = "组合框 - 可选择或输入"
+    Case 5  ' msoControlButtonDropdown
+        typeName = "msoControlButtonDropdown"
+        typeDesc = "按钮下拉框 - 点击按钮显示下拉菜单"
+    Case 6  ' msoControlSplitDropdown
+        typeName = "msoControlSplitDropdown"
+        typeDesc = "拆分下拉框 - 按钮和下拉分开"
+    Case 7  ' msoControlOCXDropdown
+        typeName = "msoControlOCXDropdown"
+        typeDesc = "OCX下拉框 - ActiveX控件"
+    Case 8  ' msoControlGenericDropdown
+        typeName = "msoControlGenericDropdown"
+        typeDesc = "通用下拉框"
+    Case 9  ' msoControlGraphicDropdown
+        typeName = "msoControlGraphicDropdown"
+        typeDesc = "图形下拉框"
+    Case 10    ' msoControlPopup
+        typeName = "msoControlPopup"
+        typeDesc = "弹出菜单 - 包含子菜单"
+    Case 11    ' msoControlGraphicPopup
+        typeName = "msoControlGraphicPopup"
+        typeDesc = "图形弹出菜单"
+    Case 12    ' msoControlSplitButtonPopup
+        typeName = "msoControlSplitButtonPopup"
+        typeDesc = "拆分按钮弹出"
+    Case 13    ' msoControlSplitButtonMRUPopup
+        typeName = "msoControlSplitButtonMRUPopup"
+        typeDesc = "最近使用的拆分按钮"
+    Case 14    ' msoControlLabel
+        typeName = "msoControlLabel"
+        typeDesc = "标签 - 仅显示文本"
+    Case 15    ' msoControlExpandingGrid
+        typeName = "msoControlExpandingGrid"
+        typeDesc = "可展开网格"
+    Case 16    ' msoControlSplitExpandingGrid
+        typeName = "msoControlSplitExpandingGrid"
+        typeDesc = "拆分可展开网格"
+    Case 17    ' msoControlGrid
+        typeName = "msoControlGrid"
+        typeDesc = "网格"
+    Case 18    ' msoControlGauge
+        typeName = "msoControlGauge"
+        typeDesc = "仪表"
+    Case 19    ' msoControlGraphicCombo
+        typeName = "msoControlGraphicCombo"
+        typeDesc = "图形组合框"
+    Case 20    ' msoControlPane
+        typeName = "msoControlPane"
+        typeDesc = "窗格"
+    Case 21    ' msoControlActiveX
+        typeName = "msoControlActiveX"
+        typeDesc = "ActiveX控件"
+    Case Else
+        typeName = "未知类型"
+        typeDesc = "未定义的控件类型"
+    End Select
+End Sub
+
+
+
+' 辅助函数：根据控件信息猜测可能的idMso
+Private Function GuessIdMso(ByVal menuName As String, ByVal caption As String, ByVal id As Long) As String
+' 常用控件的idMso对照表（基于您的示例）
+    Select Case id
+        ' VBA相关
+    Case 1695: GuessIdMso = "VisualBasic"      ' Visual Basic编辑器
+    Case 184: GuessIdMso = "MacroRecord"       ' 录制新宏
+    Case 186: GuessIdMso = "Macros"            ' 宏
+    Case 3627: GuessIdMso = "MacroSecurity"    ' 宏安全性
+    Case 548: GuessIdMso = "ControlToolbox"    ' 控件工具箱
+    Case 1605: GuessIdMso = "DesignMode"       ' 设计模式
+    Case 3631: GuessIdMso = "ScriptEditor"     ' Microsoft脚本编辑器
+
+        ' 文件操作
+    Case 3: GuessIdMso = "FileSave"
+    Case 4: GuessIdMso = "FileSaveAs"
+    Case 19: GuessIdMso = "FileOpen"
+    Case 21: GuessIdMso = "FilePrint"
+
+        ' 编辑操作
+    Case 19: GuessIdMso = "Copy"
+    Case 21: GuessIdMso = "Cut"
+    Case 22: GuessIdMso = "Paste"
+
+    Case Else
+        ' 尝试从菜单名称和标题生成
+        Dim base As String
+        base = Replace(menuName, " ", "")
+        base = Replace(base, "&", "")
+        base = Replace(base, ".", "")
+        GuessIdMso = base & "_" & id
+    End Select
+End Function
+
+'F辅助函数： 从控件标题生成可能的idMso
+Private Function GenerateIdMsoFromCaption(caption As String) As String
+    Dim result As String
+    Dim words() As String
+    Dim i As Integer
+    Dim word As String
+
+    ' 移除快捷键标记 (&) 和标点
+    result = caption
+    result = Replace(result, "&", "")
+    result = Replace(result, "...", "")
+    result = Replace(result, "(", "")
+    result = Replace(result, ")", "")
+    result = Replace(result, ".", "")
+    result = Replace(result, " ", " ")
+
+    ' 分割单词
+    words = Split(result, " ")
+
+    result = ""
+    For i = 0 To UBound(words)
+        word = Trim(words(i))
+        If Len(word) > 0 Then
+            If i = 0 Then
+                ' 第一个单词首字母小写（通常动词）
+                result = LCase(Left(word, 1)) & Mid(word, 2)
+            Else
+                ' 后续单词首字母大写
+                result = result & UCase(Left(word, 1)) & Mid(word, 2)
+            End If
+        End If
+    Next i
+
+    GenerateIdMsoFromCaption = result
+End Function

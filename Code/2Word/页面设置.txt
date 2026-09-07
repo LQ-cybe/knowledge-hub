@@ -1,0 +1,33 @@
+Attribute VB_Name = "页面设置"
+'设置页面A4，横向
+Sub AutoPageSetup()
+    With ActiveDocument.PageSetup
+        .PaperSize = wdPaperA4    ' 设置纸张大小为A4
+        .Orientation = wdOrientationLandscape    ' 设置页面方向为横向
+    End With
+End Sub
+
+'设置页边距属性
+Sub AutoPageMarginsAndHeaderFooter()
+    With ActiveDocument.PageSetup
+        .LeftMargin = CentimetersToPoints(2.5)    ' 设置左页边距为2.5厘米
+        .RightMargin = CentimetersToPoints(2.5)    ' 设置右页边距为2.5厘米
+        .TopMargin = CentimetersToPoints(3)    ' 设置上页边距为3厘米
+        .BottomMargin = CentimetersToPoints(3)    ' 设置下页边距为3厘米
+        ' 添加页眉
+        .HeaderDistance = CentimetersToPoints(2)    ' 设置页眉距离顶部的距离
+        .FooterDistance = CentimetersToPoints(2.5)    ' 设置页脚距离底部的距离
+        ' 添加自定义页眉和页脚
+        Dim sec As Section
+        For Each sec In ActiveDocument.Sections
+            With sec.Headers(wdHeaderFooterPrimary)
+                .Range.Text = "这是页眉内容"    ' 设置页眉内容
+            End With
+            With sec.Footers(wdHeaderFooterPrimary)
+                .Range.Text = "这是页脚内容"    ' 设置页脚内容
+            End With
+        Next sec
+    End With
+End Sub
+
+

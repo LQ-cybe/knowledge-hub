@@ -1,0 +1,19 @@
+﻿    '导出所有模块到桌面，需引用Microsoft Visual Basic for Applications Extensibility 库
+Sub ExportAllVBAModules()
+    Dim vbc As VBComponent
+    Dim strPath As String
+    Dim strFileName As String
+    ' 设置导出文件的保存路径，这里以桌面为例，你可以根据需要修改
+    strPath = CreateObject("WScript.Shell").SpecialFolders("Desktop") & "\"
+    ' 遍历所有的VBA组件
+    For Each vbc In ThisWorkbook.VBProject.VBComponents
+        ' 排除用户窗体，因为窗体导出的格式不同
+        If vbc.Type <> vbext_ct_MSForm Then
+            ' 构建导出文件的文件名
+            strFileName = strPath & vbc.Name & ".bas"
+            ' 导出模块
+            vbc.Export strFileName
+        End If
+    Next vbc
+    MsgBox "所有VBA模块已成功导出到 " & strPath, vbInformation
+End Sub

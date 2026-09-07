@@ -1,0 +1,4 @@
+﻿'打开VBE窗口
+Sub VBE()
+Application.VBE.ActiveCodePane.Show
+End Sub

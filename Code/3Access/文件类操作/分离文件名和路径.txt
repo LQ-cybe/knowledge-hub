@@ -1,0 +1,61 @@
+' 参数：path - 完整文件路径
+'       returnType - "name" 返回文件名, "dir" 返回目录路径
+Function ParsePath(ByVal path As String, ByVal returnType As String) As String
+    Dim lastSlashPos As Long
+    
+    ' 处理空路径
+    If path = "" Then
+        ParsePath = ""
+        Exit Function
+    End If
+    
+    ' 查找最后一个反斜杠的位置
+    lastSlashPos = InStrRev(path, "\")
+    
+    ' 根据 returnType 参数返回相应部分
+    Select Case LCase(returnType)
+        Case "name"  ' 返回文件名（带扩展名）
+            If lastSlashPos > 0 Then
+                ParsePath = Mid(path, lastSlashPos + 1)
+            Else
+                ParsePath = path  ' 如果没有路径分隔符，整个字符串被视为文件名
+            End If
+            
+        Case "dir"  ' 返回目录路径
+            If lastSlashPos > 0 Then
+                ParsePath = Left(path, lastSlashPos)
+            Else
+                ParsePath = ""  ' 如果没有路径分隔符，视为没有目录部分
+            End If
+            
+        Case "namewithout ext"  ' 返回不带扩展名的文件名（可选）
+            Dim fileName As String
+            fileName = ParsePath(path, "name")
+            Dim lastDotPos As Long
+            lastDotPos = InStrRev(fileName, ".")
+            
+            If lastDotPos > 0 Then
+                ParsePath = Left(fileName, lastDotPos - 1)
+            Else
+                ParsePath = fileName
+            End If
+            
+        Case Else  ' 无效参数
+            ParsePath = ""
+'            MsgBox "无效的返回类型参数。请使用 'name' 或 'dir'。", vbExclamation
+    End Select
+End Function
+'提取文件名或文件路径
+Sub TestParsePath()
+    Dim fullPath As String
+    fullPath = "D:\CS\Data_20250511_154553.accdb"
+    
+    ' 获取文件名
+    Debug.Print ParsePath(fullPath, "name")  ' 输出: Data_20250511_154553.accdb
+    
+    ' 获取目录路径
+    Debug.Print ParsePath(fullPath, "dir")   ' 输出: D:\CS
+    
+    ' 获取不带扩展名的文件名（可选功能）
+    Debug.Print ParsePath(fullPath, "namewithout ext")  ' 输出: Data_20250511_154553
+End Sub

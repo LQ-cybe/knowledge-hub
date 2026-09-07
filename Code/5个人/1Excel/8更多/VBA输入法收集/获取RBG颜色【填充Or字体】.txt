@@ -1,0 +1,9 @@
+Function getcolor(rng, a)
+    Dim R, G, B
+    If a = 1 Then C = rng.Interior.Color
+    If a = 2 Then C = rng.Font.Color
+    R = C \ 256 ^ 0 Mod 256
+    G = C \ 256 ^ 1 Mod 256
+    B = C \ 256 ^ 2 Mod 256
+    getcolor = "RGB(" & R & "," & G & "," & B & ")"
+End Function

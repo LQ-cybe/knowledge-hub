@@ -1,0 +1,10 @@
+﻿'标识工作表中的名称区域
+Sub OPEN_SetNameRanges(control As IRibbonControl)
+    Dim rngName As Name
+    On Error Resume Next
+    '遍历当前工作簿中的名称
+    For Each rngName In ActiveWorkbook.Names
+        rngName.RefersToRange.Interior.ColorIndex = 3
+    Next rngName
+    MsgBox "定义名称的区域已经填充为红色！"
+End Sub

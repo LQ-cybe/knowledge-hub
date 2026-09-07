@@ -1,0 +1,4 @@
+﻿'自定义函数返回输入参数的反值，输入TRUE返回false，反之同理
+Function ReverseBoolean(inputValue As Boolean) As Boolean
+    ReverseBoolean = Not inputValue
+End Function

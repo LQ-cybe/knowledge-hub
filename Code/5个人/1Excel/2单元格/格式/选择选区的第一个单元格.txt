@@ -1,0 +1,6 @@
+With Selection(1) 
+	Selection(1)		'选择单个单元格
+	Selection(1).Cells(1)	'所选择的单元格区域的第一个单元格,也可以用Selection(1).Cells(1, 1)行号和列号来表示
+	.Value = "完美Excel" 	''在所选单元格区域第一个单元格中输入文字
+	.Font.Bold = True		'单元格格式字体加粗
+End With

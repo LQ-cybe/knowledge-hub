@@ -1,0 +1,48 @@
+﻿Sub DFillData()
+    Application.DisplayAlerts = False       '屏蔽提示窗口，比如保存时直接保存不弹出提示窗口直接保存
+    Application.ScreenUpdating = False     '关闭屏幕刷新
+
+    Sheets("单变码").Unprotect Password:="123456" '解除工作表的保护状态，密码为123456
+    Dim i As Long
+    Dim d1Value As String
+    Dim G1Value As String
+    Dim resultValue As String
+    Dim sjlvalue As Long
+    Dim qssvalue As String
+    Dim wss As Worksheet
+    Dim lswsvalue As String
+    
+    lswsvalue = String(Range("I1"), "0")    '将数值5处理成5个0
+    Set wss = ThisWorkbook.Sheets("单变码") '修改为你的工作表名称
+    wss.Columns("A:A").ClearContents     '清除B列的内容，若使用.Clear则完全清除B列所有属性
+
+    d1Value = Range("C1").Value '前固定码
+    G1Value = Range("F1").Value '后固定码
+    sjlvalue = Range("I3").Value * 1    '数据量
+    qssvalue = Range("F3").Value * 1    '起始数。为屏蔽单元格为空值出现的错误，加上乘1的步骤
+    
+    For i = 0 To sjlvalue - 1
+        resultValue = d1Value & Format(i + qssvalue, lswsvalue) & G1Value
+        Cells(i + 2, 1).Value = resultValue     '将数据写入表格A2为起点的单元格中
+    Next i
+        ActiveSheet.ListObjects.Add(xlSrcRange, Range("A1:A" & (sjlvalue - QSVALUE) * 1 + 1), , xlYes).Name = "DSJXL"           '将A1:B2区域创建成表，表名称为DSJXL
+    wss.Range("A1").Value = "A"     '在A1单元格中输入标题A
+
+    Columns("A").Select       '选中A列的数据
+    Selection.Copy      '复制选择的数据
+    Workbooks.Add       '新建一个工作簿
+    
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+    Application.CutCopyMode = False
+    ChDir "C:\Users\Administrator\Desktop"      '导出文件目录
+    ActiveWorkbook.SaveAs Filename:="C:\Users\Administrator\Desktop\单序列号数据.txt", _
+        FileFormat:=xlUnicodeText, CreateBackup:=False      '    导出为txt的文本文件
+    ActiveWindow.Close
+    Application.DisplayAlerts = True    '    恢复提示窗口
+    Sheets("单变码").Protect Password:="123456"     '将工作表设置为保护状态，密码为123456
+    Application.DisplayAlerts = True            '开启提示窗口，比如保存时弹出的提示窗口
+    Application.ScreenUpdating = True           '开启屏幕刷新
+    Range("C1").Select      '将光标定位到C1
+    MsgBox "导出成功，数据已保存至桌面！"
+End Sub

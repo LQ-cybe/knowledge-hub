@@ -1,0 +1,118 @@
+Attribute VB_Name = "A003根据某列拆分数据到各表"
+Option Explicit
+
+'根据某列拆分数据到当前工作簿的各个工作表中
+Sub SplitDataByCategory_Optimized()
+    Dim wbTarget As Workbook
+    Dim wsSource As Worksheet
+    Dim wsDest As Worksheet
+    Dim rngData As Range, rngHeader As Range, rngCategory As Range
+    Dim dict As Object
+    Dim arrData(), arrOutput()
+    Dim i As Long, j As Long
+    Dim category As Variant
+    Dim key As Variant
+    Dim categoryCol As Long
+    Dim itemCount As Long
+    Dim outputRow As Long
+    Dim headerRows As Long
+    
+    ' 设置目标工作簿
+    Set wbTarget = ActiveWorkbook
+    Set wsSource = wbTarget.ActiveSheet
+    
+    ' 创建字典对象
+    Set dict = CreateObject("Scripting.Dictionary")
+    
+    ' 用户选择区域
+    On Error Resume Next
+    Set rngHeader = Application.InputBox("请选择表头区域:", "表头选择", wsSource.Range("A1").CurrentRegion.Rows(1).Address, Type:=8)
+    If rngHeader Is Nothing Then Exit Sub
+    
+    Set rngData = Application.InputBox("请选择数据区域:", "数据选择", wsSource.Range("A" & rngHeader.Rows.Count + 1).CurrentRegion.Address, Type:=8)
+    If rngData Is Nothing Then Exit Sub
+    
+    Set rngCategory = Application.InputBox("请选择类别列:", "类别列选择", Type:=8)
+    If rngCategory Is Nothing Then Exit Sub
+    On Error GoTo 0
+    
+    ' 验证选择
+    If rngData.Row <= rngHeader.Row + rngHeader.Rows.Count - 1 Then
+        MsgBox "数据区域必须在表头下方!", vbExclamation
+        Exit Sub
+    End If
+    
+    If Intersect(rngCategory, rngData) Is Nothing Then
+        MsgBox "类别列必须在数据区域内!", vbExclamation
+        Exit Sub
+    End If
+    
+    ' 获取相对列号
+    categoryCol = rngCategory.Column - rngData.Column + 1
+    headerRows = rngHeader.Rows.Count
+    
+    ' 将数据读入数组
+    arrData = rngData.Value
+    
+    ' 收集类别并统计每类数据量
+    For i = 1 To UBound(arrData)
+        category = arrData(i, categoryCol)
+        If Not IsEmpty(category) Then
+            If dict.Exists(category) Then
+                dict(category) = dict(category) + 1
+            Else
+                dict.Add category, 1
+            End If
+        End If
+    Next i
+    
+    ' 处理每个类别
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    
+    For Each key In dict.Keys
+        itemCount = dict(key)
+        
+        ' 准备输出数组 (仅数据部分)
+        ReDim arrOutput(1 To itemCount, 1 To UBound(arrData, 2))
+        
+        ' 筛选匹配数据
+        outputRow = 1
+        For i = 1 To UBound(arrData)
+            If arrData(i, categoryCol) = key Then
+                For j = 1 To UBound(arrData, 2)
+                    arrOutput(outputRow, j) = arrData(i, j)
+                Next j
+                outputRow = outputRow + 1
+            End If
+        Next i
+        
+        ' 处理目标工作表
+        If WorksheetExists(wbTarget, CStr(key)) Then
+            Set wsDest = wbTarget.Sheets(CStr(key))
+            wsDest.Cells.Clear
+        Else
+            Set wsDest = wbTarget.Sheets.Add(After:=wbTarget.Sheets(wbTarget.Sheets.Count))
+            wsDest.Name = Left(CStr(key), 31)
+        End If
+        
+        ' 复制表头
+        rngHeader.Copy wsDest.Range("A1")
+        
+        ' 一次性输出数据数组到工作表
+        wsDest.Range("A" & headerRows + 1).Resize(itemCount, UBound(arrOutput, 2)).Value = arrOutput
+        wsDest.UsedRange.Columns.AutoFit
+    Next key
+    
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+    
+    MsgBox "数据处理完成! 共创建 " & dict.Count & " 个工作表。", vbInformation
+End Sub
+
+'判断工作表是否存在
+Function WorksheetExists(wb As Workbook, sheetName As String) As Boolean
+    On Error Resume Next
+    WorksheetExists = Not wb.Sheets(sheetName) Is Nothing
+    On Error GoTo 0
+End Function

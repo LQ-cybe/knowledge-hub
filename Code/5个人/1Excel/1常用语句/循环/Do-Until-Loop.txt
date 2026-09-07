@@ -1,0 +1,14 @@
+﻿Do Until 条件表达式
+  '代码
+Loop
+
+'当 `i <= 5` 时，重复执行循环
+Sub TestDoLoop()
+    Dim i As Integer
+    i = 1
+    Do While i <= 5
+        MsgBox "当前值是：" & i
+        i = i + 1
+    Loop
+End Sub
+

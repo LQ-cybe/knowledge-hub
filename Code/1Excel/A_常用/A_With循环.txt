@@ -1,0 +1,6 @@
+﻿    With Application
+        .ScreenUpdating = False
+        .DisplayAlerts = False
+        .AskToUpdateLinks = False
+        .Calculation = xlCalculationManual
+    End With

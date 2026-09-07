@@ -1,0 +1,5 @@
+﻿'打开文件夹选择对话框需要txtAttachmentServerPath文本框和btnBrowseAttachmentServerPath按钮
+    With Application.FileDialog(msoFileDialogFolderPicker)
+        If Not .Show Then Exit Sub
+        Me.txtAttachmentServerPath_Folder = .SelectedItems(1) & "\"
+    End With

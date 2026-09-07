@@ -1,0 +1,1 @@
+﻿Environ("USERPROFILE") & "\Desktop\"      '获取桌面目录

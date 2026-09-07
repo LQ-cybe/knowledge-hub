@@ -1,0 +1,23 @@
+﻿Sub word2els()
+Set wdApp = CreateObject("kwps.application")
+
+Path_ = ThisWorkbook.Path
+wdApp.Documents.Open (Path_ & "" & "汇聚2024生产指令单.docx")
+wdApp.Visible True
+ThisWorkbook.Sheets("sheet1").Cells(1, 7) = "序号"  '设置sheet1的第一行第一列单元格内容为“序号"
+ThisWorkbook.Sheets(Sheet1).Cells(5, 3) = "用例标识" '设置sheet1的第一行第一列单元格内容为用例标识"
+ThisWorkbook.Sheets(Sheet1).Cells(5, 4) = "测试类型" '设置sheet1的第一行第一列单元格内容为“测试类型"
+n = wdApp.ActiveDocument.Tables.Count '有多少个表格
+excel_line_no = 2
+For i = 1 To n
+zhs = wdApp.ActiveDocument.Tables().cel(1, 7)   '提取第i个表格的第二行第三列单元格的内容保存到变量zhs中
+Version = wdApp.ActiveDocument.Tables().Cell(5, 3) '提取第i个表格的第三行第五列单元格的内容保存到变量Version中
+env = wdApp.ActiveDocument.Tables().cel(5, 4)   '提取第i个表格的第三行第七列单元格的内容保存到变量env中
+ThisWorkbook.Sheets("Sheet1").Cells(excel_line_no, 1) = zhs '将变量zhs的值写入到excel的sheet1的第excel_line_no行第1列
+ThisWorkbook.Sheets("Sheet1").Cells(excel_Iine_no, 2) = Version '将变量Version的值写入到excel的sheet1的第excel__Iine_no行第2列
+ThisWorkbook.Sheets("Sheet1").Cells(excel_line_no, 3) = env '将变量env的值写入到excel的sheet1的第'excel line_no行第3列
+excel_line_no = excel_line_no + 1
+Next
+vdApp.Application.Quit关闭word文档
+Set wdApp = Nothing释放对象变量的内存
+End Sub

@@ -1,0 +1,27 @@
+Sub ShowFaceIDs()
+Dim NewToolbar As CommandBar
+Dim NewButton As CommandBarButton
+Dim i As Integer, IDStart As Integer, IDStop As Integer
+
+' Delete existing FaceIds toolbar if it exists
+On Error Resume Next
+Application.CommandBars("FaceIds").Delete
+On Error GoTo 0
+
+' Add an empty toolbar
+Set NewToolbar = Application.CommandBars.Add _
+(Name:="FaceIds", temporary:=True)
+NewToolbar.Visible = True
+
+' Change the following values to see different FaceIDs
+IDStart = 1
+IDStop = 800
+
+For i = IDStart To IDStop
+Set NewButton = NewToolbar.Controls.Add _
+(Type:=msoControlButton, ID:=2950)
+NewButton.FaceId = i
+NewButton.Caption = "FaceID = " & i
+Next i
+NewToolbar.Width = 600
+End Sub

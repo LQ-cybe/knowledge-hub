@@ -1,0 +1,2 @@
+﻿    Dim addinPath As String ' 获取当前用户 Excel 默认加载项目录（全电脑通用）
+    addinPath = Application.UserLibraryPath

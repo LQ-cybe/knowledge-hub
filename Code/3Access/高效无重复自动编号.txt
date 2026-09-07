@@ -1,0 +1,55 @@
+'============================================================================================================================
+'-函数名称：    GetNewID
+'-功能描述：    高效率的文本型自动编号函数，除了第一次调用，以后每次生成编号时不需要再访问编号字段所在的表，因此效率非常高，
+'               表中数据量越大，效果越明显。并且在多用户环境下，也不会出现多个用户基于一个表同时录入时，会出现的编号重复问
+'               题。适用于各种单据的编号及流水码等，具体请参考使用示例。
+'-输入参数：    TableName       必需的，表名称或查询名称。
+'               FieldName       必需的，自动编号字段名。
+'               Digit           必需的，不包含前缀的序号位数。
+'               Prefixal        可选的，编号前缀字符串，除了单据类型的描述字符，还可以把其它信息要素如部门ID等加入到此参数中。
+'               DateFormat      可选的，编号中的日期部分格式，具体使用请参考Format函数中关于日期的数的部分说明。
+'-其它说明：    必需要有一个编号维护表配合使用，表名称：USysSN 字段名：TableName|FieldName|LastID ,3个字段均为文本型，大小255。
+'-使用注意：
+'-返回参数：    返回生成的编号，出错时返回空字符串（""）。
+'-兼 容 性：
+'-使用示例：    =GetNewID("Orders","OrderID",5,"XS","yymmdd")     返回示例：XS01042500004
+'               =GetNewID("Orders","OrderID",5,"XS","-yyyymmdd-") 返回示例：XS-20100425-00004
+'               =GetNewID("Orders","OrderID",5,"XS")              返回示例：XS00004
+'               =GetNewID("Orders","OrderID",5,"XS","-")          返回示例：XS-00004
+'               =GetNewID("Orders","OrderID",5)                   返回示例：00004
+'               =GetNewID("Orders","OrderID",5,"【售】")          返回示例：【售】00004
+'-相关调用：
+'-作    者：    红尘如烟
+'-创建日期：    2011-1-25
+'=============================================================================================================================Function GetNewID(TableName As String, FieldName As String, Digit As Integer, _
+                    Optional Prefixal As String, Optional DateFormat As String) As String
+    On Error GoTo Err_GetNewID
+    Dim strDate     As String
+    Dim strLastID   As String
+    Dim strSN       As String
+    Dim strWhere    As String
+    
+    If DateFormat <> "" Then strDate = Format$(Date, DateFormat)
+    strSN = String$(Digit, "0")
+    strWhere = "TableName='" & TableName & "' AND FieldName='" & FieldName & "'"
+    strLastID = Nz(DLookup("LastID", "USysSN", strWhere))
+    
+    If strLastID = "" Then
+        strLastID = Nz(DMax(FieldName, TableName), strSN)
+        CurrentDb.Execute "Delete FROM USysSN Where " & strWhere
+        CurrentDb.Execute "Insert INTO USysSN(TableName,FieldName) " & _
+                          "VALUES('" & TableName & "','" & FieldName & "')"
+    End If
+    
+    strLastID = Prefixal & strDate & Format$(Val(Right$(strLastID, Digit)) + 1, strSN)
+    CurrentDb.Execute "Update USysSN SET LastID='" & strLastID & "' Where " & strWhere
+    GetNewID = strLastID
+    
+Exit_GetNewID:
+    Exit Function
+    
+Err_GetNewID:
+    GetNewID = ""
+    MsgBox Err.Description, vbCritical, "Error #" & Err
+    Resume Exit_GetNewID
+End Function

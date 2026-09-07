@@ -1,0 +1,56 @@
+﻿'统一工作表图表尺寸并导出图片：只限于工作表中的图表
+Sub ExportAllWorksheetChartsToImages()
+    Dim ws As Worksheet
+    Dim shp As Shape
+    Dim folderPath As String
+    Dim chartCount As Integer
+    Dim totalCount As Integer
+    
+    '选择保存目录
+    With Application.FileDialog(msoFileDialogFolderPicker)
+        .Title = "请选择图片保存目录"
+        .InitialFileName = Environ("USERPROFILE") & "\Desktop\"
+        If .Show = -1 Then
+            folderPath = .SelectedItems(1)
+            If Right(folderPath, 1) <> "\" Then
+                folderPath = folderPath & "\"
+            End If
+        Else
+            MsgBox "未选择保存目录，操作取消！", vbExclamation
+            Exit Sub
+        End If
+    End With
+    
+    Application.ScreenUpdating = False
+    totalCount = 0
+    
+    For Each ws In ThisWorkbook.Worksheets
+        chartCount = 0
+        
+        For Each shp In ws.Shapes
+            If shp.Type = msoChart Then
+                chartCount = chartCount + 1
+                
+                '调整图表尺寸后导出
+                With shp.Chart
+                    .Parent.Width = 400
+                    .Parent.Height = 300
+                    .Export Filename:=folderPath & ws.Name & "_" & Format(chartCount, "00") & ".png", _
+                            FilterName:="PNG"
+                End With
+                
+                totalCount = totalCount + 1
+            End If
+        Next shp
+    Next ws
+    
+    Application.ScreenUpdating = True
+    
+    If totalCount > 0 Then
+        MsgBox "导出完成！" & vbCrLf & _
+               "共导出 " & totalCount & " 个图表" & vbCrLf & _
+               "保存位置：" & folderPath, vbInformation, "导出成功"
+    Else
+        MsgBox "未找到任何图表！", vbExclamation, "导出失败"
+    End If
+End Sub

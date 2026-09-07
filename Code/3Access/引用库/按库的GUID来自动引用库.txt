@@ -1,0 +1,17 @@
+﻿'按库的GUID来自动引用库，前提是文件目录正确
+Sub AddReferenceByGuid()
+    Dim ref As Object
+    Dim referenceGuid As String
+    referenceGuid = "{00020813-0000-0000-C000-000000000046}" ' Excel库的GUID，可替换为其他库的GUID
+    For Each ref In References
+        If ref.guid = referenceGuid Then
+            Debug.Print "引用已经存在！"
+            Exit Sub
+        End If
+    Next ref
+    ' 如果没有找到该引用，则添加它
+    On Error Resume Next
+    References.AddFromGuid referenceGuid, 1, 0
+    On Error GoTo 0
+    Debug.Print "引用已成功添加！"
+End Sub

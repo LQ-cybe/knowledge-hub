@@ -1,0 +1,24 @@
+Function ReadTxtByADODB(sPath)
+    '//自定义函数的作用：指定读取txt的编码形式为UTF-8，读取txt里面所有内容
+    Dim txt As String, i%
+    Dim ADO As Object, myCharset As String
+    If Dir(sPath) = "" Then Exit Function                      '如果路径是空的，直接推出
+    i = 3                                                      '指定txt编码类型是utf-8                                                ' GetEncoding(sPath)
+    If i = 3 Then
+        myCharset = "utf-8"
+    ElseIf i = 2 Or i = 1 Then
+        myCharset = "unicode"
+    Else
+        myCharset = "GB2312"
+    End If
+    Set ADO = CreateObject("adodb.stream")                     '创建ado对象，后面用这个对象的方法，读取txt内容
+    With ADO
+        .Charset = myCharset                                   '编码形式
+        .Type = 2                                              '以正常文本形式返回
+        .Open                                                  '打开ado对象
+        .LoadFromFile sPath                                    '加载txt文件
+        txt = .ReadText                                        '用readtxt方法读取txt所有内容
+        .Close                                                 '关闭
+    End With
+    ReadTxtByADODB = txt                                       '返回值
+End Function

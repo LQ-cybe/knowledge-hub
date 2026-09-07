@@ -1,0 +1,103 @@
+﻿'动态作代码时，VBE 窗口会频繁刷新。使用 Windows API 锁屏可显著提速。
+#If VBA7 Then
+    Private Declare PtrSafe Function FindWindow Lib "user32" Alias "FindWindowA" _
+        (ByVal lpClassName As String, ByVal lpWindowName As String) As LongPtr
+    Private Declare PtrSafe Function LockWindowUpdate Lib "user32" _
+        (ByVal hWndLock As LongPtr) As LongPtr
+#Else
+    Private Declare Function FindWindow Lib "user32" Alias "FindWindowA" _
+        (ByVal lpClassName As String, ByVal lpWindowName As String) As Long
+    Private Declare Function LockWindowUpdate Lib "user32" _
+        (ByVal hWndLock As Long) As Long
+'中文名称
+'对象
+'常用入口
+'整个编辑器
+'VBE Application.VBE
+'当前工程
+'VBProject ActiveWorkbook.VBProject
+'模块/类/窗体
+'VBComponent VBProject.VBComponents("Module1")
+'代码内容
+'CodeModule VBComponent.CodeModule
+'https://mp.weixin.qq.com/s/JGtbYd3NlVwGohTrSYQZhA
+#End If
+'避免屏幕闪烁
+Sub SilentMode()
+    Dim hwnd As LongPtr: hwnd = FindWindow("wndclass_desked_gsk", Application.VBE.MainWindow.Caption)
+    If hwnd Then LockWindowUpdate hwnd
+    '--- 在此执行大批量操作 ---
+    LockWindowUpdate 0
+End Sub
+'动态插入模块与过程
+'键创建名为  的模块，并写入  过程
+Sub CreateAutoRunModule()
+    Dim vbProj As Object 'VBIDE.VBProject
+    Dim vbComp As Object 'VBIDE.VBComponent
+    
+    Set vbProj = ActiveWorkbook.VBProject
+    Set vbComp = vbProj.VBComponents.Add(1) '1 = vbext_ct_StdModule
+    vbComp.Name = "AutoRun1"
+    
+    Dim cm As Object: Set cm = vbComp.CodeModule
+    cm.InsertLines 1, _
+        "Sub Hello()" & vbCrLf & _
+        "    MsgBox ""来自AutoRun模块的Hello!"" & vbCrLf & ""Time: "" & Now" & vbCrLf & _
+        "End Sub"
+End Sub
+
+'需求：把当前工作簿中的 模块复制到所有打开的工作簿。 Utilities
+'跨工作簿复制模块
+Sub BatchCopyUtilities()
+    Dim src As Object, dst As Object, wb As Workbook
+    Dim temp As String: temp = Environ("TEMP") & "\Utilities.bas"
+    
+    Set src = ThisWorkbook.VBProject
+    src.VBComponents("Utilities").Export temp
+    
+    For Each wb In Workbooks
+        If wb.Name <> ThisWorkbook.Name Then
+            Set dst = wb.VBProject
+            On Error Resume Next
+            dst.VBComponents.Remove dst.VBComponents("Utilities")
+            dst.VBComponents.Import temp
+            On Error GoTo 0
+        End If
+    Next
+    
+    Kill temp
+End Sub
+
+'需求：所有工作表都需要  事件，用于记录修改日志。Worksheet_Change
+'批量为工作表生成事件
+Sub InjectWorksheetChangeEvent()
+    Dim sh As Worksheet, comp As Object, cm As Object
+    Dim lineNum As Long
+    
+    For Each sh In ActiveWorkbook.Worksheets
+        Set comp = sh.Parent.VBProject.VBComponents(sh.CodeName)
+        Set cm = comp.CodeModule
+        
+        '已有事件则跳过
+        If cm.CountOfLines < 3 Then '空白或只有 Option Explicit
+            lineNum = cm.CreateEventProc("Change", "Worksheet")
+            cm.InsertLines lineNum + 1, _
+                "    Debug.Print ""Changed at "" & Address & "" by "" & Application.UserName"
+        End If
+    Next
+End Sub
+
+'需求：交付文件前需要删除所有源码，只保留功能。
+'一键清空工作簿所有 VBA 代码
+Sub NukeAllCode()
+    Dim comp As Object
+    With ActiveWorkbook.VBProject
+        For Each comp In .VBComponents
+            If comp.Type = 100 Then    '文档类
+                comp.CodeModule.DeleteLines 1, comp.CodeModule.CountOfLines
+            Else
+                .VBComponents.Remove comp
+            End If
+        Next
+    End With
+End Sub

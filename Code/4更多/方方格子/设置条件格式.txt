@@ -1,0 +1,12 @@
+Private Sub SetStyles(ByVal r As Range, ByVal sht3name As String)
+    r.FormatConditions.Delete '删除条件格式
+    r.FormatConditions.add Type:=xlExpression, Formula1:="=ABS(A1-" & sht3name & "!A1)>0.0001"
+    r.FormatConditions(Selection.FormatConditions.Count).SetFirstPriority
+    With r.FormatConditions(1).Interior
+        .PatternColorIndex = xlAutomatic
+        .Color = 255
+        .TintAndShade = 0
+    End With
+    Selection.FormatConditions(1).StopIfTrue = False
+    Set r = Nothing
+End Sub

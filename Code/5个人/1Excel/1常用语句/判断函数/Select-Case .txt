@@ -1,0 +1,19 @@
+﻿Select Case 字符串变量或表达式
+  Case 字符串1    
+    '代码
+  Case 字符串1    
+    '代码
+  Case Else    
+    '代码
+End Select
+
+Select Case 数字变量或表达式
+  Case 1 To 5
+    '代码
+  Case 6, 7, 8
+    '代码
+  Case 9 To 10
+    '代码
+  Case Else    
+    '其它处理
+End Select

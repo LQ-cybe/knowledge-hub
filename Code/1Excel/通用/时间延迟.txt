@@ -1,0 +1,8 @@
+    '自定义延迟函数
+Public Sub Delay(Milliseconds As Long)
+    Dim Start As Double
+    Start = Timer
+    Do While Timer < Start + (Milliseconds / 1000)
+        DoEvents
+    Loop
+End Sub

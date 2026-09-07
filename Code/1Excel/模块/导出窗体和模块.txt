@@ -1,0 +1,44 @@
+﻿'导出所有模块和窗体到桌面指定文件夹（不含工作表的代码）
+Sub OPEN_导出所有VBA组件()
+    Dim vbc As VBComponent
+    Dim strRootPath As String  ' 根文件夹路径
+    Dim strModulePath As String  ' 模块保存路径
+    Dim strFormPath As String    ' 窗体保存路径
+    Dim strFileName As String
+    
+    ' 1. 设置保存路径（桌面→VBA导出文件）
+    strRootPath = CreateObject("WScript.Shell").SpecialFolders("Desktop") & "\VBA导出文件\"
+    strModulePath = strRootPath & "模块\"  ' 模块单独存放
+    strFormPath = strRootPath & "窗体\"    ' 窗体单独存放
+    
+    ' 2. 自动创建文件夹（不存在则创建）
+    Call CreateFolderIfNotExist(strRootPath)
+    Call CreateFolderIfNotExist(strModulePath)
+    Call CreateFolderIfNotExist(strFormPath)
+    
+    ' 3. 遍历所有VBA组件（模块、窗体、类模块等）
+    For Each vbc In ThisWorkbook.VBProject.VBComponents
+        Select Case vbc.Type
+            ' 导出标准模块、类模块（保存为 .bas 文件）
+            Case vbext_ct_StdModule, vbext_ct_ClassModule
+                strFileName = strModulePath & vbc.Name & ".bas"
+                vbc.Export strFileName
+            
+            ' 导出用户窗体（保存为 .frm 主文件 + .frx 资源文件）
+            Case vbext_ct_MSForm
+                strFileName = strFormPath & vbc.Name & ".frm"
+                vbc.Export strFileName  ' 窗体导出会自动生成 .frm 和 .frx（如有图片等资源）
+        End Select
+    Next vbc
+    
+    MsgBox "导出完成！" & vbCrLf & _
+           "模块路径：" & strModulePath & vbCrLf & _
+           "窗体路径：" & strFormPath, vbInformation
+End Sub
+
+'辅助函数：如果文件夹不存在则创建
+Private Sub CreateFolderIfNotExist(strFolderPath As String)
+    If Dir(strFolderPath, vbDirectory) = "" Then
+        MkDir strFolderPath  ' 创建文件夹
+    End If
+End Sub

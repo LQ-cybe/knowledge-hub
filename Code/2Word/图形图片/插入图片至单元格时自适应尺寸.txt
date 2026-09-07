@@ -1,0 +1,10 @@
+'插入图片至Word单元格时自适应尺寸
+Sub DisableResizeTableCells()
+    Dim meekouTable As Table
+    Dim meekouRow As Row
+    Set meekouTable = Selection.Tables(1)
+    meekouTable.AllowAutoFit = False
+    For Each meekouRow In meekouTable.Rows
+        meekouRow.HeightRule = wdRowHeightExactly
+    Next meekouRow
+End Sub

@@ -1,0 +1,21 @@
+'保护工作簿中所有工作表
+Sub ProtectAllSheets()
+   Dim strPW As String
+   Dim wks As Worksheet
+   strPW = "123"
+   For Each wks In Worksheets
+       wks.Protect Password:=strPW
+   Next wks
+   Set wks = Nothing
+End Sub
+
+'撤销工作簿中所有工作表的保护
+Sub UnprotectAllSheets()
+   Dim strPW As String
+   Dim wks As Worksheet
+   strPW = "123"
+   For Each wks In Worksheets
+       wks.Unprotect Password:=strPW
+   Next wks
+   Set wks = Nothing
+End Sub

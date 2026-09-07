@@ -1,0 +1,57 @@
+﻿    '根据表中的表名称来创建查询
+    '创建的查询包含对应表的所有字段（不使用*通配符方式）
+Sub CreateQueriesForTabless()
+    Dim db As DAO.Database
+    Dim tdf As DAO.TableDef
+    Dim qdf As DAO.QueryDef
+    Dim fld As DAO.field
+    Dim fieldList As String
+    Dim rs As DAO.Recordset
+    Dim tableName As String
+    Dim tblName, Zdname As String
+    tblName = "待创建查询的列表"
+    Zdname = "要创建查询的表名称"
+    Set db = CurrentDb
+    
+    ' 从 X 表中获取 Zdname 字段的所有表名称
+    Set rs = db.OpenRecordset("SELECT " & Zdname & "  FROM " & tblName)
+    
+    ' 遍历获取到的表名称
+    Do While Not rs.EOF
+        tableName = rs.Fields(Zdname).Value
+    
+        ' 检查该表是否存在
+        On Error Resume Next
+        Set tdf = db.TableDefs(tableName)
+        If Err.Number = 0 Then
+            On Error GoTo 0
+            fieldList = ""
+            ' 构建字段列表字符串，不使用*号
+            For Each fld In tdf.Fields
+                fieldList = fieldList & fld.Name & ", "
+            Next fld
+            ' 去除最后多余的逗号和空格
+            If Len(fieldList) > 0 Then
+                fieldList = Left(fieldList, Len(fieldList) - 2)
+            End If
+    
+            ' 构建查询SQL语句
+            Dim sql As String
+            sql = "SELECT " & fieldList & " FROM [" & tableName & "]"
+    
+            ' 创建查询对象
+            Set qdf = db.CreateQueryDef("qry_" & tableName)
+            qdf.sql = sql
+        End If
+        On Error GoTo 0
+        rs.MoveNext
+    Loop
+    
+    rs.Close
+    Set rs = Nothing
+    Set qdf = Nothing
+    Set tdf = Nothing
+    Set db = Nothing
+    Application.RefreshDatabaseWindow
+End Sub
+    

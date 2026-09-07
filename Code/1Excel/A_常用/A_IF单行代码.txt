@@ -1,0 +1,1 @@
+﻿If CheckBox1 Then Call VBEtoolbar Else Call RemoveVBEBar

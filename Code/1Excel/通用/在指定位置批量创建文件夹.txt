@@ -1,0 +1,69 @@
+﻿' 函数：在指定位置批量创建文件夹
+Function BatchCreateFolders(folderNames As Variant, basePath As String) As Boolean
+    ' 功能：在指定位置批量创建文件夹
+    ' 参数：
+    '   folderNames: 包含文件夹名称的数组
+    '   basePath: 基础路径，如 "C:\Users\Desktop\插件文件夹\"
+    ' 返回：成功返回True，失败返回False
+    
+    Dim fso As Object
+    Dim folderName As Variant
+    Dim fullPath As String
+    Dim folderExists As Boolean
+    
+    On Error GoTo ErrorHandler
+    
+    ' 创建文件系统对象
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    
+    ' 检查基础路径是否存在
+    If Not fso.folderExists(basePath) Then
+        MsgBox "错误：基础路径不存在！" & vbCrLf & basePath, vbExclamation
+        BatchCreateFolders = False
+        Exit Function
+    End If
+    
+    ' 确保基础路径以反斜杠结尾
+    If Right(basePath, 1) <> "\" Then
+        basePath = basePath & "\"
+    End If
+    
+    ' 遍历数组并创建文件夹
+    For Each folderName In folderNames
+        ' 过滤非法字符
+        folderName = Replace(folderName, "/", "")
+        folderName = Replace(folderName, "\", "")
+        folderName = Replace(folderName, ":", "")
+        folderName = Replace(folderName, "*", "")
+        folderName = Replace(folderName, "?", "")
+        folderName = Replace(folderName, """", "")
+        folderName = Replace(folderName, "<", "")
+        folderName = Replace(folderName, ">", "")
+        folderName = Replace(folderName, "|", "")
+        
+        ' 跳过空名称
+        If Trim(folderName) = "" Then
+            GoTo NextFolder
+        End If
+        
+        ' 构建完整路径
+        fullPath = basePath & folderName
+        
+        ' 检查文件夹是否已存在
+        folderExists = fso.folderExists(fullPath)
+        
+        ' 创建文件夹（如果不存在）
+        If Not folderExists Then
+            fso.CreateFolder fullPath
+        End If
+        
+NextFolder:
+    Next folderName
+    
+    BatchCreateFolders = True
+    Exit Function
+    
+ErrorHandler:
+    MsgBox "创建文件夹时出错: " & Err.Description, vbCritical
+    BatchCreateFolders = False
+End Function

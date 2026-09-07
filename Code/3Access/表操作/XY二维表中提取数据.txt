@@ -1,0 +1,80 @@
+    Public tbl_BName As String
+Function LookupDataByYearAndMonth(targetYear As Integer, targetMonth As Integer) As Variant
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim strSQL As String
+    Dim monthField As String
+    '根据月份确定字段名
+    Select Case targetMonth
+        Case 1
+            monthField = "Jan"
+        Case 2
+            monthField = "Feb"
+        Case 3
+            monthField = "Mar"
+        Case 4
+            monthField = "Apr"
+        Case 5
+            monthField = "May"
+        Case 6
+            monthField = "Jun"
+        Case 7
+            monthField = "Jul"
+        Case 8
+            monthField = "Aug"
+        Case 9
+            monthField = "Sep"
+        Case 10
+            monthField = "Oct"
+        Case 11
+            monthField = "Nov"
+        Case 12
+            monthField = "Dec"
+        Case Else
+            LookupDataByYearAndMonth = Null
+            Exit Function
+    End Select
+    '构建SQL查询语句，假设年份是文本类型
+    strSQL = "SELECT " & monthField & " FROM  " & tbl_BName & "  WHERE 年份 = '" & targetYear & "'"
+    On Error Resume Next                                       ' 开启错误处理
+    Set db = CurrentDb
+    Set rs = db.OpenRecordset(strSQL)
+    If Err.Number <> 0 Then
+        ' 可能是年份字段不是文本类型，尝试作为数值类型处理
+        strSQL = "SELECT " & monthField & " FROM  " & tbl_BNname & "  WHERE 年份 = " & targetYear
+        Set rs = db.OpenRecordset(strSQL)
+        If Err.Number <> 0 Then
+            LookupDataByYearAndMonth = Null
+            Exit Function
+        End If
+    End If
+    On Error GoTo 0                                            ' 关闭错误处理
+    If Not rs.EOF Then
+        On Error Resume Next                                   ' 再次开启错误处理，防止字段不存在
+        LookupDataByYearAndMonth = rs.Fields(monthField).value
+        If Err.Number <> 0 Then
+            LookupDataByYearAndMonth = Null
+        End If
+        On Error GoTo 0                                        ' 关闭错误处理
+    Else
+        LookupDataByYearAndMonth = Null
+    End If
+    rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+End Function
+    '查找字段A对应B字段的值
+Sub TestLookupFunction()
+    Dim result As Variant
+    Dim inputYear As Integer
+    Dim inputMonth As Integer
+    inputYear = 2025                                           '定义要查找的年份
+    inputMonth = 3                                             '定义要查找的月份
+    tbl_BName = "tbl_年月周数对照表"            '定义表名称
+    result = LookupDataByYearAndMonth(inputYear, inputMonth)
+    If IsNull(result) Then
+        MsgBox "未找到符合条件的数据。"
+    Else
+        MsgBox "找到的数据为：" & result
+    End If
+End Sub

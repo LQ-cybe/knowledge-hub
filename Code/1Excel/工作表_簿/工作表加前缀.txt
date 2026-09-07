@@ -1,0 +1,14 @@
+'name=批量工作表加前缀
+'officetype=excel,et
+'category=工作簿
+'description=为所有工作表名称批量添加指定前缀
+
+Public Sub AddSheetPrefix()
+    Dim prefix As String, sh As Worksheet
+    prefix = InputBox("输入要添加的前缀：", "批量加前缀")
+    If prefix = "" Then Exit Sub
+    For Each sh In ThisWorkbook.Worksheets
+        sh.Name = prefix & sh.Name
+    Next sh
+    MsgBox "已完成", vbInformation
+End Sub

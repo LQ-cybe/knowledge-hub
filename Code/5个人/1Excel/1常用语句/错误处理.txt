@@ -1,0 +1,12 @@
+﻿    '    On Error Resume Next
+    '    Sheets("目录").Select
+    '    If Err.Number <> 0 Then
+    '        MsgBox "未找到'目录'工作表！", vbExclamation
+    '        Exit Sub
+    '    End If
+    '    On Error GoTo 0
+    ' 清空原有内容（保留第1行标题）
+
+
+
+

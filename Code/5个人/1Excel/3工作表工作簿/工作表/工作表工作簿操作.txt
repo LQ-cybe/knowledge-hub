@@ -1,0 +1,74 @@
+﻿'工作表的选择
+Sheet1.Select '选择工作表1
+Sheets(3).Select '选择第三个工作表
+Sheets("一月").Select '选择名称为一月的工作表
+
+'插入工作表
+Sheets.Add '在当前工作表前面插入新的工作表
+Sheets.Add , after:=Sheet3 '在sheet3后面插入新的工作表
+
+'在sheet3后面插入100个新的工作表
+Dim i As Integer
+For i = 1 To 100
+    Sheets.Add , after:=Sheet3
+Next
+
+'统计工作簿中工作表的数量
+Sheet5.Range("a1") = Sheets.Count   '在工作表的A1单元格中输出工作簿中所有工作表的数量
+Sheet5.Range("a1") = Sheet1.Name    '在工作表的A1单元格中输出I作表1的名称
+Sheet1.Name = "汇总"                '将工作表1的名称改为汇总
+
+'使其总是在最后张工作表后面插入新表
+Sheets.Add , after:=Sheets(Sheets.Count)
+
+'创建十二个月的工作表
+Dim i As Integer
+For i = 1 To 12
+Sheets.Add , after:=Sheets(Sheets.Count)  '这里的Sheets.Count表示插入前的工作表数
+Sheets(Sheets.Count).Name = i & "月"   '这里的Sheets.Count表示插入后的工作表数，与上句相差1
+Next
+
+Excel.Application.DisplayAlerts = False '关闭Excel 的报错机制
+Sheet3.Delete  '删除工作表3
+Excel.Application.DisplayAlerts = True   '开启Excel 的报错机制
+
+'插入100张工作表
+Sheets.Add , Count:=100
+
+'删除100张工作表
+Dim i As Integer
+Excel.Application.DisplayAlerts = False
+For i = 1 To 100
+Sheets(1).Delete    '总是删除左起第一 张工作表,这里也可以用step -1 倒序删除
+Next
+Excel.Application.DisplayAlerts = True
+
+Sheet1.Copy , after:=Sheets(2)    '复制工作表，并且将其置于左起第二 张工作表之后
+Sheet1.Copy , after:=Sheets(Sheets.Count) '复制工作表，并且始终将其置在最后端
+
+'操作工作簿
+Sub open_file()
+'关闭错误提示框
+Application.DisplayAlerts = False
+'关闭屏幕更新
+Application.ScreenUpdating = False
+'打开路径文件，文件名需要填写完整
+Workbooks.Open Filename:=("E:\Excel_date\case.xlsx")
+'给活动工作簿的表1添加值
+ActiveWorkbook.Sheets(1).Range("A1") = "到此一游o"
+'保存
+ActiveWorkbook.Save
+'关闭
+ActiveWorkbook.Close
+Application.DisplayAlerts = True
+End Sub
+
+Sub create_file()
+'创建新的工作簿
+Workbooks.Add
+ActiveWorkbook.Sheets(1).Range("A1") = "测试内容"
+'文件另存为
+ActiveWorkbook.SaveAs Filename:=("E:\Excel_date\caeate.xlsx")
+'关闭
+ActiveWorkbook.Close
+End Sub

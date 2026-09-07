@@ -1,0 +1,52 @@
+﻿'导出2000以内的内置命令
+Sub ListCommonBuiltInControls()
+    Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    Application.AskToUpdateLinks = False
+    Dim ws As Worksheet
+    Dim cb As CommandBar
+    Dim ctl As CommandBarControl
+    Dim i As Long
+    Dim dict As Object
+    Set dict = CreateObject("Scripting.Dictionary")
+    
+    On Error Resume Next
+    Set ws = ThisWorkbook.Worksheets("常用内置命令")
+    On Error GoTo 0
+    If ws Is Nothing Then
+        Set ws = ThisWorkbook.Worksheets.Add
+        ws.Name = "常用内置命令"
+    End If
+    
+    ws.Cells.Clear
+    ws.Range("A1:C1") = Array("ID", "名称", "FaceId")
+    ws.Range("A1:C1").Font.Bold = True
+    i = 2
+    
+    For Each cb In Application.CommandBars
+        For Each ctl In cb.Controls
+            If ctl.id > 0 And ctl.id < 2000 And ctl.Type = msoControlButton Then
+                If Not dict.Exists(CStr(ctl.id)) Then
+                    dict(CStr(ctl.id)) = True
+                    ws.Cells(i, 1) = ctl.id
+                    ws.Cells(i, 2) = Replace(ctl.Caption, "&", "")
+                    ws.Cells(i, 3) = ctl.FaceId
+                    i = i + 1
+                End If
+            End If
+        Next
+    Next
+    
+    With ws.Sort
+        .SortFields.Clear
+        .SortFields.Add key:=ws.Range("A2:A" & i), Order:=xlAscending
+        .SetRange ws.Range("A1:C" & i)
+        .Header = xlYes
+        .Apply
+    End With
+    
+    MsgBox "常用内置命令导出完成：" & (i - 2) & " 个", vbInformation
+            Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+    Application.AskToUpdateLinks = True
+End Sub

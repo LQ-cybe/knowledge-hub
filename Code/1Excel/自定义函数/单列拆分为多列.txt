@@ -1,0 +1,60 @@
+﻿    '主要功能:将A列的所有数据除标题外拆分成指定的列数N，并依次写入B、C等列中
+    '自动识别数据行数
+Sub SplitDataToFourColumns()
+    Dim lastRow As Long
+    Dim i As Long, j As Long
+    Dim arr() As Variant
+    Dim rowCount As Long
+    Dim colCount As Long
+    Dim cfls As Variant
+    '获取A列最后一个有数据的行号（从第二行开始算有数据的行，跳过标题行）
+    lastRow = Cells(Rows.Count, 1).End(xlUp).Row
+    rowCount = lastRow - 1                                     '实际要处理的数据行数，减去标题行那1行
+    '将A列数据（除标题行）读取到数组中
+    ReDim arr(1 To rowCount, 1 To 1)
+    For i = 2 To lastRow
+        arr(i - 1, 1) = Cells(i, 1).Value
+    Next i
+    '弹出输入框让用户输入要拆分到的列数N
+    cfls = InputBox("请输入要拆分到的列数N：")
+    If Not IsNumeric(cfls) Then
+        MsgBox "输入的不是有效的数字，请核对后重新操作！"
+        Exit Sub
+    End If
+    n = CInt(cfls)
+    '计算平均拆分后每列的行数
+    colCount = rowCount \ cfls
+    If rowCount Mod cfls > 0 Then
+        colCount = colCount + 1
+    End If
+ 
+    '将数据拆分到B、C、D、E四列（从B2单元格开始）
+    For j = 0 To cfls - 1
+        For i = 1 To colCount
+            If (i + j * colCount) <= rowCount Then
+                Cells(1 + i, 2 + j).Value = arr(i + j * colCount, 1)
+            End If
+        Next i
+    Next j
+    LinkFirstAndLastCellValueInBColumn cfls
+    '    LinkFirstAndLastCellValueInBColumn
+End Sub
+ 
+    '对拆分后的数据的首尾提取值,并写在每列数据的末尾处
+Sub LinkFirstAndLastCellValueInBColumn(ByVal y As Integer)
+    For i = 2 To y + 1
+        Dim lastRow As Long
+        Dim firstValue As String
+        Dim lastValue As String
+        Dim lastRowbt As Long
+        '获取B列最后一个有数据的行号（跳过标题行，从第二行开始算）
+        lastRow = Cells(Rows.Count, i).End(xlUp).Row
+        '获取B列除标题行外的第一行单元格的值
+        firstValue = Cells(2, i).Value
+        '获取B列最后一行单元格的值
+        lastValue = Cells(lastRow, i).Value
+        lastRowbt = Cells(Rows.Count, i).End(xlUp).Row
+        '    将两个值连接起来并赋值给B1单元格
+        Cells(lastRowbt + 1, i).Value = firstValue & "~" & lastValue
+    Next i
+End Sub

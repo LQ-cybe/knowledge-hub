@@ -1,0 +1,11 @@
+'按颜色求和
+'Csum(求和区域,含颜色单元格）
+Function CSum(Rg1 As Range, Rg2 As Range)
+    Dim rg_ID As Range, rg_sum As Long
+    For Each rg_ID In Rg1
+        If rg_ID.Interior.ColorIndex = Rg2.Interior.ColorIndex Then
+        rg_sum = rg_sum + IIf(IsNumeric(rg_ID.Value), rg_ID.Value, 0)
+        End If
+    Next
+    CSum = rg_sum
+End Function

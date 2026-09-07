@@ -1,0 +1,154 @@
+'按工作表名称拆分文件保存
+Sub EachShtToWorkbook()
+    Dim sht As Worksheet
+    Dim strPath As String, strFileName As String, strFullPath As String
+    Dim fileFormat As XlFileFormat
+    Dim formatExt As String, formatDesc As String
+    Dim selectFormat As Variant
+    Dim successCount As Long, failCount As Long
+    Dim invalidChar As String
+    
+    '==================== 1. 选择保存文件夹 ====================
+    With Application.FileDialog(msoFileDialogFolderPicker)
+        .Title = "选择文件保存根目录"
+        If .Show <> -1 Then
+            MsgBox "已取消操作", vbInformation, "提示"
+            Exit Sub
+        End If
+        strPath = .SelectedItems(1)
+    End With
+    
+    '补全路径末尾反斜杠
+    If Right(strPath, 1) <> "\" Then strPath = strPath & "\"
+    
+    '==================== 2. 选择保存文件格式 ====================
+    '格式选项，可根据需要增删
+    Dim formatList As Variant
+    formatList = Array( _
+        "1. Excel 工作簿 (*.xlsx) - 无宏", _
+        "2. Excel 启用宏工作簿 (*.xlsm) - 带宏", _
+        "3. Excel 97-2003 工作簿 (*.xls) - 旧格式", _
+        "4. PDF 文档 (*.pdf)", _
+        "5. 单个网页文件 (*.mht)", _
+        "6. XML 电子表格 2003 (*.xml)", _
+        "7. CSV 逗号分隔文件 (*.csv)")
+    
+    '生成选择提示文本
+    Dim promptText As String
+    promptText = "请选择保存格式（输入数字1-7）：" & vbCrLf & vbCrLf
+    For i = LBound(formatList) To UBound(formatList)
+        promptText = promptText & formatList(i) & vbCrLf
+    Next i
+    
+    '获取用户选择
+    selectFormat = InputBox(promptText, "选择保存格式", "1")
+    If selectFormat = False Then Exit Sub '点击取消退出
+    
+    '校验输入是否为有效数字
+    If Not IsNumeric(selectFormat) Or selectFormat < 1 Or selectFormat > 7 Then
+        MsgBox "输入无效，请输入1-7之间的数字", vbExclamation, "错误"
+        Exit Sub
+    End If
+    
+    '根据选择赋值格式常量、扩展名、描述
+    Select Case selectFormat
+        Case 1
+            fileFormat = xlOpenXMLWorkbook 'xlsx
+            formatExt = ".xlsx"
+            formatDesc = "Excel无宏工作簿"
+        Case 2
+            fileFormat = xlOpenXMLWorkbookMacroEnabled 'xlsm
+            formatExt = ".xlsm"
+            formatDesc = "Excel启用宏工作簿"
+        Case 3
+            fileFormat = xlExcel8 'xls 97-2003
+            formatExt = ".xls"
+            formatDesc = "Excel旧版工作簿"
+        Case 4
+            fileFormat = xlTypePDF 'PDF（专项导出，不使用SaveAs）
+            formatExt = ".pdf"
+            formatDesc = "PDF文档"
+        Case 5
+            fileFormat = xlSingleFileWebPage 'mht
+            formatExt = ".mht"
+            formatDesc = "单个网页文件"
+        Case 6
+            fileFormat = xlXMLSpreadsheet 'xml
+            formatExt = ".xml"
+            formatDesc = "XML电子表格"
+        Case 7
+            fileFormat = xlCSV 'csv
+            formatExt = ".csv"
+            formatDesc = "CSV逗号分隔文件"
+    End Select
+    
+    '==================== 3. 初始化环境 ====================
+    Application.DisplayAlerts = False '关闭覆盖确认弹窗
+    Application.ScreenUpdating = False '关闭屏幕刷新
+    successCount = 0
+    failCount = 0
+    invalidChar = "\/:*?""<>|" 'Windows文件名非法字符
+    
+    '==================== 4. 遍历工作表批量保存 ====================
+    For Each sht In ActiveWorkbook.Worksheets
+        On Error GoTo ErrorHandler '单个工作表出错不中断整体循环
+        
+        '4.1 清理工作表名，生成合法文件名
+        strFileName = sht.Name
+        '替换非法字符为下划线
+        For i = 1 To Len(invalidChar)
+            strFileName = Replace(strFileName, Mid(invalidChar, i, 1), "_")
+        Next i
+        '拼接完整路径
+        strFullPath = strPath & strFileName & formatExt
+        
+        '4.2 复制工作表到新工作簿
+        sht.Copy '复制后自动新建仅包含该工作表的工作簿
+        
+        '4.3 按格式保存文件
+        If selectFormat = 4 Then
+            'PDF格式：专项导出
+            ActiveWorkbook.ExportAsFixedFormat _
+                Type:=xlTypePDF, _
+                Filename:=strFullPath, _
+                Quality:=xlQualityStandard
+            ActiveWorkbook.Close SaveChanges:=False 'PDF导出后直接关闭，无需保存
+        Else
+            'Excel/网页/XML/CSV格式：SaveAs保存
+            ActiveWorkbook.SaveAs _
+                Filename:=strFullPath, _
+                fileFormat:=fileFormat
+            ActiveWorkbook.Close SaveChanges:=True '保存后关闭
+        End If
+        
+        '4.4 成功计数
+        successCount = successCount + 1
+        GoTo NextSheet
+        
+ErrorHandler:
+        '错误计数+提示
+        failCount = failCount + 1
+        MsgBox "工作表【" & sht.Name & "】保存失败：" & Err.Description, vbCritical, "错误"
+        '关闭残留的新工作簿
+        If Not ActiveWorkbook Is ThisWorkbook Then
+            ActiveWorkbook.Close SaveChanges:=False
+        End If
+        
+NextSheet:
+        On Error GoTo 0
+    Next sht
+    
+    '==================== 5. 恢复环境+完成提示 ====================
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+    
+    '结果汇总提示
+    Dim resultMsg As String
+    resultMsg = "处理完成！" & vbCrLf & vbCrLf
+    resultMsg = resultMsg & "成功保存：" & successCount & " 个文件" & vbCrLf
+    resultMsg = resultMsg & "失败跳过：" & failCount & " 个文件" & vbCrLf
+    resultMsg = resultMsg & "保存格式：" & formatDesc & vbCrLf
+    resultMsg = resultMsg & "保存路径：" & strPath
+    
+    MsgBox resultMsg, vbInformation, "处理完成"
+End Sub

@@ -1,0 +1,10 @@
+﻿'隐藏工作表零值
+Sub HideWorksheetZeroValue()
+    Dim oWKView As WorksheetView
+    Dim oWK As Worksheet
+    Set oWK = Excel.ActiveSheet
+    Dim oWnd As Window
+    Set oWnd = Excel.ActiveWindow
+    '隐藏零值
+    oWnd.DisplayZeros = False
+End Sub

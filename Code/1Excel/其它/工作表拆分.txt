@@ -1,0 +1,19 @@
+Sub 分拆工作表()
+    Application.ScreenUpdating = False '//关闭屏幕刷新
+    Application.DisplayAlerts = False '//关闭系统提示
+    Application.EnableEvents = False  '//禁止触发其他事件
+    Application.StatusBar = True   '关闭系统状态条
+    Dim sht As Worksheet
+    Dim MyBook As Workbook
+    Set MyBook = ActiveWorkbook
+    For Each sht In MyBook.Sheets
+        sht.Copy
+        ActiveWorkbook.SaveAs Filename:=MyBook.Path & "\" & sht.Name, FileFormat:=xlNormal '将工作簿另存为EXCEL默认格式
+        ActiveWorkbook.Close
+    Next
+    Application.StatusBar = False   '恢复系统状态条
+    Application.EnableEvents = True  '//  '//恢复触发其他事件
+    Application.ScreenUpdating = True '//恢复屏幕刷新
+    Application.DisplayAlerts = True '//恢复系统提示
+    MsgBox "文件已经被分拆完毕!"
+End Sub

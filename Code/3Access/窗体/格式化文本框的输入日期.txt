@@ -1,0 +1,54 @@
+﻿'格式化文本框的日期，并转换成标准的日期格式
+    Dim dateValue As Date
+    inputStr = Me.RQM.Value                                    ' 获取文本框内容，假设文本框名为RQM
+    
+    If InStr(inputStr, "-") > 0 Then
+        Dim arr() As String
+        arr = Split(inputStr, "-")
+    
+        If UBound(arr) = 1 Then
+            Dim part1 As Integer
+            Dim part2 As Integer
+            part1 = Val(arr(0))
+            part2 = Val(arr(1))
+    
+            ' 判断输入是年 - 月 还是 月 - 日
+            If part1 > 12 Then                                 ' 假设大于 12 的是年份
+                If Len(CStr(part1)) = 2 Then
+                    part1 = 2000 + part1
+                End If
+                If part2 >= 1 And part2 <= 12 Then
+                    dateValue = CDate(part1 & "-" & part2 & "-01")
+                Else
+                    MsgBox "输入的月份无效，请输入 1 - 12 之间的数字。", vbExclamation, "错误提示"
+                    Exit Sub
+                End If
+            Else                                               ' 假设是 月 - 日
+                If part1 >= 1 And part1 <= 12 Then
+                    Dim currentYear As Integer
+                    currentYear = 2025                         ' 可以根据实际情况动态获取年份
+                    If part2 >= 1 And part2 <= 31 Then
+                        On Error Resume Next
+                        dateValue = CDate(currentYear & "-" & part1 & "-" & part2)
+                        If Err.Number <> 0 Then
+                            MsgBox "输入的日期无效，请输入有效的日期。", vbExclamation, "错误提示"
+                            Exit Sub
+                        End If
+                        On Error GoTo 0
+                    Else
+                        MsgBox "输入的日期无效，请输入 1 - 31 之间的数字。", vbExclamation, "错误提示"
+                        Exit Sub
+                    End If
+                Else
+                    MsgBox "输入的月份无效，请输入 1 - 12 之间的数字。", vbExclamation, "错误提示"
+                    Exit Sub
+                End If
+            End If
+            Me.RQM.Value = Format(dateValue, "yyyy - mm - dd")
+        Else
+            MsgBox "输入格式不正确，请使用 年 - 月 或 月 - 日 的格式。", vbExclamation, "错误提示"
+        End If
+    Else
+        MsgBox "输入格式不正确，请使用 年 - 月 或 月 - 日 的格式。", vbExclamation, "错误提示"
+    End If
+

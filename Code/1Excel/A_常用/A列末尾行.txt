@@ -1,0 +1,2 @@
+'A列末尾行
+Application.CountA(ActiveSheet.Range("A:A"))

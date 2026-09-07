@@ -1,0 +1,36 @@
+Sub word表格格式()
+    Dim table As table
+    Dim cell As cell
+    Dim doc As Document
+    Set doc = ActiveDocument
+    ' 遍历文档中的所有表格
+    For Each table In doc.Tables
+        ' 设置表格行的高度
+        'table.Rows.HeightRule = wdRowHeightExactly
+        'table.Rows.Height = CentimetersToPoints(0.7) ' 将厘米转换为磅，1厘米约等于28.35磅
+        table.Range.Font.Size = 10.5
+        table.Range.Font.Name = "宋体"
+        With table.Range.ParagraphFormat
+            .SpaceBefore = 0
+            .SpaceAfter = 0
+            .LineSpacingRule = wdLineSpaceSingle
+        End With
+        ' 遍历表格中的所有单元格
+        '        For Each cell In table.Range.Cells
+        '            DoEvents
+        '            ' 设置单元格内文本的字体大小
+        '            cell.Range.Font.Size = 10 ' 五号字体大小通常为10磅
+        '
+        '            ' 设置段落格式
+        '            With cell.Range.ParagraphFormat
+        '                .SpaceBefore = 0
+        '                .SpaceAfter = 0
+        '                .LineSpacingRule = wdLineSpaceSingle
+        '            End With
+        '        Next cell
+    Next table
+End Sub
+Function CentimetersToPoints(cm As Single) As Single
+' 将厘米转换为磅
+    CentimetersToPoints = cm * 28.35
+End Function

@@ -1,0 +1,3 @@
+﻿MsgBox "延时开始，期间可以操作其他功能", vbInformation
+Wait 6
+MsgBox "延时结束", vbInformation

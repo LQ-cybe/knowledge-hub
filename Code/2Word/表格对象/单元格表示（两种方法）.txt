@@ -1,0 +1,14 @@
+Sub 第一种写入方法()
+    Dim t As Table
+        Set t = ActiveDocument.Tables(1)
+        t.Cell(1, 1).Range = 1
+End Sub
+
+Sub 第二种写入方法()
+    Set t = ActiveDocument.Tables(1).Range
+    For i = 1 To t.Cells.Count
+        t.Cells(i).Range = i
+    Next
+EndSub
+
+

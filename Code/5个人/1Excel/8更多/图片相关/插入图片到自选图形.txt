@@ -1,0 +1,13 @@
+'//自选图形插入图片
+'方法一
+        Set rng = Cells(i + 1, j).Resize(15, 6)
+        With rng
+            ML = .Left
+            MT = .Top
+            MW = .Width
+            MH = .Height
+            ActiveSheet.Shapes.AddShape(msoShapeRectangle, ML, MT, MW, MH).Select
+            Selection.ShapeRange.Fill.UserPicture _
+                ThisWorkbook.Path & "" & nm & ".jpg"
+            Selection.ShapeRange.Line.Visible = msoFalse
+        End With	

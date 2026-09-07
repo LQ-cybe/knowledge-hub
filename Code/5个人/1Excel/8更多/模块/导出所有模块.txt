@@ -1,0 +1,35 @@
+'把当前工作簿的模块导出到文件夹中
+Sub ExportAllModules()
+    Dim wb As Workbook
+    Dim comp As VBComponent
+    Dim exportPath As String
+    
+   '设置要导出到的路径，这里使用桌面路径，可按需修改
+    exportPath = Environ$("USERPROFILE") & "\Desktop\ExportedModules"
+    
+   '如果导出路径不存在，则创建它
+    If Dir(exportPath, vbDirectory) = "" Then
+        MkDir exportPath
+    End If
+    
+   '设置当前工作簿
+    Set wb = ThisWorkbook
+    
+    For Each comp In wb.VBProject.VBComponents
+        Dim filePath As String
+        filePath = exportPath & "\" & comp.Name
+        Select Case comp.Type
+            Case vbext_ct_StdModule
+                filePath = filePath & ".bas"
+            Case vbext_ct_ClassModule
+                filePath = filePath & ".cls"
+            Case vbext_ct_MSForm
+                filePath = filePath & ".frm"
+        End Select
+        comp.Export filePath
+    Next comp
+    
+    MsgBox "所有模块已成功导出到指定路径。"
+    Set comp = Nothing
+    Set wb = Nothing
+End Sub

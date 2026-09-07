@@ -1,0 +1,34 @@
+﻿'获取tbl_单列流水码表中的A字段的第一行和最后一行
+Sub GetFirstAndLastDataWithDAO()
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim firstData As Variant
+    Dim lastData As Variant
+    
+   '打开数据库
+    Set db = CurrentDb
+   '打开表的记录集
+    Set rs = db.OpenRecordset("tbl_单列流水码", dbOpenDynaset)
+    
+    If Not rs.EOF Then
+       '获取第一条数据
+        rs.MoveFirst
+        firstData = rs!A
+        
+       '获取最后一条数据
+        rs.MoveLast
+        lastData = rs!A
+    End If
+    
+   '关闭记录集和数据库
+    rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    
+   '输出结果（这里以消息框为例）
+    If IsEmpty(firstData) Or IsEmpty(lastData) Then
+        MsgBox "表中没有数据"
+    Else
+        MsgBox "第一条数据: " & firstData & vbNewLine & "最后一条数据: " & lastData
+    End If
+End Sub

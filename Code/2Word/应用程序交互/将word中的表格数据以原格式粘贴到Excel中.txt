@@ -1,0 +1,58 @@
+Sub word表格复制到excel单元格不拆分()	'原格式粘贴到Excel中
+    ActiveDocument.Tables(1).Select '当前打开的word文档，选择它的第一个表，程序目前只能处理一个表
+    Selection.Copy '拷贝当前文档中选中的这个表的所有内容（包括图片）
+    Selection.MoveRight 1, 1 '将选定内容向右移动，作为取消选定用
+    'ActiveDocument.Close '可以不用，关掉当前的word
+    Dim wordApp As Word.Application '将wordApp变量定义为Word.Application类型，
+    Set wordApp = New Word.Application 'Application 对象代表 Microsoft Word 应用程序，新建一个word应用程序，名字叫做wordApp，
+    With wordApp
+        .Visible = False               '这个wordApp应用程序不可见。
+        .Application.StatusBar = "正在创建word。。。" '如果这个wordApp应用程序可见，那么在它的状态栏中会出现’正在创建word‘字样，似乎从2010起已不再支持此属性。
+        .Documents.Add '根据 Normal 模板新建一篇文档,返回一个 Document 对象
+        .ActiveDocument.Paragraphs(1).Range.Paste '新建文档处于活动状态，range代表首段的全部内容，已选定，并粘贴刚才的复制的表格。
+    End With
+    With wordApp.ActiveDocument.Content.Find '这里不能缺省wordApp，否则会报错，代表的意思是开始查找。
+        .Forward = False          '不要只向前搜索，也可以搜索完后回头搜索
+        .Wrap = wdFindContinue             '到达文档末尾时，继续从文档开头进行搜索。
+        .Text = Chr(13)             '搜索回车符，这个是关键，正是因为回车符在excel复制后会变新的单元格，所以我们要找到它。
+        .Replacement.Text = "い" '替换成一个不常用的字符。
+        .Execute Replace:=wdReplaceAll   '执行时全部都要替换
+        wordApp.ActiveDocument.Tables(1).Select '替换后选择这个表格。wordApp.ActiveDocument.不能省略。
+    End With
+    wordApp.ActiveDocument.ActiveWindow.Selection.Copy '拷贝这个替换后表格的内容。这里注意，wordApp.ActiveDocument.ActiveWindow中一定要加一个ActiveWindow，代表活动窗口，有Selection属性
+    '以下是在word中创建一个excel表格，需要用到CreateObject("Excel.Application")，还需要用add方法新建一个工作簿 叫excelWB
+    Dim excelApp
+    Dim excelWB As Object
+    Dim savePath
+    Dim saveName As String
+    Set excelApp = CreateObject("Excel.Application")
+    Set excelWB = excelApp.Workbooks.Add
+    '选择A1单元格，粘贴刚才从word中复制的内容
+    excelWB.Worksheets("Sheet1").Range("A1").Select
+    excelWB.Worksheets("Sheet1").Paste
+    '定义整数型，获得当前复制的表格的列宽数
+    Dim a As Integer
+    Dim b As Integer
+    a = excelWB.Worksheets("Sheet1").UsedRange.Rows.Count
+    b = excelWB.Worksheets("Sheet1").UsedRange.Columns.Count
+    '测试的时候用，不要了
+    'MsgBox "表格的行有" & a & "行，列有" & b & "列。"
+    'MsgBox "当前活动的工作簿" & excelWB.ActiveWorkbook.Name
+    'MsgBox "当前活动的工作表" & excelWB.ActiveSheet.Name
+    '下面这一行比较复杂，主要是指引用这块，excel工作簿（excelwb，这里不需要到应用这个层面，比word要好，应该只有一个应用吧，而且wordapp是没有定义下面的document变量的）.所选的区域，里面的cell也需要完整引用。选择这块有内容区域
+    excelWB.Worksheets("Sheet1").Range(excelWB.Worksheets("Sheet1").Cells(1, 1), excelWB.Worksheets("Sheet1").Cells(a, b)).Select
+    '开始遍历每一个单元格，一旦发现值是之前word里面的那个"い"，就把"い"给替换掉，替换成Chr(10)，这个是excel专有的换行符。InStr是找字符串，如果找的到就返回其在原字符串中的位置，否则就返回0
+    For Each c In excelWB.Worksheets("Sheet1").Range(excelWB.Worksheets("Sheet1").Cells(1, 1), excelWB.Worksheets("Sheet1").Cells(a, b))
+        If InStr(c.Value, "い") > 0 Then
+            c.Value = Replace(c.Value, "い", Chr(10))
+        End If
+    Next
+    '不断提醒用户保存文件，直到用户键入文件名为止。
+    Do
+        FName = excelApp.GetSaveAsFilename(fileFilter:="Excel Files (*.xlsx), *.xlsx", Title:="请输入转换后要保存的Excel文件名。。。")
+    Loop Until FName <> False
+    excelWB.SaveAs FileName:=FName  '文件保存的位置。
+    excelApp.Quit
+    wordApp.Quit (wdDoNotSaveChanges) 'word退出，不保存新建的文件。
+End Sub
+

@@ -1,0 +1,10 @@
+Rem Find
+Rem Range.Find(what,After,LookIn,LookAt,Searchorder,SearchDirection,MatchCase,MatchByte,SearchFormat)
+
+Rem what 搜索值
+Rem After 起始位置，省略为range左上角
+Rem Lookin xlValues、xlFormulas或者xlComments，默认值为xlFormulas
+Rem LookAt xlWhole xlPart
+Rem SearchOrder xlByROws 或 xlByColumns
+Rem SearchDirection 向前查找（xlPrevious）还是向后查找（xlNext）
+Rem MatchCase true，则搜索区分大小写。默认值为False

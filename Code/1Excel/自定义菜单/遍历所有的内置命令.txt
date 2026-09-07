@@ -1,0 +1,60 @@
+﻿'遍历Excel所有的内置命令
+Sub ListAllBuiltInControls()
+    Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    Application.AskToUpdateLinks = False
+
+    Dim ws As Worksheet
+    Dim cb As CommandBar
+    Dim ctl As CommandBarControl
+    Dim i As Long
+    Dim dict As Object
+    Set dict = CreateObject("Scripting.Dictionary")
+    
+    ' 创建/使用工作表
+    On Error Resume Next
+    Set ws = ThisWorkbook.Worksheets("内置命令列表")
+    On Error GoTo 0
+    If ws Is Nothing Then
+        Set ws = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count))
+        ws.Name = "内置命令列表"
+    End If
+    
+    ws.Cells.Clear
+    ws.Range("A1:E1").Value = Array("ID", "标题", "类型", "所在菜单", "FaceId")
+    ws.Range("A1:E1").Font.Bold = True
+    
+    i = 2
+    
+    ' 遍历所有菜单
+    For Each cb In Application.CommandBars
+        For Each ctl In cb.Controls
+            If ctl.id > 1 And ctl.id < 60000 Then  ' 过滤无效ID
+                If Not dict.Exists(CStr(ctl.id)) Then
+                    dict(CStr(ctl.id)) = True
+                    
+                    ws.Cells(i, 1) = ctl.id
+                    ws.Cells(i, 2) = Replace(ctl.Caption, "&", "") ' 去掉快捷键&
+                    ws.Cells(i, 3) = TypeName(ctl)
+                    ws.Cells(i, 4) = cb.Name
+'                    ws.Cells(i, 5) = ctl.FaceId
+                    i = i + 1
+                End If
+            End If
+        Next
+    Next
+    
+    ' 按ID排序
+    With ws.Sort
+        .SortFields.Clear
+        .SortFields.Add key:=ws.Range("A2:A" & i), Order:=xlAscending
+        .SetRange ws.Range("A1:E" & i)
+        .Header = xlYes
+        .Apply
+    End With
+    
+    MsgBox "导出完成！共 " & (i - 2) & " 个内置命令", vbInformation
+        Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+    Application.AskToUpdateLinks = True
+End Sub

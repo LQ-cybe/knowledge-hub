@@ -1,0 +1,10 @@
+﻿Sub 拆分工作表()
+    Dim b As Worksheet
+    Excel.Application.ScreenUpdating = False
+    For Each b In Sheets
+        b.Copy
+        Excel.ActiveWorkbook.SaveAs Filename:=ThisWorkbook.Path & "\" & b.Name & ".xlsx"
+        Excel.ActiveWorkbook.Close
+    Next
+    Excel.Application.ScreenUpdating = True
+End Sub

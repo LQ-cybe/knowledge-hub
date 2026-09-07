@@ -1,0 +1,33 @@
+﻿Private Function FileList(Folderpath, Optional Pstr = "*", Optional Dimensions = 2)
+  
+  '遍历某文件夹下的单层文件,pstr用通配符指定筛选条件
+  'Dimensions 指定是返回一维数组还是二维数组
+  Dim fs, f, f1, fc, i, k, arr
+  Set fs = CreateObject("Scripting.FileSystemObject")
+  Set f = fs.GetFolder(Folderpath)
+  Set fc = f.Files
+  ReDim arr(1 To fc.Count)
+  For Each f1 In fc
+    If f1.Name Like Pstr And ((f1.Attributes And 2) = 0) Then '筛选文件 排除隐藏文件
+      i = i + 1
+      arr(i) = f1.Name
+      'arr(i, 2) = f1.Attributes
+    End If
+  Next
+  
+  If i = 0 Then
+    ReDim Preserve arr(0 To 0)
+  Else
+    ReDim Preserve arr(1 To i)
+  End If
+  
+  If Dimensions <> 1 And i > 0 Then
+    ReDim brr(1 To i, 1 To 1)
+    For k = 1 To i
+      brr(k, 1) = arr(k)
+    Next
+    arr = brr
+  End If
+  FileList = arr
+End Function
+

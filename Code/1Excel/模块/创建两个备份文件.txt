@@ -1,0 +1,61 @@
+﻿'保存的时候把文件备份在两个不同的目录下
+Sub Workbook_Beforgxm()
+    Dim sourceFilePath As String
+    Dim targetFilePath As String
+    Dim folderPath As String
+    Dim fso As Object
+    
+    sourceFilePath = ThisWorkbook.FullName
+    folderPath = "\\192.168.0.254\公共文件可修改\共享E盘\流水码记录表"
+    targetFilePath = folderPath & "\" & ThisWorkbook.Name
+    
+    ThisWorkbook.Save
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    If Not fso.FolderExists(folderPath) Then
+        MsgBox "指定的共享文件夹不存在: " & folderPath, vbCritical
+        Exit Sub
+    End If
+    
+    On Error Resume Next
+    fso.CopyFile sourceFilePath, targetFilePath, True          ' True 表示如果目标文件已存在则覆盖
+    If Err.Number <> 0 Then
+        MsgBox "复制文件时出现错误: " & Err.Description, vbCritical
+        Err.Clear
+    End If
+    On Error GoTo 0
+    Set fso = Nothing
+End Sub
+    
+Sub Workbook_Beforjl()
+    Dim sourceFilePath As String
+    Dim targetFilePath As String
+    Dim folderPath As String
+    Dim fso As Object
+    
+    sourceFilePath = ThisWorkbook.FullName
+    folderPath = "D:\BFWJ"
+    Dim currentDate As String
+    currentDate = Format(Now, "yyyymmdd")
+    targetFilePath = folderPath & "\" & currentDate & "_" & ThisWorkbook.Name
+    
+    ThisWorkbook.Save
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    If Not fso.FolderExists(folderPath) Then
+        MsgBox "指定的共享文件夹不存在: " & folderPath, vbCritical
+        Exit Sub
+    End If
+    
+    On Error Resume Next
+    fso.CopyFile sourceFilePath, targetFilePath, True          ' True 表示如果目标文件已存在则覆盖
+    If Err.Number <> 0 Then
+        MsgBox "复制文件时出现错误: " & Err.Description, vbCritical
+        Err.Clear
+    End If
+    On Error GoTo 0
+    Set fso = Nothing
+End Sub
+    
+Private Sub Workbook_BeforeClose(Cancel As Boolean)
+    Call Workbook_Beforgxm
+    Call Workbook_Beforjl
+End Sub

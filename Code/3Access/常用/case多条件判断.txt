@@ -1,0 +1,17 @@
+    If customChars = "" Then
+        Select Case base
+            Case 2
+                digits = "01"
+            Case 10
+                digits = "0123456789"
+            Case 16
+                digits = "0123456789ABCDEF"
+            Case 34
+                digits = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+            Case 36
+                digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            Case Else
+                MsgBox "不支持的进制: " & base
+                Exit Function
+        End Select
+    Else

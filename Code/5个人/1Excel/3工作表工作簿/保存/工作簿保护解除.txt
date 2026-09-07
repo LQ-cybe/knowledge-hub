@@ -1,0 +1,6 @@
+﻿ Sub test()
+ ActiveWorkbook.Sheets.Copy
+ For Each sh In ActiveWorkbook.Sheets
+ sh.Visible = True
+ Next
+ End Sub

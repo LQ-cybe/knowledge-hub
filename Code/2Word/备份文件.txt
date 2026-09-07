@@ -1,0 +1,27 @@
+
+Sub 备份文件()
+
+    Application.ScreenUpdating = False
+    
+    s = ActiveDocument.FullName '源文件夹下所有txt文件复制到目标文件夹下
+    d = Replace(ActiveDocument.FullName, ".docx", "-备份文件.docx") '
+结尾加上\，表示文件夹
+
+    Set fso = CreateObject("Scripting.FileSystemobject")
+    
+    If fso.FileExists(s) Then
+    Else
+        Exit Sub
+    End If
+    
+    Application.ScreenUpdating = True
+
+    Call Copy_file(s, d) '调用 Copy_file函数
+End Sub
+
+'
+源文件路径,目标路径,是否覆盖(默认为覆盖)
+Function Copy_file(Source, Destination, Optional OverwriteFiles = True)
+    Set fso = CreateObject("Scripting.FileSystemobject")
+    fso.CopyFile Source, Destination, OverwriteFiles ' fso.CopyFile方法
+End Function

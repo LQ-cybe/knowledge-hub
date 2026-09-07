@@ -1,0 +1,10 @@
+'类别=个人常用
+'说明=在光标位置插入文本内容
+Sub 插入文本()
+'
+' 宏1 宏
+'
+'
+    Selection.TypeText Text:="hello"
+    Selection.TypeParagraph
+End Sub

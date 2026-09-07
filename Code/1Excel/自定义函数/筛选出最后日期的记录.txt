@@ -1,0 +1,68 @@
+﻿'将数据区域的多条记录中筛选出最后一条日期的数据，保留原数据格式
+Sub CopyLatestDateData()
+    Dim sourceSheet As Worksheet
+    Dim targetSheet As Worksheet
+    Dim lastRow As Long
+    Dim i As Long, j As Long
+    Dim dict As Object
+    Dim key As Variant
+    Dim partNumberCol As Integer
+    Dim dateCol As Integer
+    Dim dataRange As Range
+    Dim selectedColRange As Range
+    ' 设置源工作表为当前活动工作表
+    Set sourceSheet = ActiveSheet
+    ' 让用户选择数据区域
+    On Error Resume Next
+    Set dataRange = Application.InputBox("请选择数据区域（包含表头）", "选择数据区域", Type:=8)
+    On Error GoTo 0
+    If dataRange Is Nothing Then
+        MsgBox "未选择数据区域，操作取消。"
+        Exit Sub
+    End If
+    ' 让用户选择料号所在列
+    On Error Resume Next
+    Set selectedColRange = Application.InputBox("请选择料号所在的列（点击该列的任意单元格即可）", "选择料号列", Type:=8)
+    On Error GoTo 0
+    If selectedColRange Is Nothing Then
+        MsgBox "未选择料号列，操作取消。"
+        Exit Sub
+    End If
+    partNumberCol = selectedColRange.Column
+    ' 让用户选择记录日期所在列
+    On Error Resume Next
+    Set selectedColRange = Application.InputBox("请选择记录日期所在的列（点击该列的任意单元格即可）", "选择日期列", Type:=8)
+    On Error GoTo 0
+    If selectedColRange Is Nothing Then
+        MsgBox "未选择日期列，操作取消。"
+        Exit Sub
+    End If
+    dateCol = selectedColRange.Column
+    ' 创建新的目标工作表
+    Set targetSheet = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    targetSheet.Name = "最新日期数据"
+    ' 复制源工作表的表头到目标工作表
+    dataRange.Rows(1).Copy Destination:=targetSheet.Rows(1)
+    ' 获取数据区域的最后一行
+    lastRow = dataRange.Rows.Count + dataRange.Row - 1
+    ' 创建字典对象
+    Set dict = CreateObject("Scripting.Dictionary")
+    ' 遍历源工作表的数据，将料号和对应的行号存入字典
+    For i = dataRange.Row + 1 To lastRow
+        key = sourceSheet.Cells(i, partNumberCol).Value
+        If Not dict.exists(key) Then
+            dict.Add key, i
+        Else
+            If sourceSheet.Cells(i, dateCol).Value > sourceSheet.Cells(dict(key), dateCol).Value Then
+                dict(key) = i
+            End If
+        End If
+    Next i
+    ' 将字典中记录的最新日期的数据复制到目标工作表
+    j = 2
+    For Each key In dict.keys
+        sourceSheet.Rows(dict(key)).Copy Destination:=targetSheet.Rows(j)
+        j = j + 1
+    Next key
+    MsgBox "每个料号最新日期的数据已复制到新表 '最新日期数据'。"
+End Sub

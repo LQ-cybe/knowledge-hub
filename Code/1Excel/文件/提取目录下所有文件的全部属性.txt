@@ -1,0 +1,26 @@
+'提取目录下所有文件的全部属性
+Sub LoopFilePropertiesInFolder(folderPath As Variant)
+    Dim objFile As Variant
+    Dim index As Integer
+    Dim arrHeaders(35)
+    index = 1
+    Set objShell = CreateObject("Shell.Application")
+    Set objFolder = objShell.Namespace(folderPath)
+    '输出所有属性名
+    For i = 0 To 34
+        Cells(index, i + 1).value = objFolder.GetDetailsOf(objFolder.Items, i)
+    Next
+    '遍历目录下的所有文件
+    For Each objFile In objFolder.Items
+        index = index + 1
+        '输出当前文件所有属性值
+        For i = 0 To 34
+'           Debug.Print i, objFolder.GetDetailsOf(objFile, i)
+           Cells(index, i + 1).value = objFolder.GetDetailsOf(objFile, i)
+        Next
+    Next
+End Sub
+
+Sub LoopFilePropertiesInFolderTest()
+    LoopFilePropertiesInFolder "D:\Office办公\Excel文件"
+End Sub

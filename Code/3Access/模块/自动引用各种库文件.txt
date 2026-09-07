@@ -1,0 +1,48 @@
+﻿' 自动引用数据库目录下指定文件夹中的所有库文件
+Sub AddAllLibraryReferences()
+    Dim ref As Object
+    Dim libraryFolder As String
+    Dim fso As Object
+    Dim folder As Object
+    Dim file As Object
+   ' 获取当前数据库的路径并拼接库文件所在文件夹路径
+    libraryFolder = CurrentProject.path & "\Reference_Library"
+   ' 创建文件系统对象
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    Set folder = fso.GetFolder(libraryFolder)
+   ' 遍历文件夹中的所有文件
+    For Each file In folder.Files
+       ' 检查文件扩展名是否为dll、olb或tlb
+        Dim fileExt As String
+        fileExt = LCase(Right(file.Name, 3))
+        If fileExt = "dll" Or fileExt = "olb" Or fileExt = "tlb" Then
+            Dim libraryPath As String
+            libraryPath = file.path
+           ' 检查引用是否已存在
+            Dim refExists As Boolean
+            refExists = False
+            For Each ref In References
+                If ref.fullPath = libraryPath Then
+                    refExists = True
+                    Debug.Print "库引用 " & libraryPath & " 已存在"
+                    Exit For
+                End If
+            Next ref
+           ' 如果引用不存在，则添加引用
+            If Not refExists Then
+                On Error Resume Next
+                References.AddFromFile libraryPath
+                On Error GoTo 0
+                If Err.Number = 0 Then
+                    Debug.Print "库引用 " & libraryPath & " 已成功添加"
+                Else
+                    Debug.Print "添加库引用 " & libraryPath & " 时出错: " & Err.Description
+                End If
+            End If
+        End If
+    Next file
+   ' 清理对象
+    Set file = Nothing
+    Set folder = Nothing
+    Set fso = Nothing
+End Sub

@@ -1,0 +1,76 @@
+Attribute VB_Name = "B003条形码函数"
+
+'联网使用
+Function GenerateBarcodeImage(Cell As Range, Optional BarcodeType As String = "code128", Optional Width As Integer = 300, Optional Height As Integer = 100) As Boolean
+    ' 功能：调用在线API生成条形码图片并插入Excel
+    ' 参数：
+    '   Cell - 包含条形码内容的单元格
+    '   BarcodeType - 条形码类型（默认code128，可选：code39,ean13,upca等）
+    '   Width - 图片宽度（像素，默认300）
+    '   Height - 图片高度（像素，默认100）
+    
+    On Error GoTo ErrorHandler
+    
+    ' 检查输入内容
+    If Trim(Cell.Value) = "" Then
+        MsgBox "单元格内容不能为空", vbExclamation
+        Exit Function
+    End If
+    
+    ' 使用BarcodeAPI.net的免费服务
+    Dim apiUrl As String
+    apiUrl = "https://barcodeapi.org/api/" & BarcodeType & "/" & WorksheetFunction.EncodeURL(Cell.Value)
+    
+    ' 创建HTTP请求
+    Dim httpRequest As Object
+    Set httpRequest = CreateObject("MSXML2.XMLHTTP")
+    
+    With httpRequest
+        .Open "GET", apiUrl, False
+        .Send
+    End With
+    
+    ' 检查响应状态
+    If httpRequest.Status <> 200 Then
+        MsgBox "无法获取条形码，HTTP错误: " & httpRequest.Status, vbExclamation
+        Exit Function
+    End If
+    
+    ' 创建临时文件路径
+    Dim tempFilePath As String
+    tempFilePath = Environ("Temp") & "\Barcode_" & Format(Now, "yyyymmddhhnnss") & ".png"
+    
+    ' 保存图片到临时文件
+    Dim stream As Object
+    Set stream = CreateObject("ADODB.Stream")
+    
+    With stream
+        .Type = 1 ' 二进制模式
+        .Open
+        .Write httpRequest.responseBody
+        .SaveToFile tempFilePath, 2 ' 覆盖已存在文件
+        .Close
+    End With
+    
+    ' 插入图片到单元格右侧
+    Dim barcodeImage As Picture
+    Set barcodeImage = Cell.Parent.Pictures.Insert(tempFilePath)
+    
+    With barcodeImage
+        .Left = Cell.Offset(0, 1).Left
+        .Top = Cell.Top
+        .Width = Application.CentimetersToPoints(Width / 37.8) ' 像素转厘米再转点
+        .Height = Application.CentimetersToPoints(Height / 37.8)
+        .Placement = xlMoveAndSize ' 图片随单元格移动和调整大小
+    End With
+    
+    ' 删除临时文件
+    Kill tempFilePath
+    
+    GenerateBarcodeImage = True
+    Exit Function
+    
+ErrorHandler:
+    GenerateBarcodeImage = False
+    MsgBox "生成条形码时出错: " & Err.Description, vbExclamation
+End Function

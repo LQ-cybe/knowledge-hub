@@ -1,0 +1,27 @@
+﻿Sub DeleteCellsWithSpecifiedChars()                       ' 删除所有内容与指定字符相等的单元格
+    Dim selectedRange As Range
+    Dim inputChars As String
+    Dim charArray() As String
+    Dim cell As Range
+    Dim i As Long
+    On Error Resume Next                                       ' 忽略错误
+    ' 让用户选择单元格区域
+    Set selectedRange = Application.InputBox("请选择单元格区域", Type:=8)
+    On Error GoTo 0                                            ' 恢复错误处理
+    If selectedRange Is Nothing Then Exit Sub                  ' 如果用户取消选择，退出程序
+    ' 让用户输入要查找的字符，多个字符用逗号分隔
+    inputChars = InputBox("请输入要删除对应单元格的字符（多个字符用逗号分隔）")
+    If inputChars = "" Then Exit Sub                           ' 如果用户未输入，退出程序
+    charArray = Split(inputChars, ",")                         ' 将输入的字符按逗号分割成数组
+    Application.ScreenUpdating = False                         ' 关闭屏幕更新，加快执行速度
+    For Each cell In selectedRange
+        For i = LBound(charArray) To UBound(charArray)
+            If cell.Value = Trim(charArray(i)) Then
+                cell.ClearContents                             ' 只清除单元格内容
+                cell.Delete shift:=xlUp                        ' 删除单元格，上方单元格下移
+                Exit For                                       ' 找到一个匹配字符就跳出内层循环，继续检查下一个单元格
+            End If
+        Next i
+    Next cell
+    Application.ScreenUpdating = True                          ' 恢复屏幕更新
+End Sub

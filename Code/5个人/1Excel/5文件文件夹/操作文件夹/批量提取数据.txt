@@ -1,0 +1,132 @@
+    '批量提取数据
+Sub ExtractXLSMData_WithLog()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim i As Long, j As Long
+    Dim folderPath As String
+    Dim xlsmFile As String
+    Dim wb As Workbook
+    Dim sourceWs As Worksheet
+    Dim targetAddress As String
+    Dim resultRow As Long
+    Dim logMsg As String
+    Dim successCount As Long, failCount As Long
+    
+    ' 初始化统计变量
+    successCount = 0
+    failCount = 0
+    
+    ' 设置当前工作表
+    Set ws = ActiveSheet
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row       ' 获取 A 列最后一行
+    
+    ' 开启屏幕更新（可选，处理大量数据时可关闭提升速度）
+    Application.ScreenUpdating = False
+    
+    ' 遍历 A 列的文件夹路径（从第 2 行开始，第 1 行是表头）
+    For i = 2 To lastRow
+        logMsg = ""
+        folderPath = ws.Cells(i, "A").Value
+        resultRow = i                                          ' 结果写入当前行
+    
+        ' 1. 检查文件夹路径是否为空
+        If folderPath = "" Then
+            logMsg = "A" & i & " 单元格路径为空，跳过"
+            failCount = failCount + 1
+            GoTo NextIteration
+        End If
+    
+        ' 2. 检查路径是否存在
+        If Dir(folderPath, vbDirectory) = "" Then
+            logMsg = "路径不存在: " & folderPath
+            failCount = failCount + 1
+            GoTo NextIteration
+        End If
+    
+        ' 3. 查找文件夹下的 .xlsm 文件（只取第一个）
+        xlsmFile = Dir(folderPath & "\*.xlsm")
+        If xlsmFile = "" Then
+            logMsg = "未找到 .xlsm 文件: " & folderPath
+            failCount = failCount + 1
+            GoTo NextIteration
+        End If
+    
+        ' 4. 尝试打开 .xlsm 文件
+        On Error Resume Next
+        Set wb = Workbooks.Open(folderPath & "\" & xlsmFile, ReadOnly:=True)
+        On Error GoTo 0
+        If wb Is Nothing Then
+            logMsg = "无法打开文件: " & folderPath & "\" & xlsmFile
+            failCount = failCount + 1
+            GoTo NextIteration
+        End If
+    
+        ' 5. 获取文件中的第一个工作表（可根据实际需求改工作表名，如 Worksheets("Sheet1")）
+        On Error Resume Next
+        Set sourceWs = wb.Worksheets(1)
+        If Err.Number <> 0 Then
+            logMsg = "文件 " & xlsmFile & " 无有效工作表，跳过"
+            wb.Close SaveChanges:=False
+            Set wb = Nothing
+            failCount = failCount + 1
+            On Error GoTo 0
+            GoTo NextIteration
+        End If
+        On Error GoTo 0
+    
+        ' 6. 遍历 C1:K1 获取目标单元格地址并提取内容
+        Dim hasData As Boolean
+        hasData = False
+        For j = 4 To 13
+            targetAddress = ws.Cells(1, j).Value               ' 读取 C1、D1...K1 的单元格地址
+            If targetAddress <> "" Then
+                On Error Resume Next
+                ' 提取目标地址内容并写入当前行对应列
+                ws.Cells(resultRow, j).Value = sourceWs.Range(targetAddress).Value
+                If Err.Number = 0 Then
+                    hasData = True
+                Else
+                    logMsg = logMsg & " 读取 " & targetAddress & " 失败"
+                    Err.Clear
+                End If
+                On Error GoTo 0
+            End If
+        Next j
+    
+        ' 7. 写入工作表名称到 L 列
+        On Error Resume Next
+        ws.Cells(resultRow, "M").Value = sourceWs.name
+        If Err.Number <> 0 Then
+            logMsg = logMsg & " 写入工作表名称失败"
+            Err.Clear
+        End If
+        On Error GoTo 0
+    
+        ' 8. 关闭工作簿
+        wb.Close SaveChanges:=False
+        Set wb = Nothing
+    
+        ' 9. 统计成功情况
+        If hasData Then
+            successCount = successCount + 1
+            logMsg = "处理成功: " & folderPath & "\" & xlsmFile & logMsg
+        Else
+            failCount = failCount + 1
+            logMsg = "无有效数据提取: " & folderPath & "\" & xlsmFile & logMsg
+        End If
+    
+NextIteration:
+        ' 输出日志到立即窗口（按 Ctrl+G 可查看）
+        '        Debug.Print "行 " & i & " | " & logMsg
+    Next i
+    
+    ' 关闭屏幕更新
+    Application.ScreenUpdating = False
+    
+    ' 弹出结果统计
+    MsgBox "处理完成！" & vbCrLf & _
+            "成功提取: " & successCount & " 条" & vbCrLf & _
+            "失败/跳过: " & failCount & " 条" & vbCrLf & _
+            "详情可查看【立即窗口】(Ctrl+G)", vbInformation
+End Sub
+    

@@ -1,0 +1,38 @@
+'提取文件默认激活的工作表名称
+Sub GetWorksheetNamesAndRename()
+Application.ScreenUpdating = False
+    Dim lastRow As Long
+    Dim i As Long
+    Dim filePath As String
+    Dim wb As Workbook
+    Dim ws As Worksheet
+    ' 指定要操作的工作表，这里假设是Sheet1，你可以根据实际情况修改
+    Dim targetSheet As Worksheet
+    Set targetSheet = ThisWorkbook.Sheets("A")
+    
+    ' 获取表a的最后一行数据
+    lastRow = targetSheet.Cells(targetSheet.Rows.Count, 1).End(xlUp).Row
+    
+    For i = 1 To lastRow
+        ' 拼接文件的完整路径
+        filePath = targetSheet.Cells(i, 1).Value & "\" & targetSheet.Cells(i, 2).Value
+        On Error Resume Next
+        ' 后台打开工作簿
+        Set wb = Workbooks.Open(filePath, ReadOnly:=True, UpdateLinks:=False)
+        On Error GoTo 0
+        If Not wb Is Nothing Then
+            ' 获取激活的工作表名称
+            Set ws = wb.ActiveSheet
+            targetSheet.Cells(i, 3).Value = ws.Name
+            
+            ' 修改工作表名称，这里将工作表名称修改为 "NewName" & i
+            ws.Name = "NewName" & i
+            
+            ' 关闭工作簿，不保存更改
+            wb.Close SaveChanges:=False
+        End If
+        Set wb = Nothing
+        Set ws = Nothing
+    Next i
+    Application.ScreenUpdating = True
+End Sub

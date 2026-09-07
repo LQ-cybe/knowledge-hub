@@ -1,0 +1,66 @@
+﻿    '导出表数据到到桌面TXT文件
+Sub ExportTableToTxt()
+    Dim tableName As String
+    Dim desktopPath As String
+    Dim txtFilePath As String
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim fso As Object
+    Dim txtFile As Object
+    Dim fieldCount As Integer
+    Dim i As Integer
+    Dim line As String
+    Dim startTime As Double
+    Dim endTime As Double
+    startTime = Timer                                          ' 在下面写执行代码
+    ' 设置要导出的表名，可根据实际情况修改
+    tableName = "tbl_流水码"
+    ' 获取桌面路径
+    desktopPath = CreateObject("WScript.Shell").SpecialFolders("Desktop")
+    ' 构建 TXT 文件的完整路径
+    txtFilePath = desktopPath & "\" & tableName & ".txt"
+    On Error Resume Next
+    ' 删除已存在的同名 TXT 文件
+    Kill txtFilePath
+    On Error GoTo 0
+    ' 打开数据库和记录集
+    Set db = CurrentDb
+    Set rs = db.OpenRecordset(tableName)
+    ' 创建文件系统对象
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    Set txtFile = fso.CreateTextFile(txtFilePath, True)
+    ' 获取字段数量
+    fieldCount = rs.Fields.Count
+    ' 写入字段名
+    For i = 0 To fieldCount - 1
+        line = line & Replace(Replace(rs.Fields(i).Name, """", ""), ",", "")
+        If i < fieldCount - 1 Then
+            line = line & " "
+        End If
+    Next i
+    txtFile.WriteLine line
+    line = ""
+    ' 写入记录数据
+    rs.MoveFirst
+    Do While Not rs.EOF
+        For i = 0 To fieldCount - 1
+            line = line & Replace(Replace(rs.Fields(i).Value, """", ""), ",", "")
+            If i < fieldCount - 1 Then
+                line = line & " "
+            End If
+        Next i
+        txtFile.WriteLine line
+        line = ""
+        rs.MoveNext
+    Loop
+    ' 关闭对象
+    rs.Close
+    txtFile.Close
+    Set rs = Nothing
+    Set txtFile = Nothing
+    Set fso = Nothing
+    Set db = Nothing
+    MsgBox "数据已成功导出到 " & txtFilePath
+    endTime = Timer
+    MsgBox "操作完成，运行时间:" & Format((endTime - startTime), "000") & "秒"
+End Sub

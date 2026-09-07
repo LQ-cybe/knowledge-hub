@@ -1,0 +1,60 @@
+Option Explicit
+'提取word文档中所有表格指定字段的数据
+Sub ReadFromWord()
+    Dim oWordApp As Object, oDoc As Object      '声明Word相关变量
+    Dim myPath$, MyName$, k%, Result(1 To 1000, 1 To 50)
+    '声明文件夹路径、文件名称、数组：最大文件数以及提取的最大标题列数
+    On Error Resume Next        '遇到错误忽视，程序继续
+    Range("A:M").ClearContents  '清除汇总表中的数据
+    myPath = ThisWorkbook.Path & "\"    '文件夹路径
+    MyName = Dir(myPath & "汇聚2024.docx*")     '文件夹中文档名称
+    Set oWordApp = CreateObject("Word.Applica-tion")     '创建Word程序应用
+    Do While MyName <> ""
+        Set oDoc = GetObject(myPath & MyName)   '打开文件夹中每一个Word文档
+        Dim i As Integer
+        For i = 1 To 947    '循环次数必须与word文档中表格的个数一致，否则会报错
+            With oDoc.Tables(i)  '提取当前文档中的第一个表格
+                k = k + 1 '循环变量
+                Result(k, 1) = k '文档序号
+                Result(k, 2) = Application.Clean(.Cell(1, 3).Range.Text)    '订单数量
+                Result(k, 3) = Application.Clean(.Cell(1, 5).Range.Text)    '订单号码
+                Result(k, 4) = Application.Clean(.Cell(1, 7).Range.Text)    '料号
+                Result(k, 5) = Application.Clean(.Cell(2, 5).Range.Text)    '品名
+                Result(k, 6) = Application.Clean(.Cell(5, 2).Range.Text)    '供应商
+                Result(k, 7) = Application.Clean(.Cell(5, 3).Range.Text)    '材质
+                Result(k, 8) = Application.Clean(.Cell(6, 2).Range.Text)    '供应商2
+                Result(k, 9) = Application.Clean(.Cell(6, 3).Range.Text)    '材质2
+                Result(k, 10) = Application.Clean(.Cell(7, 2).Range.Text)    '供应商3
+                Result(k, 11) = Application.Clean(.Cell(7, 3).Range.Text)    '材质3
+                Result(k, 12) = Application.Clean(.Cell(10, 2).Range.Text)    '制作内容
+                Result(k, 13) = "2024"   '文档名
+            End With
+        Next i
+        oDoc.Close True     '当前文档提取完后，关闭
+        MyName = Dir '提取下一个文档
+    Loop
+    Range("A2").Resize(k, 20) = Result   '将结果写入汇总表
+    Set oWordApp = Nothing      '将Word应用程序关闭，释放内存
+End Sub
+
+'提取word文档中表格的数量
+Sub ReadWordTableCount()
+    Dim wordApp As Object
+    Dim wordDoc As Object
+    Dim tableCount As Integer
+    Dim filePath As String
+    '设置Word文件的路径
+    filePath = "D:\LQ\其它\汇聚\提取word文档中表格数据\汇聚生产指令单\AA\汇聚2024.docx" '替换为实际的Word文件路径
+    '创建Word应用程序对象
+    Set wordApp = CreateObject("Word.Application")
+    wordApp.Visible = False '可设置为False使其后台运行
+    '打开Word文档
+    Set wordDoc = wordApp.Documents.Open(filePath)
+    '获取表格个数
+    tableCount = wordDoc.Tables.Count
+    '关闭Word文档并退出Word应用程序
+    wordDoc.Close
+    wordApp.Quit
+    '在Excel中显示表格个数
+    MsgBox "该Word文件中表格的个数为：" & tableCount
+End Sub

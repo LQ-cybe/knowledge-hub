@@ -1,0 +1,15 @@
+﻿'将十进制数转换为 34 进制，并按指定的n位数显示，不足位数用0补齐
+Function Base34Serial(num As Long, n As Long) As String
+    Dim base34Chars As String
+    base34Chars = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+    Dim result As String
+    Do While num > 0
+        result = Mid(base34Chars, num Mod 34 + 1, 1) & result
+        num = num \ 34
+    Loop
+    ' 用0补齐位数
+    While Len(result) < n
+        result = "0" & result
+    Wend
+    Base34Serial = result
+End Function

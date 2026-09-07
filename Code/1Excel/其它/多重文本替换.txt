@@ -1,0 +1,38 @@
+﻿'多重文本替换
+Public Function Subst( _
+  text As String, _
+  NewText As String, _
+  ParamArray OldText() As Variant) _
+  As String
+    Dim vItem As Variant
+    Dim sReturn As String
+    Dim vArray As Variant
+   
+    sReturn = text
+   
+    vArray = OldText
+    BubbleSortLen vArray
+   
+    For Each vItem In vArray
+        sReturn = Replace(sReturn, vItem, NewText, , , vbTextCompare)
+    Next vItem
+   
+    Subst = sReturn
+   
+End Function
+'多重文本替换辅助函数
+Public Sub BubbleSortLen(ByRef vArray As Variant)
+    Dim i As Long
+    Dim j As Long
+    Dim sTemp As String
+
+    For i = LBound(vArray) To UBound(vArray) - 1
+        For j = i To UBound(vArray)
+            If Len(vArray(j)) > Len(vArray(i)) Then
+                sTemp = vArray(i)
+                vArray(i) = vArray(j)
+                vArray(j) = sTemp
+            End If
+        Next j
+    Next i
+End Sub

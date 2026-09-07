@@ -1,0 +1,6 @@
+﻿Function MkDir2(path)
+  If Dir(path, vbDirectory) = "" Then
+    MkDir path '建立文件夹
+  End If
+End Function
+

@@ -1,0 +1,47 @@
+'删除外部链接
+Sub RemoveExternalLinks()
+    Dim wb As Workbook
+    Dim ws As Worksheet
+    Dim link As Variant
+    Dim response As VbMsgBoxResult
+
+    Set wb = ActiveWorkbook
+
+    ' 显示警告信息
+    response = MsgBox("此操作将删除工作簿中所有外部链接。继续吗？", vbExclamation + vbOKCancel, "警告")
+    If response = vbCancel Then Exit Sub
+
+    ' 删除公式中的外部引用
+    On Error Resume Next
+    For Each ws In wb.Worksheets
+        ws.Cells.Replace What:="=*[", Replacement:="=", LookAt:=xlPart, MatchCase:=False
+    Next ws
+    On Error GoTo 0
+
+    ' 删除数据连接
+    With wb
+        For Each link In .LinkSources
+            .BreakLink Name:=link, Type:=xlLinkTypeExcelLinks
+        Next link
+    End With
+
+    ' 删除查询表连接
+    For Each ws In wb.Worksheets
+        On Error Resume Next
+        For Each qt In ws.QueryTables
+            qt.Delete
+        Next qt
+        On Error GoTo 0
+    Next ws
+
+    ' 删除Power Query连接
+    On Error Resume Next
+    For Each conn In wb.Connections
+        If conn.Type = xlConnectionTypeOLEDB Then
+            conn.Delete
+        End If
+    Next conn
+    On Error GoTo 0
+
+    MsgBox "外部链接已删除完成"
+End Sub

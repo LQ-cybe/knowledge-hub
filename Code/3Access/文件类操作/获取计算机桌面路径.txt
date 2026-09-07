@@ -1,0 +1,1 @@
+﻿    desktopPath = CreateObject("WScript.Shell").SpecialFolders("Desktop")    ' 获取桌面路径

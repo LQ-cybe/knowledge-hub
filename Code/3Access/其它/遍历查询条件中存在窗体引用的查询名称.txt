@@ -1,0 +1,50 @@
+﻿'返回查询字段中包含这种窗体引用条件的查询名称：Like "*" & [Forms]![frm_承认书信息]![CPLH] & "*"));
+Sub FindQueriesWithFormControlReferences()
+    Dim qdf As DAO.QueryDef
+    Dim fld As DAO.Field
+    Dim sql As String
+    Dim formCtrlStart As Integer
+    Dim formCtrlEnd As Integer
+    Dim formCtrlRef As String
+
+   '遍历所有查询定义
+    For Each qdf In CurrentDb.QueryDefs
+       '排除系统查询
+        If Left(qdf.Name, 4) <> "MSys" Then
+            sql = qdf.sql
+            formCtrlStart = 1
+            Do
+                formCtrlStart = InStr(formCtrlStart, sql, "[Forms]![", vbTextCompare)
+                If formCtrlStart > 0 Then
+                    formCtrlEnd = InStr(formCtrlStart, sql, "]![", vbTextCompare)
+                    If formCtrlEnd > 0 Then
+                        formCtrlEnd = InStr(formCtrlEnd, sql, "]", vbTextCompare)
+                        If formCtrlEnd > 0 Then
+                            formCtrlRef = Mid(sql, formCtrlStart, formCtrlEnd - formCtrlStart + 1)
+                            Debug.Print "查询名称: " & qdf.Name & "，使用了窗体控件引用: " & formCtrlRef
+                           '遍历查询中的字段
+                            For Each fld In qdf.Fields
+                                Dim cond As String
+                                cond = fld.ValidationRule
+                                If cond <> "" And InStr(1, cond, formCtrlRef, vbTextCompare) > 0 Then
+                                    Debug.Print "  字段: " & fld.Name & "，条件内容: " & cond
+                                End If
+                            Next fld
+                            '检查SQL语句中的条件
+                            Dim wherePos As Integer
+                            Dim whereClause As String
+                            wherePos = InStr(1, sql, "WHERE", vbTextCompare)
+                            If wherePos > 0 Then
+                                whereClause = Mid(sql, wherePos)
+                                If InStr(1, whereClause, formCtrlRef, vbTextCompare) > 0 Then
+                                    Debug.Print "  SQL语句中的条件内容: " & whereClause
+                                End If
+                            End If
+                        End If
+                    End If
+                    formCtrlStart = formCtrlEnd + 1
+                End If
+            Loop While formCtrlStart > 0
+        End If
+    Next qdf
+End Sub

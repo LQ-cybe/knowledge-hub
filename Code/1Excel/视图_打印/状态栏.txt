@@ -1,0 +1,9 @@
+﻿'状态栏显示开关
+Sub QQ1722187970()
+    Excel.Application.DisplayStatusBar = True
+End Sub
+'状态栏显示自定义内容
+Sub QQ172218766970()
+    sText = "现在是" & Format(Now(), "yyyy年mm月dd日 hh:mm:ss")
+    Excel.Application.StatusBar = sText
+End Sub

@@ -1,0 +1,35 @@
+﻿'自定义排序
+Sub SortByCustomList()
+    Dim customList As Variant
+    customList = Array("A-1-W", "A-2-W", "A-3-W", "A-4-W", "A-1-X", "A-2-X", "A-3-X", "A-4-X", _
+                       "AA-1", "AA-2", "AA-3", "AA-4", "B-1-W", "B-2-W", "B-3-W", "B-4-W", _
+                       "B-1-X", "B-2-X", "B-3-X", "B-4-X", "BB-1", "BB-2", "BB-3", "BB-4", _
+                       "C-1-W", "C-2-W", "C-3-W", "C-4-W", "C-1-X", "C-2-X", "C-3-X", "C-4-X", _
+                       "CC-1", "CC-2", "CC-3", "CC-4", "D-1-W", "D-2-W", "D-3-W", "D-4-W", _
+                       "D-1-X", "D-2-X", "D-3-X", "D-4-X", "DD-1", "DD-2", "DD-3", "DD-4", "DD-5", _
+                       "A-LH", "A-TM1", "A-TM2")
+
+    Application.AddCustomList ListArray:=customList
+
+    Dim lastRow As Long
+    Dim lastCol As Long
+    lastRow = Cells(Rows.Count, 1).End(xlUp).Row
+    lastCol = Cells(1, Columns.Count).End(xlToLeft).Column
+
+    With ActiveSheet.Sort
+        .SortFields.Clear
+        .SortFields.Add Key:=Range(Cells(1, 1), Cells(lastRow, 1)), _
+                        SortOn:=xlSortOnValues, _
+                        Order:=xlAscending, _
+                        CustomOrder:=Application.CustomListCount, _
+                        DataOption:=xlSortNormal
+        .SetRange Range(Cells(1, 1), Cells(lastRow, lastCol))
+        .Header = xlGuess
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+
+    Application.DeleteCustomList Application.CustomListCount
+End Sub

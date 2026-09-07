@@ -1,0 +1,8 @@
+﻿Sub AA()
+    Dim startTime As Double
+    Dim endTime As Double
+    startTime = Timer()
+'运行代码或过程
+    endTime = Timer()
+    MsgBox "耗时:" & Format(endTime - startTime, "0.00") & " 秒"
+End Sub

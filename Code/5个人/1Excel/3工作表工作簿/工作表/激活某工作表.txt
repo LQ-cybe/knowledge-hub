@@ -1,0 +1,3 @@
+﻿Sub TZ_Aann()
+    Sheets("单变码").Activate                                     '激活名为 "A" 的工作表
+End Sub

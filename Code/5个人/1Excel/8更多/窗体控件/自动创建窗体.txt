@@ -1,0 +1,148 @@
+Sub CreateCustomForm()
+    Dim rng As Range
+    Dim c As Range
+    Dim vbProj As VBIDE.VBProject
+    Dim vbComp As VBIDE.VBComponent
+    Dim ctl As Object
+    Dim formWidth As Single, formHeight As Single
+    Dim minLeft As Single, minTop As Single
+    Dim maxRight As Single, maxBottom As Single
+    Dim cellLeft As Single, cellTop As Single
+    
+    ' ====== 可调参数 ======
+    Const COL_SPACING As Single = 5    ' 列间距 (像素)
+    Const ROW_SPACING As Single = 3     ' 行间距 (像素)
+    Const FORM_MARGIN As Single = 10    ' 窗体边距 (像素)
+    ' =====================
+    
+    ' 检查VBA访问权限
+    On Error Resume Next
+    Set vbProj = ThisWorkbook.VBProject
+    If Err.Number <> 0 Then
+        MsgBox "请启用对VBA工程对象模型的访问：" & vbCrLf & _
+               "文件→选项→信任中心→信任中心设置→宏设置" & vbCrLf & _
+               "勾选'信任对VBA工程对象模型的访问'", vbCritical
+        Exit Sub
+    End If
+    On Error GoTo 0
+    
+    ' 使用当前选中的区域
+    If TypeName(Selection) <> "Range" Then
+        MsgBox "请先选择一个单元格区域", vbExclamation
+        Exit Sub
+    End If
+    Set rng = Selection
+    
+    ' 计算区域边界
+    minLeft = rng.Cells(1, 1).Left
+    minTop = rng.Cells(1, 1).Top
+    maxRight = rng.Cells(rng.Rows.Count, rng.Columns.Count).Left + rng.Cells(rng.Rows.Count, rng.Columns.Count).Width
+    maxBottom = rng.Cells(rng.Rows.Count, rng.Columns.Count).Top + rng.Cells(rng.Rows.Count, rng.Columns.Count).Height
+    
+    ' 计算窗体尺寸（添加间距和边距）
+    formWidth = (maxRight - minLeft) + (rng.Columns.Count - 1) * COL_SPACING + 2 * FORM_MARGIN
+    formHeight = (maxBottom - minTop) + (rng.Rows.Count - 1) * ROW_SPACING + 2 * FORM_MARGIN
+    
+    ' 创建新窗体
+    Set vbComp = vbProj.VBComponents.Add(vbext_ct_MSForm)
+    vbComp.Properties("Name") = "CustomForm_" & Format(Now, "yymmdd_hhmmss")
+    vbComp.Properties("Caption") = "自定义窗体"
+    vbComp.Properties("Width") = formWidth
+    vbComp.Properties("Height") = formHeight
+    
+    ' 遍历选中的单元格
+    For Each c In rng.Cells
+        ' 跳过空白单元格
+        If IsEmpty(c) Then GoTo NextCell
+        
+        ' 计算相对位置（添加间距和边距）
+        cellLeft = (c.Left - minLeft) + (c.Column - rng.Column) * COL_SPACING + FORM_MARGIN
+        cellTop = (c.Top - minTop) + (c.Row - rng.Row) * ROW_SPACING + FORM_MARGIN
+        
+        ' 获取单元格字体格式
+        Dim cellFont As Font
+        Set cellFont = c.Font
+        
+        ' 根据单元格内容创建控件
+        Select Case LCase(Trim(c.Value))
+            Case "标签", "label"
+                Set ctl = vbComp.Designer.Controls.Add("Forms.Label.1")
+                ctl.Caption = "标签"
+                ctl.Width = c.Width
+                ctl.Height = c.Height
+                
+            Case "文本框", "textbox", "输入框"
+                Set ctl = vbComp.Designer.Controls.Add("Forms.TextBox.1")
+                ctl.Width = c.Width
+                ctl.Height = c.Height
+                ctl.Text = ""
+                
+            Case "组合框", "combobox", "下拉框"
+                Set ctl = vbComp.Designer.Controls.Add("Forms.ComboBox.1")
+                ctl.Width = c.Width
+                ctl.Height = c.Height
+                ' 添加示例选项
+                ctl.AddItem "选项1"
+                ctl.AddItem "选项2"
+                ctl.AddItem "选项3"
+                
+            Case "按钮", "commandbutton", "命令按钮"
+                Set ctl = vbComp.Designer.Controls.Add("Forms.CommandButton.1")
+                ctl.Caption = "按钮"
+                ctl.Width = c.Width
+                ctl.Height = c.Height
+                ctl.BackColor = RGB(200, 200, 255)
+                
+            Case "复选框", "checkbox", "选择框"
+                Set ctl = vbComp.Designer.Controls.Add("Forms.CheckBox.1")
+                ctl.Caption = "选项"
+                ctl.Width = c.Width
+                ctl.Height = c.Height
+                
+            Case "列表框", "listbox"
+                Set ctl = vbComp.Designer.Controls.Add("Forms.ListBox.1")
+                ctl.Width = c.Width
+                ctl.Height = c.Height
+                ' 添加示例选项
+                ctl.AddItem "项目1"
+                ctl.AddItem "项目2"
+                ctl.AddItem "项目3"
+                
+            Case "选项按钮", "optionbutton", "单选按钮"
+                Set ctl = vbComp.Designer.Controls.Add("Forms.OptionButton.1")
+                ctl.Caption = "选项"
+                ctl.Width = c.Width
+                ctl.Height = c.Height
+                
+            Case Else
+                Set ctl = vbComp.Designer.Controls.Add("Forms.Label.1")
+                ctl.Caption = c.Value
+                ctl.Width = c.Width
+                ctl.Height = c.Height
+                ctl.ForeColor = RGB(100, 100, 100)
+        End Select
+        
+        ' 设置控件位置和样式
+        With ctl
+            .Top = cellTop
+            .Left = cellLeft
+            .Font.Name = cellFont.Name
+            .Font.Size = cellFont.Size
+            .Font.Bold = cellFont.Bold
+            .Font.Italic = cellFont.Italic
+            .ForeColor = cellFont.Color
+            .BackColor = c.Interior.Color
+        End With
+        
+NextCell:
+    Next c
+    
+    ' 显示窗体（无确定/取消按钮）
+    VBA.UserForms.Add(vbComp.Name).Show
+    
+    ' 清理对象
+    Set rng = Nothing
+    Set vbComp = Nothing
+    Set vbProj = Nothing
+End Sub
+

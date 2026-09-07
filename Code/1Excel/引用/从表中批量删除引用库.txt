@@ -1,0 +1,47 @@
+﻿' 批量删除表格中指定GUID的引用
+Sub BatchRemoveReferencesFromTable()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim i As Long
+    Dim guid As String
+    Dim ref As Object
+    Dim delCount As Long
+    Dim errorCount As Long
+    
+    On Error Resume Next
+    If ThisWorkbook.VBProject Is Nothing Then
+        MsgBox "请启用信任对VBA工程对象模型的访问", vbCritical
+        Exit Sub
+    End If
+    On Error GoTo 0
+    
+    Set ws = ThisWorkbook.Worksheets("Sheet1")
+    lastRow = ws.Cells(ws.Rows.Count, "C").End(xlUp).Row
+    delCount = 0: errorCount = 0
+    
+    For i = 2 To lastRow
+        guid = Trim(ws.Cells(i, "C").Value)
+        If guid = "" Then GoTo NextLine
+        
+        For Each ref In ThisWorkbook.VBProject.References
+            If ref.guid = guid Then
+                On Error Resume Next
+                ThisWorkbook.VBProject.References.Remove ref
+                If Err.Number = 0 Then
+                    delCount = delCount + 1
+                    Debug.Print " 成功删除: " & ref.Name
+                Else
+                    errorCount = errorCount + 1
+                    Debug.Print " 删除失败: " & ref.Name
+                End If
+                On Error GoTo 0
+                Exit For
+            End If
+        Next ref
+NextLine:
+    Next i
+    
+    MsgBox " 批量删除完成！" & vbCrLf & _
+           "删除: " & delCount & " 个 | 失败: " & errorCount & " 个", vbInformation
+    Set ref = Nothing: Set ws = Nothing
+End Sub

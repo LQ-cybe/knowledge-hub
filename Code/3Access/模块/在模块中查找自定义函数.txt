@@ -1,0 +1,41 @@
+﻿Function IsFunctionExists(functionName As String) As Boolean
+    Dim vbProj As VBProject
+    Dim vbComp As VBComponent
+    Dim codeMod As CodeModule
+    Dim lineCount As Long
+    Dim lineNum As Long
+    Dim lineText As String
+    
+    ' 获取当前的 VBA 项目
+    Set vbProj = Application.VBE.ActiveVBProject
+    
+    ' 遍历所有模块
+    For Each vbComp In vbProj.VBComponents
+        Set codeMod = vbComp.CodeModule
+        lineCount = codeMod.CountOfLines
+        
+        ' 遍历模块中的每一行代码
+        For lineNum = 1 To lineCount
+            lineText = Trim(codeMod.Lines(lineNum, 1))
+            ' 检查是否为函数定义行，并且包含指定的函数名
+            If InStr(1, UCase(lineText), "FUNCTION " & UCase(functionName), vbTextCompare) > 0 Then
+                IsFunctionExists = True
+                Exit Function
+            End If
+        Next lineNum
+    Next vbComp
+    
+    IsFunctionExists = False
+End Function
+
+'判断函数是否存在
+Sub TestIsFunctionExists()
+    Dim functionName As String
+    functionName = "Base34ToDecimal" ' 替换为你要检查的函数名
+    
+    If IsFunctionExists(functionName) Then
+        MsgBox "函数 " & functionName & " 存在。"
+    Else
+        MsgBox "函数 " & functionName & " 不存在。"
+    End If
+End Sub

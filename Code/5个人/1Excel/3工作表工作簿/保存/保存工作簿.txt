@@ -1,0 +1,14 @@
+Sub SaveAndclosePlus()'保存并关闭当前工作簿
+'判断当前工作簿是否只读，若是则返回True，否则返回False。因为我们要保存的工作簿不应该是只读的，所以该属性应返回False，
+'那么代码：Not ActiveWorkbook.ReadOnly返回True。
+'如果该工作簿已经保存过，则其Path属性应返回该工作簿的文件路径，其长度肯定大于0，
+'那么代码：Len(ActiveWorkbook.Path)
+'这两个条件使用And逻辑符连接，表明上述两个条件都返回True才会执行保存和关闭操作，
+'也就是说只有当工作簿不是只读的且已经保存过才会执行保存和关闭操作。
+> 0返回True。
+'验证当前工作演不是只读的并且之前本工作薄已经保存
+	If Not ActiveWorkbook.ReadOnly And Len(Activeworkbook.Path) > 0 Then
+	Activeworkbook.Save 
+	Activewindow.close
+	End If 
+End Sub

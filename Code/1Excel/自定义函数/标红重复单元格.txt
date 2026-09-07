@@ -1,0 +1,93 @@
+﻿Sub 对重复数据标红()
+    Dim dict As Object
+    Set dict = CreateObject("Scripting.Dictionary")
+    
+    Dim selectedRange As Range
+    On Error Resume Next
+    Set selectedRange = Application.InputBox(prompt:="请选择一个列（单击列标）", Type:=8)
+    On Error GoTo 0
+    If selectedRange Is Nothing Then
+        MsgBox "你没有选择任何列，操作取消。"
+        Exit Sub
+    End If
+    If selectedRange.Columns.Count > 1 Then
+        MsgBox "你只能选择一个列。"
+        Exit Sub
+    End If
+    
+    Dim lastRow As Long
+    lastRow = Cells(Rows.Count, selectedRange.Column).End(xlUp).Row
+    
+    Dim data As Variant
+    Dim i As Long
+    ' 创建一个集合对象，用于存储已经标记过颜色的单元格地址，避免重复填充颜色
+    Dim coloredCells As New Collection
+    For i = 2 To lastRow
+        data = Cells(i, selectedRange.Column).Value
+        If dict.Exists(data) Then
+            ' 如果数据已经存在于字典中，说明是重复值，获取当前单元格地址
+            Dim cellAddress As String
+            cellAddress = Cells(i, selectedRange.Column).Address
+            ' 检查当前单元格是否已经被标记过颜色，如果没有则进行颜色填充并添加到已标记集合中
+            On Error Resume Next
+            coloredCells.Add cellAddress, cellAddress
+            On Error GoTo 0
+            If Err.Number = 0 Then
+                Cells(i, selectedRange.Column).Interior.Color = RGB(255, 0, 0)    ' 设置单元格填充颜色为红色
+            End If
+        Else
+            dict(data) = 1
+        End If
+    Next i
+    
+    If coloredCells.Count > 0 Then
+        MsgBox "所选列存在重复数据，重复数据所在单元格已标记为红色。"
+    Else
+        MsgBox "所选列没有重复数据。"
+    End If
+End Sub
+
+Sub 对重复数据标红()
+    Dim dict As Object
+    Set dict = CreateObject("Scripting.Dictionary")
+    Dim selectedRange As Range
+    On Error Resume Next
+    Set selectedRange = Application.InputBox(prompt:="请选择一个列（单击列标）", Type:=8)
+    On Error GoTo 0
+    If selectedRange Is Nothing Then
+        MsgBox "你没有选择任何列，操作取消。"
+        Exit Sub
+    End If
+    If selectedRange.Columns.Count > 1 Then
+        MsgBox "你只能选择一个列。"
+        Exit Sub
+    End If
+    Dim lastRow As Long
+    lastRow = Cells(Rows.Count, selectedRange.Column).End(xlUp).Row
+    Dim data As Variant
+    Dim i As Long
+    ' 创建一个集合对象，用于存储已经标记过颜色的单元格地址，避免重复填充颜色
+    Dim coloredCells As New Collection
+    For i = 2 To lastRow
+        data = Cells(i, selectedRange.Column).Value
+        If dict.Exists(data) Then
+            ' 如果数据已经存在于字典中，说明是重复值，获取当前单元格地址
+            Dim cellAddress As String
+            cellAddress = Cells(i, selectedRange.Column).Address
+            ' 检查当前单元格是否已经被标记过颜色，如果没有则进行颜色填充并添加到已标记集合中
+            On Error Resume Next
+            coloredCells.Add cellAddress, cellAddress
+            On Error GoTo 0
+            If Err.Number = 0 Then
+                Cells(i, selectedRange.Column).Interior.Color = RGB(255, 0, 0)    ' 设置单元格填充颜色为红色
+            End If
+        Else
+            dict(data) = 1
+        End If
+    Next i
+    If coloredCells.Count > 0 Then
+        MsgBox "所选列存在重复数据，重复数据所在单元格已标记为红色。"
+    Else
+        MsgBox "所选列没有重复数据。"
+    End If
+End Sub

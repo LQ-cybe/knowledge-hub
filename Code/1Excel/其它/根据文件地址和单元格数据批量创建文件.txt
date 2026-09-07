@@ -1,0 +1,97 @@
+﻿'根据模板文件和数据批量生成文件
+Sub WriteToTemplateAndSave()
+    Dim ws As Worksheet
+    Dim templatePath As String
+    Dim wbTemplate As Workbook
+    Dim lastRow As Long
+    Dim i As Long, col As Long
+    Dim folderPath As String
+    Dim fileName As String
+    Dim fullPath As String
+    Dim targetCell As String
+    
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False ' 禁用警告对话框
+    
+    ' 设置当前工作表
+    Set ws = ActiveSheet
+    
+    ' 模板文件路径
+    templatePath = ws.Range("X1").Value
+    
+    ' 检查模板文件是否存在
+    If Len(Dir(templatePath)) = 0 Then
+        MsgBox "模板文件不存在：" & templatePath, vbCritical
+        Application.DisplayAlerts = True
+        Application.ScreenUpdating = True
+        Exit Sub
+    End If
+    
+    ' 获取当前工作表数据最后一行行号
+    lastRow = ws.Cells(ws.Rows.Count, "B").End(xlUp).Row
+    
+    ' 遍历数据行（从第2行开始，第1行是表头）
+    For i = 2 To lastRow
+        ' 获取文件夹路径（B列）
+        folderPath = ws.Cells(i, "B").Value
+        
+        ' 获取文件名（C列，假设已包含扩展名）
+        fileName = ws.Cells(i, "C").Value
+        
+        ' 处理路径中的斜杠问题
+        folderPath = Replace(folderPath, "/", "\")
+        
+        ' 确保路径以反斜杠结尾
+        If Right(folderPath, 1) <> "\" Then folderPath = folderPath & "\"
+        
+        ' 构建完整文件路径
+        fullPath = folderPath & fileName
+        
+        ' 检查文件夹路径是否存在
+        If Len(Dir(folderPath, vbDirectory)) = 0 Then
+            MsgBox "文件夹不存在：" & folderPath & vbCrLf & "行号：" & i, vbCritical
+            GoTo NextRecord
+        End If
+        
+        ' 打开模板工作簿
+        Set wbTemplate = Workbooks.Open(templatePath, ReadOnly:=False)
+        
+        ' 遍历 D 到 R 列（列号 4 到 18）
+        For col = 4 To 18
+            ' 获取第一行对应列的目标单元格地址
+            targetCell = ws.Cells(1, col).Value
+            
+            If targetCell <> "" Then
+                ' 将当前行对应列的值写入模板文件的目标单元格
+                On Error Resume Next
+                wbTemplate.Worksheets(1).Range(targetCell).Value = ws.Cells(i, col).Value
+                If Err.Number <> 0 Then
+                    Debug.Print "写入错误: 行=" & i & ", 列=" & col & ", 目标单元格=" & targetCell & ", 错误=" & Err.Description
+                    Err.Clear
+                End If
+                On Error GoTo 0
+            End If
+        Next col
+        
+        ' 另存为新文件（自动替换已存在的文件）
+        On Error Resume Next
+        wbTemplate.SaveAs fileName:=fullPath
+        If Err.Number <> 0 Then
+            MsgBox "保存文件失败：" & fullPath & vbCrLf & "错误：" & Err.Description, vbCritical
+            Err.Clear
+        End If
+        On Error GoTo 0
+        
+        ' 关闭模板工作簿
+        wbTemplate.Close SaveChanges:=False
+        
+NextRecord:
+        ' 释放对象
+        Set wbTemplate = Nothing
+    Next i
+    
+    Application.DisplayAlerts = True ' 恢复警告对话框
+    Application.ScreenUpdating = True
+    
+    MsgBox "操作完成！共处理 " & (lastRow - 1) & " 条记录", vbInformation
+End Sub

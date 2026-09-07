@@ -1,0 +1,24 @@
+Attribute VB_Name = "文字样式"
+Sub 设置第一个段落的格式()
+    Set myRange = ActiveDocument.Paragraphs(1).Range
+    With myRange.Font
+        .Bold = True
+        .Name = "Arial"
+        .Size = 24
+    End With
+End Sub
+
+Sub 设置字体和加粗()
+    With ActiveDocument.Styles(wdStyleHeading2).Font
+        .Name = "Arial"
+        .Italic = True
+    End With
+End Sub
+
+Sub 创建文字样式并应用()
+    Set myFont = New Font
+    myFont.Bold = True
+    myFont.Name = "Arial"
+    ActiveDocument.Paragraphs(1).Range.Font = myFont
+End Sub
+

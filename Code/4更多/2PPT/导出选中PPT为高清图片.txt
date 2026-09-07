@@ -1,0 +1,10 @@
+﻿'导出PPT中选中的幻灯片为图片
+Sub sutExportSelectedPic()
+    Dim i, j As Integer
+    j = 1
+    For i = ActiveWindow.Selection.SlideRange.Count To 1 Step -1
+        '图片格式也可以改为png，后面的数字代表分辨率
+        ActiveWindow.Selection.SlideRange(i).Export "D:\AAA\SUT1" & Format(j, "000") & ".jpg", "jpg", 10000, 10000 * 0.5625
+        j = j + 1
+    Next
+End Sub

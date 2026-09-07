@@ -1,0 +1,36 @@
+Sub DeleteCustomFunction(functionName As String)
+    Dim codeMod As CodeModule
+    Dim lineCount As Long
+    Dim lineNum As Long
+    Dim startLine As Long
+    Dim endLine As Long
+    Dim inFunction As Boolean
+    Dim lineText As String
+    ' 获取当前模块的代码模块对象
+    Set codeMod = Application.vbe.ActiveCodePane.CodeModule
+    lineCount = codeMod.CountOfLines
+    startLine = 0
+    endLine = 0
+    inFunction = False
+    ' 遍历当前模块中的每一行代码
+    For lineNum = 1 To lineCount
+        lineText = Trim(codeMod.Lines(lineNum, 1))
+        If InStr(1, UCase(lineText), "FUNCTION " & UCase(functionName), vbTextCompare) > 0 Then
+            startLine = lineNum
+            inFunction = True
+        End If
+        If inFunction Then
+            If InStr(1, UCase(lineText), "END FUNCTION", vbTextCompare) > 0 Then
+                endLine = lineNum
+                Exit For
+            End If
+        End If
+    Next lineNum
+    ' 如果找到了函数的起始和结束行，则删除该函数代码
+    If startLine > 0 And endLine > 0 Then
+        codeMod.DeleteLines startLine, endLine - startLine + 1
+        '        MsgBox "函数 " & functionName & " 已从当前模块中删除。"
+    Else
+        '        MsgBox "未在当前模块中找到函数 " & functionName & "。"
+    End If
+End Sub

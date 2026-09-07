@@ -1,0 +1,61 @@
+﻿    
+Sub 检查有无重复值()
+    ' 创建一个Scripting.Dictionary对象，用于存储数据并快速判断数据是否重复
+    ' Scripting.Dictionary可以通过键值对的形式来高效地进行数据的查找和唯一性判断
+    Dim dict As Object
+    Set dict = CreateObject("Scripting.Dictionary")
+    
+    ' 弹出输入框，提示用户选择一个列（通过单击列标），并获取用户选择的列范围
+    ' Type:=8 表示允许用户选择一个单元格区域，这里期望用户选择的是一个列
+    Dim selectedRange As Range
+    On Error Resume Next
+    Set selectedRange = Application.InputBox(prompt:="请选择一个列（单击列标）", Type:=8)
+    On Error GoTo 0
+    ' 判断用户是否取消了选择操作，如果selectedRange为Nothing，表示用户取消了，弹出提示并退出过程
+    If selectedRange Is Nothing Then
+        MsgBox "你没有选择任何列，操作取消。"
+        Exit Sub
+    End If
+    ' 检查用户选择的是否是一个列，如果选择的列数大于1，则不符合要求，弹出提示并退出过程
+    If selectedRange.Columns.Count > 1 Then
+        MsgBox "你只能选择一个列。"
+        Exit Sub
+    End If
+    
+    ' 获取所选列最后一个有数据的行号
+    ' 使用Cells函数结合Rows.Count获取工作表的总行数，定位到所选列的最后一行
+    ' 然后通过End(xlUp)方法向上查找，找到最后一个有数据的单元格所在行号，并赋值给lastRow变量
+    Dim lastRow As Long
+    lastRow = Cells(Rows.Count, selectedRange.Column).End(xlUp).Row
+    
+    ' 声明变量data，用于临时存储从单元格中读取的值
+    ' 声明变量duplicateAddresses，用于拼接重复数据所在单元格的地址，初始为空字符串
+    ' 声明循环计数器i，用于遍历所选列的数据行
+    Dim data As Variant
+    Dim duplicateAddresses As String
+    Dim i As Long
+    ' 从所选列的第2行开始（通常第1行是标题行，跳过标题行进行数据检查），循环到最后一行
+    For i = 2 To lastRow
+        ' 获取当前行、所选列单元格的值，并赋值给data变量
+        data = Cells(i, selectedRange.Column).Value
+        ' 使用Scripting.Dictionary对象的Exists方法判断data的值是否已经作为键存在于字典中
+        ' 如果已经存在，说明遇到了重复数据
+        If dict.Exists(data) Then
+            ' 如果duplicateAddresses还是空字符串，说明是第一次发现重复数据，直接将当前单元格地址赋值给它
+            ' 如果不为空字符串，则将当前单元格地址通过字符串拼接的方式添加到duplicateAddresses后面，中间用逗号隔开
+            duplicateAddresses = duplicateAddresses & ", " & Cells(i, selectedRange.Column).Address
+        Else
+            ' 如果data的值不存在于字典中，将其作为键添加到字典中，对应的值在这里简单设为1，重点是利用键的唯一性来判断重复
+            dict(data) = 1
+        End If
+    Next i
+    
+    ' 根据duplicateAddresses变量是否为空来判断是否存在重复数据
+    ' 如果不为空，说明存在重复数据，弹出消息框显示所选列存在重复数据以及重复数据所在单元格地址
+    ' 如果为空，则弹出消息框提示所选列没有重复数据
+    If duplicateAddresses <> "" Then
+        MsgBox "所选列存在重复数据，重复数据所在单元格地址为：" & duplicateAddresses
+    Else
+        MsgBox "所选列没有重复数据。"
+    End If
+End Sub

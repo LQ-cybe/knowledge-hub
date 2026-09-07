@@ -1,0 +1,18 @@
+﻿Application.ScreenUpdating = False		'启用和禁用屏幕刷新
+
+Application.ScreenUpdating = True
+
+Application.DisplayAlerts = False		'启用和禁用事件
+
+Application.DisplayAlerts = True
+
+Application.Calculation = xlManual		'手动计算
+
+Application.Calculation = xlAutomatic	'自动计算
+
+Application.CutCopyMode = False '取消复制选区
+
+'这段代码先关闭所有警告提示
+       Application.DisplayAlerts = False
+       ActiveWorkbook.CheckCompatibility = False
+       Application.DisplayAlerts = True

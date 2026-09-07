@@ -1,0 +1,19 @@
+﻿'32位数是Declare，64位数改成Declare PtrSafe
+' 声明Windows API函数用于编码转换
+Private Declare PtrSafe Function MultiByteToWideChar Lib "kernel32" ( _
+    ByVal CodePage As Long, _
+    ByVal dwFlags As Long, _
+    ByVal lpMultiByteStr As String, _
+    ByVal cchMultiByte As Long, _
+    ByVal lpWideCharStr As String, _
+    ByVal cchWideChar As Long) As Long
+
+Private Declare PtrSafe Function WideCharToMultiByte Lib "kernel32" ( _
+    ByVal CodePage As Long, _
+    ByVal dwFlags As Long, _
+    ByVal lpWideCharStr As String, _
+    ByVal cchWideChar As Long, _
+    ByVal lpMultiByteStr As String, _
+    ByVal cchMultiByte As Long, _
+    ByVal lpDefaultChar As String, _
+    ByVal lpUsedDefaultChar As Long) As Long

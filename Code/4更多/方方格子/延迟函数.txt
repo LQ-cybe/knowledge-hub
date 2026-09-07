@@ -1,0 +1,7 @@
+Public Sub delay(t As Single)
+    Dim time1 As Single
+    time1 = Timer
+    Do
+        DoEvents
+    Loop While Timer - time1 < t
+End Sub

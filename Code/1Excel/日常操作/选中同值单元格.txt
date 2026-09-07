@@ -1,0 +1,17 @@
+'name=选中同值单元格
+'officetype=excel,et
+'category=定位引用
+'description=选中与活动单元格内容相同的所有单元格（当前表）
+
+Public Sub SelectSameValue()
+    Dim v, r As Range
+    v = ActiveCell.Value
+    If IsEmpty(v) Then Exit Sub
+    Set r = ActiveSheet.UsedRange.Find(What:=v, LookIn:=xlValues, LookAt:=xlWhole)
+    If r Is Nothing Then Exit Sub
+    ActiveSheet.Cells.ClearOutline
+    Do
+        Union(Selection, r).Select
+        Set r = ActiveSheet.UsedRange.FindNext(r)
+    Loop Until r Is Nothing Or r.Address = ActiveCell.Address
+End Sub

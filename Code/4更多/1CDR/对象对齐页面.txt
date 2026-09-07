@@ -1,0 +1,96 @@
+﻿' 对齐常量定义
+Public Const ALIGN_LEFT = 1
+Public Const ALIGN_CENTER_H = 2
+Public Const ALIGN_RIGHT = 3
+Public Const ALIGN_TOP = 4
+Public Const ALIGN_CENTER_V = 5
+Public Const ALIGN_BOTTOM = 6
+Public Const ALIGN_CENTER = 7
+
+' 左对齐到页面
+Sub AlignLeftToPage()
+    Call QuickAlignToPage(1)
+End Sub
+
+' 水平居中到页面
+Sub AlignCenterHToPage()
+    Call QuickAlignToPage(2)
+End Sub
+
+' 右对齐到页面
+Sub AlignRightToPage()
+    Call QuickAlignToPage(3)
+End Sub
+
+' 顶部对齐到页面
+Sub AlignTopToPage()
+    Call QuickAlignToPage(4)
+End Sub
+
+' 垂直居中到页面
+Sub AlignCenterVToPage()
+    Call QuickAlignToPage(5)
+End Sub
+
+' 底部对齐到页面
+Sub AlignBottomToPage()
+    Call QuickAlignToPage(6)
+End Sub
+
+' 中心对齐到页面
+Sub AlignCenterToPage()
+    Call QuickAlignToPage(7)
+End Sub
+
+'对象对齐页面函数
+Sub QuickAlignToPage(alignType As Integer)
+    Dim s As shape
+    Dim pageW As Double
+    Dim pageH As Double
+    Dim newX As Double
+    Dim newY As Double
+
+    If ActiveDocument Is Nothing Then Exit Sub
+    If ActiveSelection.Shapes.count = 0 Then
+        MsgBox "请先选择对象！"
+        Exit Sub
+    End If
+
+    ' 获取页面尺寸（英寸）
+    pageW = ActivePage.SizeWidth
+    pageH = ActivePage.SizeHeight
+
+    ActiveDocument.BeginCommandGroup "对齐到页面"
+    Application.Optimization = True
+
+    For Each s In ActiveSelection.Shapes
+        Select Case alignType
+            Case 1  ' 左对齐
+                newX = 0
+                newY = s.PositionY
+            Case 2  ' 水平居中
+                newX = (pageW - s.SizeWidth) / 2
+                newY = s.PositionY
+            Case 3  ' 右对齐
+                newX = pageW - s.SizeWidth
+                newY = s.PositionY
+            Case 4  ' 顶部对齐（对象顶部贴页面顶部）
+                newX = s.PositionX
+                newY = pageH
+            Case 5  ' 垂直居中（对象中心贴页面中心）
+                newX = s.PositionX
+                newY = (pageH + s.SizeHeight) / 2
+            Case 6  ' 底部对齐（对象底部贴页面底部）
+                newX = s.PositionX
+                newY = pageH - (pageH - s.SizeHeight)
+            Case 7  ' 中心对齐（水平+垂直居中）
+                newX = (pageW - s.SizeWidth) / 2
+                newY = (pageH + s.SizeHeight) / 2
+        End Select
+
+        s.SetPosition newX, newY
+    Next s
+    Application.Optimization = False
+    ActiveDocument.EndCommandGroup
+    Application.Refresh
+End Sub

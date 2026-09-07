@@ -1,0 +1,37 @@
+'遍历输出当前文档所有VBA组件的名称和类型
+Sub OutputAllVba()
+    Dim vbaPro As Object
+    Dim vbaComp As Object
+    Dim ws As Worksheet
+    Dim rowNum As Long
+
+    '绑定当前工作簿VBA工程
+    Set vbaPro = ThisWorkbook.VBProject
+    Set ws = ActiveSheet
+
+    '清空A2往下原有内容，从A2重新输出
+    ws.range("A2:B" & ws.Rows.count).ClearContents
+    rowNum = 2
+
+    '遍历所有模块组件
+    For Each vbaComp In vbaPro.VBComponents
+        ws.Cells(rowNum, 1).value = vbaComp.NAME
+        '判断模块类型
+        Select Case vbaComp.Type
+            Case 1 'vbctStandardModule 标准模块
+                ws.Cells(rowNum, 2).value = "标准模块"
+            Case 2 'vbctClassModule 类模块
+                ws.Cells(rowNum, 2).value = "类模块"
+            Case 3 'vbctUserForm 用户窗体
+                ws.Cells(rowNum, 2).value = "用户窗体"
+            Case 100 'vbctDocumentModule 工作表/工作簿文档模块
+                ws.Cells(rowNum, 2).value = "文档模块"
+        End Select
+        rowNum = rowNum + 1
+    Next vbaComp
+
+    '自动调整列宽
+    ws.Columns("A:B").AutoFit
+
+    MsgBox "模块信息已输出完成，共 " & rowNum - 2 & " 个组件", vbInformation
+End Sub

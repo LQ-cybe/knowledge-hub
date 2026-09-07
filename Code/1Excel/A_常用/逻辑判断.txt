@@ -1,0 +1,26 @@
+'IF条件语句
+Sub MeekouIf()
+    Dim value As Integer
+    value = Range("A1").value
+    If value <= 5 Then
+        Debug.Print "小于5"
+    ElseIf value > 5 And value <= 10 Then
+        Debug.Print "大于5小于10"
+    Else
+        Debug.Print "大于10"
+    End If
+End Sub
+
+'Select Case条件判断
+Sub MeekouSwitch()
+    Dim value As Integer
+    value = Range("a1").value
+    Select Case value
+        Case Is < 5
+            Debug.Print "小于5"
+        Case 5 To 10
+            Debug.Print "大于5小于10"
+        Case Else
+            Debug.Print "大于10"
+    End Select
+End Sub

@@ -1,0 +1,48 @@
+﻿    Dim Parameter As Integer
+'    自定义函数，提取类别对应的月编码以数组的形式返回
+Function GetArrayByTableNameAndName(tableName As String, arrayName As String) As Variant
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim resultArray() As Variant
+    Dim i As Integer
+    Dim found As Boolean
+    
+    Set db = CurrentDb
+    Set rs = db.OpenRecordset(tableName, dbOpenDynaset)
+    
+    found = False
+    Do While Not rs.EOF
+        If rs.Fields("类别名称") = arrayName Then
+            ReDim resultArray(2 To Parameter)
+            For i = 2 To Parameter
+                resultArray(i) = rs.Fields(i)
+            Next i
+            found = True
+            Exit Do
+        End If
+        rs.MoveNext
+    Loop
+    
+    rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+    
+    If found Then
+        GetArrayByTableNameAndName = resultArray
+    Else
+        GetArrayByTableNameAndName = Empty
+    End If
+End Function
+Sub TestFunction1()
+    Dim arr As Variant
+    Parameter = 12 + 1
+    arr = GetArrayByTableNameAndName("qry_月份编码", "数字码B")
+    If IsArray(arr) Then
+        Dim i As Integer
+        For i = LBound(arr) To UBound(arr)
+            Debug.Print arr(i)
+        Next i
+    Else
+        Debug.Print "未找到对应内容"
+    End If
+End Sub

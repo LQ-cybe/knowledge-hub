@@ -1,0 +1,49 @@
+﻿Option Explicit
+#If VBA7 Then
+  Private Declare PtrSafe Function MessageBoxTimeout Lib "user32" Alias "MessageBoxTimeoutW"( _
+      ByVal hWnd As Long, ByVal lpText As LongPtr,  _
+      ByVal lpCaption As LongPtr, ByVal wType As Long,  _
+      ByVal wLange As Long, ByVal dwTimeout As Long) As Long
+#Else
+  Private Declare Function MessageBoxTimeout Lib "user32" Alias "MessageBoxTimeoutW"( _
+      ByVal hWnd As Long, ByVal lpText As Long,  _
+      ByVal lpCaption As Long, ByVal wType As Long,  _
+      ByVal wLange As Long, ByVal dwTimeout As Long) As Long
+#End If
+Private lngTimeOut As Long
+
+Public Property Let MsgboxTimeOutSecond(ByVal TimeOut As Long)
+  On Error GoTo letseconderror
+  If TimeOut < 0 Then
+    lngTimeOut = 0
+  Else
+    lngTimeOut = TimeOut * 1000
+  End If
+  Exit Property
+LetSecondError:
+  lngTimeOut = &H7FFFFFFF
+  
+End Property
+
+Public Property Let MsgboxTimeOut(ByVal TimeOut As Long)
+  If TimeOut < 0 Then
+    lngTimeOut = 0
+  Else
+    lngTimeOut = TimeOut
+  End If
+End Property
+
+Public Property Get MsgboxTimeOut() As Long
+  MsgboxTimeOut = lngTimeOut
+End Property
+
+Public Function MsgBox(ByVal Prompt As String, Optional ByVal Buttons As VbMsgBoxStyle = vbOKOnly,  _
+      Optional ByVal Title As String = vbNullString, Optional ByVal TimeOut As Long = -1&,  _
+      Optional ByVal LangeId As Long = 0&) As VbMsgBoxResult
+  'TimeOut以毫秒为单位，1 second = 1000 ms,TimeOut值为0时表示不自动返回,为负值时表示使用全局默认值
+  '如果信息框弹出后，用户未点击任何按钮，将返回3200,但如果Buttons的按钮值为VbOkOnly时，返回VbOk
+  
+  If TimeOut < 0 Then TimeOut = lngTimeOut
+  If Len(Title) < 1 Then Title = Application.Caption
+  MsgBox = MessageBoxTimeout(Application.hWnd, StrPtr(Prompt), StrPtr(Title), Buttons Or &H2000&, LangeId, TimeOut)
+End Function

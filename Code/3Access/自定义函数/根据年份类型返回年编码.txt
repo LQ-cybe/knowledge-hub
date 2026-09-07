@@ -1,0 +1,25 @@
+﻿'根据年份编码类型和年份返回年编码
+Function GetEraCode(categoryName As String, year As Integer) As Variant
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim sql As String
+    ' 去除 categoryName 前后空格
+    categoryName = Trim(categoryName)
+    sql = "SELECT 年代码 FROM qry_年字母码 WHERE 类别名称 = '" & categoryName & "' AND 年份 = " & year
+    Set db = CurrentDb
+    Set rs = db.OpenRecordset(sql)
+    If Not rs.EOF Then
+        GetEraCode = rs.Fields("年代码")
+    Else
+        GetEraCode = Empty
+    End If
+    rs.Close
+    Set rs = Nothing
+    Set db = Nothing
+End Function
+
+Sub TestGetEraCode()
+    Dim result As Variant
+    result = GetEraCode("字母码", 2015)
+    Debug.Print result
+End Sub

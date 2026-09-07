@@ -1,0 +1,14 @@
+﻿'比如要添加自定义系列”A,B,C,D,E,F,G”，可以使用如下的vba代码：
+Sub AddCustomSequences()
+    arr = Array("A", "B", "C", "D", "E", "F", "G")
+    Excel.Application.AddCustomList arr
+End Sub
+'删除自定义序列
+Sub DeleteCustomSequences()
+    arr = Array("A", "B", "C", "D", "E", "F", "G")
+    Excel.Application.AddCustomList arr
+    iNo = Excel.Application.GetCustomListNum(arr)
+    Excel.Application.DeleteCustomList iNo
+    arr1 = Excel.Application.GetCustomListContents(6)
+    MsgBox Excel.Application.CustomListCount
+End Sub

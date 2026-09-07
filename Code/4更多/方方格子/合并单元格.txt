@@ -1,0 +1,38 @@
+Sub MergeCells(rng As Range)
+    If rng.Rows.Count=1 Then Exit Sub
+    arr = rng.Value
+    ReDim brr(1 To UBound(arr), 1 To 2)
+    '结果数组，第一列保存值，第二列保存合并行数
+    For i = 1 To UBound(arr)
+        strTemp = ""
+        For j = 1 To UBound(arr, 2)
+            strTemp = strTemp & "♀" & arr(i, j)
+            '合并多列字符串为单个字符串
+        Next
+        brr(i, 1) = strTemp
+        '字符串装入结果数组
+        If i > 1 Then
+        '如果不是第一行
+            If brr(i - 1, 1) = strTemp Then
+                If lngBK = 0 Then lngBK = i - 1
+                'lngBK变量赋值结果数组用于存放合并行数的位置
+                    brr(lngBK, 2) = brr(lngBK, 2) + 1
+                    '累计相同值的行数
+            Else
+                lngBK = i
+            End If
+        End If
+    Next
+    lngRowFirst = rng.Row
+    '用户选择单元格区域的开始行
+    lngClnFirst = rng.Column
+    '用户选择单元格区域的开始列
+    For i = 1 To UBound(brr)
+        If brr(i, 2) > 0 Then
+            For j = 1 To UBound(arr, 2)
+                Set rngMerge = rng.Parent.Cells(i + lngRowFirst - 1, lngClnFirst + j - 1)
+                rngMerge.Resize(brr(i, 2) + 1, 1).Merge
+            Next
+        End If
+    Next
+End Sub

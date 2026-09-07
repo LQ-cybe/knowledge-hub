@@ -1,0 +1,9 @@
+﻿'禁用工作簿右键菜单
+Sub DisBar()
+    Dim myBar As CommandBar
+    For Each myBar In CommandBars
+        If myBar.Type = msoBarTypePopup Then
+            myBar.Enabled = True
+        End If
+    Next
+End Sub

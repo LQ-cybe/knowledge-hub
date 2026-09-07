@@ -1,0 +1,79 @@
+﻿' 按表格完整信息批量添加VBA引用（含版本号）
+Sub BatchAddReferencesFromTable()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim i As Long
+    Dim guid As String
+    Dim major As Long, minor As Long
+    Dim ref As Object
+    Dim addedCount As Long
+    Dim existCount As Long
+    Dim errorCount As Long
+
+    On Error Resume Next
+    If ThisWorkbook.VBProject Is Nothing Then
+        MsgBox " 请先在【文件→选项→信任中心→信任中心设置→宏设置】，" & vbCrLf & _
+               "勾选【信任对VBA工程对象模型的访问】", vbCritical
+        Exit Sub
+    End If
+    On Error GoTo 0
+    Set ws = ThisWorkbook.Worksheets("Sheet1")
+    lastRow = ws.Cells(ws.Rows.Count, "C").End(xlUp).Row ' 以C列GUID判断最后一行
+    
+    addedCount = 0
+    existCount = 0
+    errorCount = 0
+    For i = 2 To lastRow
+        ' 读取C列GUID，跳过空行
+        guid = Trim(ws.Cells(i, "C").Value)
+        If guid = "" Then GoTo NextLine
+        
+        ' 读取D列主版本、E列次版本，空值自动补默认1,0
+        major = Val(ws.Cells(i, "D").Value)
+        minor = Val(ws.Cells(i, "E").Value)
+        If major = 0 Then major = 1 ' 主版本为空默认1
+        ' 次版本为空默认0
+        
+        ' 5. 检查引用是否已存在，避免重复添加
+        If IsReferenceExists(guid) Then
+            existCount = existCount + 1
+            GoTo NextLine
+        End If
+        
+        ' 6. 按GUID+版本号添加引用
+        On Error Resume Next
+        Set ref = ThisWorkbook.VBProject.References.AddFromGuid(guid, major, minor)
+        If Err.Number = 0 Then
+            addedCount = addedCount + 1
+'            Debug.Print " 成功添加: " & ws.Cells(i, "A").Value & " | 版本: " & major & "." & minor
+        Else
+            errorCount = errorCount + 1
+'            Debug.Print " 添加失败: " & ws.Cells(i, "A").Value & " | 错误: " & Err.Description
+        End If
+        On Error GoTo 0
+        
+NextLine:
+    Next i
+    
+    ' 7. 弹出最终统计结果
+    MsgBox " 批量添加引用完成！" & vbCrLf & vbCrLf & _
+           "新增引用: " & addedCount & " 个" & vbCrLf & _
+           "已存在跳过: " & existCount & " 个" & vbCrLf & _
+           "添加失败: " & errorCount & " 个", vbInformation
+    
+    ' 释放对象
+    Set ref = Nothing
+    Set ws = Nothing
+End Sub
+
+' 辅助函数：检查指定GUID的引用是否已存在
+Private Function IsReferenceExists(guid As String) As Boolean
+    Dim ref As Object
+    For Each ref In ThisWorkbook.VBProject.References
+        If ref.guid = guid Then
+            IsReferenceExists = True
+            Exit Function
+        End If
+    Next ref
+    IsReferenceExists = False
+End Function

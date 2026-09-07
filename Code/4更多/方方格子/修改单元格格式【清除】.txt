@@ -1,0 +1,7 @@
+Public Function ClearRange(ByVal rng As Range)
+    With rng
+        .Borders.LineStyle = 0 '区域加边框
+        .ClearContents
+        .Interior.pattern = xlNone '清除颜色
+    End With
+End Function

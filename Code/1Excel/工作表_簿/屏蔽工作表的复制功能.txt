@@ -1,0 +1,19 @@
+﻿'屏蔽工作表的复制功能
+    Dim CmdCtrls As CommandBarControls
+    Dim Cmd As CommandBarControl
+Sub ProCopy()
+    Set CmdCtrls = Application.CommandBars.FindControls(ID:=19)
+    For Each Cmd In CmdCtrls
+        Cmd.Enabled = False
+    Next
+    Application.CellDragAndDrop = False
+    Application.OnKey ("^c"), ""
+End Sub
+Sub StaCopy()
+    Set CmdCtrls = Application.CommandBars.FindControls(ID:=19)
+    For Each Cmd In CmdCtrls
+        Cmd.Enabled = True
+    Next
+    Application.CellDragAndDrop = True
+    Application.OnKey ("^c")
+End Sub

@@ -1,0 +1,12 @@
+﻿'输出不可见字符的ASCII码
+Sub TestRSCharacter1()
+    Dim rsChar As String
+    rsChar = Chr(29)  ' 十进制ASCII码29，表示记录分隔符(RS)
+    
+    ' 输出到立即窗口
+    Debug.Print "RS字符: [" & rsChar & "]"
+    Debug.Print "RS字符的ASCII码: " & Asc(rsChar)
+    
+    ' 输出到单元格
+'    ThisWorkbook.Sheets("Sheet1").Range("A1").Value = "包含RS的文本" & rsChar & "数据"
+End Sub

@@ -1,0 +1,67 @@
+'单页：4张图片 → 对应Coll2集合
+'单PDF：20页 × 4张 = 80张图片 → 对应Coll1集合
+'总集合：所有PDF分组 → 对应Coll集合
+'边界处理：补充了索引越界判断，最后不足4张的页、不足80张的PDF也能正常处理。
+Sub fff()
+   Dim Fso As Scripting.FileSystemObject
+       Set Fso = New Scripting.FileSystemObject
+   Dim FileDict As Scripting.Dictionary
+       Set FileDict = New Scripting.Dictionary
+   Dim oFile As Scripting.File
+       For Each oFile In Fso.GetFolder(ThisWorkbook.Path & "\IMG").Files
+           ''Debug.Print oFile.Name
+           Set FileDict(oFile.Name) = oFile
+       Next
+   Dim totalRecord
+   Dim Coll As Collection
+       Set Coll = New Collection
+   Dim Coll1 As Collection
+       Set Coll1 = New Collection
+   Dim Coll2 As Collection
+       Set Coll2 = New Collection
+   Dim Coll3 As Collection
+       totalRecord = FileDict.Count \ 1
+       For ii = 1 To FileDict.Count Step 20
+           Set Coll1 = New Collection
+           For jj = 1 To 80 Step 4
+               ''Debug.Print "First:" & ii + jj - 1
+               Set Coll2 = New Collection
+               For kk = 1 To 4
+                    ''Debug.Print "     Second:" & ii + jj + kk - 2
+                    If ii + jj + kk - 2 < FileDict.Count - 1 Then
+                       If Not FileDict.Items(ii + jj + kk - 2) Is Nothing Then
+                           Coll2.Add FileDict.Items(ii + jj + kk - 2)
+                       End If
+                    End If
+               Next
+               
+               Coll1.Add Coll2
+           Next
+           Coll.Add Coll1
+           '''
+           ''Debug.Print "----"
+       Next
+       Dim Str As String
+       Dim FileCount As Integer
+           FileCount = 1
+       Dim PageCount As Integer
+       For Each Coll1 In Coll
+            PageCount = 1
+            For Each Coll2 In Coll1
+                 
+                 Str = ""
+                 For Each oFile In Coll2                      ''
+                      If Not oFile Is Nothing Then
+                          Str = Str & oFile.Name & vbCr
+                      End If
+                 Next
+                 
+                 Debug.Print "File: " & FileCount & "----- Page Count -------- " & PageCount & vbCr; Str
+                 PageCount = PageCount + 1
+                 Debug.Print
+                 Debug.Print
+            Next
+            Debug.Print "File: " & FileCount
+            FileCount = FileCount + 1
+       Next
+End Sub

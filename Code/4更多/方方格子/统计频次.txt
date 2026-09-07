@@ -1,0 +1,18 @@
+'出现几次
+Function COUNTOCCURENCE(Text As String, Search As String)
+    Dim l As Integer
+    Dim N As Integer
+    N = Len(Text)
+    Text = Replace(Text, Search, "")
+    COUNTOCCURENCE = (N - Len(Text)) / Len(Search)
+End Function
+'第N次出现位置
+Function SEARCHN(Text As String, Search As String, N As Integer)
+    Dim k As Integer
+    Dim i As Integer
+    k = 0
+    For i = 1 To N
+        k = InStr(k + 1, Text, Search, vbBinaryCompare)
+    Next
+    SEARCHN = k
+End Function

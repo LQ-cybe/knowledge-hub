@@ -1,0 +1,47 @@
+Sub 整个工作簿中子表破解()
+
+    ' 检查工作簿中是否存在加密工作表
+    Dim hasProtectedSheet As Boolean
+    Dim sht As Worksheet
+    
+    hasProtectedSheet = False
+    For Each sht In Worksheets
+        If sht.ProtectContents Then
+            hasProtectedSheet = True
+            Exit For
+        End If
+    Next sht
+    
+    ' 根据检查结果执行不同逻辑
+    If Not hasProtectedSheet Then
+        MsgBox "未找到有工作表保护密码", vbInformation, "提示"
+        Exit Sub
+    Else
+        ' 发现加密工作表，显示警告
+        Dim response As VbMsgBoxResult
+        response = MsgBox("检查到有工作表保护！<注意：请尊重他人的劳动成果！>", vbYesNo + vbExclamation, "警告")
+        If response = vbNo Then Exit Sub
+         ' 破解提示
+        MsgBox "破解提示：当要求输入密码时请点击取消！"
+        ' 关闭警告提示
+        Application.DisplayAlerts = False
+        On Error Resume Next
+        
+        ' 遍历所有工作表进行破解
+        For Each sht In Worksheets
+            With sht
+                .Protect DrawingObjects:=True, Contents:=True, Scenarios:=True, AllowFiltering:=True, AllowUsingPivotTables:=True
+                .Protect DrawingObjects:=False, Contents:=True, Scenarios:=False, AllowFiltering:=True, AllowUsingPivotTables:=True
+                .Protect DrawingObjects:=True, Contents:=True, Scenarios:=False, AllowFiltering:=True, AllowUsingPivotTables:=True
+                .Protect DrawingObjects:=False, Contents:=True, Scenarios:=True, AllowFiltering:=True, AllowUsingPivotTables:=True
+                .Unprotect
+            End With
+        Next
+        
+        ' 恢复设置
+        On Error GoTo 0
+        Application.DisplayAlerts = True
+        
+        MsgBox "破密完成！"
+    End If
+End Sub

@@ -1,0 +1,7 @@
+'发送当前工作簿到多人
+Sub SendMail2() '发送多人
+Dim aName, strTit As String
+aName = Array("Excel@qq.com", "测试@qq.com")
+strTit = 你好啊看见星光
+ThisWorkbook.SendMail aName, strTit     '发送当前工作簿
+End Sub

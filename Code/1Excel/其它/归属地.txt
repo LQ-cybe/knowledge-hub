@@ -1,0 +1,23 @@
+Private Sub CommandButton1_Click()
+      Dim temp
+      n = Range("a65536").End(xlUp).Row
+      On Error Resume Next
+      With CreateObject("Microsoft.XMLHTTP")
+          For p = 2 To n
+              .Open "GET", "http://www.hiphop8.com/nub/" & Cells(p, 1) & ".html", True
+              .Send
+              Do Until .ReadyState = 4
+                  DoEvents
+              Loop
+              temp = Split(StrConv(.responseBody, vbUnicode, &H804), "class=T>")
+              Cells(p, "B") = Split(Split(temp(1), "<")(0), " ")(1)
+              Cells(p, "C") = Split(temp(2), "<")(0)
+              Cells(p, "D") = Split(temp(3), "<")(0)
+          Next p
+          Set r = Nothing
+          .Quit
+      End With
+      Cells.Font.Size = 9
+      Cells.Columns.AutoFit
+      MsgBox "Íê³É"
+End Sub

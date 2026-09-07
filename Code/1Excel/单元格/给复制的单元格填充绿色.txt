@@ -1,0 +1,41 @@
+'给复制的单元格填充绿色
+Sub CopyAndFillWithGreen()
+    Dim tempSheet As Worksheet
+    Dim copySheetName As String
+    Dim copyRangeAddress As String
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+    Set tempSheet = Sheets("米可爱分享")
+    '保存Selection对象
+    copySheetName = ActiveSheet.Name
+    copyRangeAddress = Selection.Address
+    '复制当前所中的内容
+    Selection.Copy tempSheet.Range(copyRangeAddress)
+    '设置选中区域的填充色为绿色
+    With Worksheets(copySheetName).Range(copyRangeAddress)
+        .Interior.Color = 5287936
+    End With
+    tempSheet.Range(copyRangeAddress).Copy
+    Application.Goto Worksheets(copySheetName).Range(copyRangeAddress)
+    Application.ScreenUpdating = True
+    Application.DisplayAlerts = True
+End Sub
+
+'为FillCopyWithGreen添加快捷键CTRL+C
+Sub CreateShortcut()
+    Dim tempSheet As Worksheet
+    Application.OnKey "^c", "CopyAndFillWithGreen"
+    '创建临时存储表格
+    Set tempSheet = Sheets.Add
+    tempSheet.Name = "米可爱分享"
+    tempSheet.Visible = False
+End Sub
+
+'移除快捷键CTRL+C
+Sub RemoveShortcut()
+    Application.DisplayAlerts = False
+    Application.OnKey "^c"
+    '删除临时表格
+    Sheets("米可爱分享").Delete
+    Application.DisplayAlerts = True
+End Sub

@@ -1,0 +1,13 @@
+﻿'使用AI软件打开pdf文件   
+ Public filename As String                                  '文件名
+    Public Filedirectory As String                             '文件目录
+    Public Openmode As String                                  '打开方式
+    Public FullNameDocument As String                          '文件全路径
+    
+Private Sub Command0_Click()
+    Filedirectory = "D:\LQ\SMDA\W020000205"
+    filename = "W020000205-V01-2.pdf"
+    FullNameDocument = Filedirectory & "\" & filename
+    Openmode = "D:\Program Files (x86)\Adobe Illustrator CS6\Support Files\Contents\Windows\Illustrator.exe"
+    Shell Openmode & " " & FullNameDocument, vbNormalFocus
+End Sub

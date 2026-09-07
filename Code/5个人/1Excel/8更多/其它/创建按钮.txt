@@ -1,0 +1,17 @@
+﻿    '创建按钮并指定宏
+Sub CreateFormsButton()
+    Dim btn As Button
+    Dim ws As Worksheet
+    ' 设置要操作的工作表，这里以当前活动工作表为例
+    Set ws = ActiveSheet
+    ' 创建一个 Forms 按钮
+    Set btn = ws.Buttons.Add(100, 100, 100, 30)                ' 位置和大小 (Left, Top, Width, Height)
+    ' 设置按钮的显示文本
+    btn.Text = "点击我"
+    ' 指定按钮要执行的宏名称，这里假设宏名为 MyMacro
+    btn.OnAction = "MyMacro"
+End Sub
+    ' 定义要执行的宏
+Sub MyMacro()
+    MsgBox "你点击了按钮！"
+End Sub

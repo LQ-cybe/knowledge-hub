@@ -1,0 +1,18 @@
+    ' 自定义延时函数1（替代Application.Wait）
+Public Sub Delay(Seconds As Long)
+    Dim endTime As Date
+    endTime = Now + TimeSerial(0, 0, Seconds)
+
+    Do While Now < endTime
+        DoEvents                                               ' 允许系统处理其他事件
+    Loop
+End Sub
+    
+    '自定义延时函数2
+Public Sub Delay(Seconds As Long)
+    Dim Start As Double
+    Start = Timer                                              ' 记录当前时间
+    Do While Timer < Start + Seconds
+        DoEvents                                               ' 允许界面响应（比如点击按钮）
+    Loop
+End Sub

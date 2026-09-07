@@ -1,0 +1,3 @@
+﻿Sub OpenUp()'打开 C 盘上名为 MyFolder 的文件夹中的 MyBook.xls 工作簿
+    Workbooks.Open("C:\MyFolder\MyBook.xls")
+End Sub 

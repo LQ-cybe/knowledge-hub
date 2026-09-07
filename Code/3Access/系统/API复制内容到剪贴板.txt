@@ -1,0 +1,72 @@
+Option Compare Database
+Option Explicit
+
+' 声明 Unicode 兼容的 API 函数
+Private Declare PtrSafe Function OpenClipboard Lib "user32" (ByVal hwnd As LongPtr) As Long
+Private Declare PtrSafe Function CloseClipboard Lib "user32" () As Long
+Private Declare PtrSafe Function EmptyClipboard Lib "user32" () As Long
+Private Declare PtrSafe Function SetClipboardData Lib "user32" (ByVal wFormat As Long, ByVal hMem As LongPtr) As LongPtr
+Private Declare PtrSafe Function GlobalAlloc Lib "kernel32" (ByVal wFlags As Long, ByVal dwBytes As Long) As LongPtr
+Private Declare PtrSafe Function GlobalLock Lib "kernel32" (ByVal hMem As LongPtr) As LongPtr
+Private Declare PtrSafe Function GlobalUnlock Lib "kernel32" (ByVal hMem As LongPtr) As Long
+Private Declare PtrSafe Function GlobalFree Lib "kernel32" (ByVal hMem As LongPtr) As Long
+Private Declare PtrSafe Function lstrcpy Lib "kernel32" Alias "lstrcpyW" (ByVal lpString1 As LongPtr, ByVal lpString2 As LongPtr) As Long  ' Unicode 版本
+
+' 定义常量（使用 Unicode 格式）
+Private Const GMEM_MOVEABLE = &H2
+Private Const CF_UNICODETEXT = 13  ' Unicode 文本格式
+'API复制内容到剪贴板
+Sub CopyStringToClipboard(ByVal strText As String)
+    Dim hGlobalMemory As LongPtr
+    Dim lpGlobalMemory As LongPtr
+    Dim length As Long
+    Dim result As LongPtr
+
+    ' 计算 Unicode 字符串长度（每个字符 2 字节，包括终止符）
+    length = Len(strText) * 2 + 2  ' 2 字节/字符 + 2 字节终止符（\0\0）
+
+    ' 分配全局内存（Unicode 需双字节对齐）
+    hGlobalMemory = GlobalAlloc(GMEM_MOVEABLE, length)
+    If hGlobalMemory = 0 Then
+        Exit Sub
+    End If
+
+    ' 锁定内存块并获取指针
+    lpGlobalMemory = GlobalLock(hGlobalMemory)
+    If lpGlobalMemory = 0 Then
+        GlobalUnlock hGlobalMemory
+        Exit Sub
+    End If
+
+    ' 将 Unicode 字符串复制到内存（使用 StrPtr 获取字符串指针）
+    lstrcpy lpGlobalMemory, StrPtr(strText)
+
+    ' 解锁内存块
+    GlobalUnlock hGlobalMemory
+
+    ' 打开剪贴板
+    result = OpenClipboard(0)
+    If result = 0 Then
+        GlobalFree hGlobalMemory
+        Exit Sub
+    End If
+
+    ' 清空剪贴板
+    EmptyClipboard
+
+    ' 设置 Unicode 文本格式
+    result = SetClipboardData(CF_UNICODETEXT, hGlobalMemory)
+    If result = 0 Then
+        GlobalFree hGlobalMemory
+    End If
+
+    ' 关闭剪贴板
+    CloseClipboard
+End Sub
+Sub 测试复制文本()
+    ' 调用函数，将指定字符串复制到剪贴板
+    CopyStringToClipboard "这是要复制的内容！"
+    
+    ' 可选：显示提示信息
+    msgbox "内容已复制到剪贴板！", vbInformation
+End Sub

@@ -1,0 +1,30 @@
+﻿    '1.使用二进制读取文件内容，2.使用查找替换的方式删除掉双引号，3.保存为原名称的文件
+Sub RemoveQuotesFromTextFile()
+    Dim filePath As String
+    Dim Symbol1 As String
+    Symbol1 = Range("E3").Value
+    Dim Symbol2 As String
+    Symbol2 = """"
+    filePath = "C:\Users\Administrator\Desktop\" & "铜版纸.txt"   ' 修改为实际的文本文件路径
+    Dim fileSystem As Object
+    Set fileSystem = CreateObject("Scripting.FileSystemObject")
+    Dim file As Object
+    Set file = fileSystem.OpenTextFile(filePath, 1, False, -2) ' 以二进制读取模式打开文件，参数 -2表示自动检测文件编码格式
+    
+    Dim fileContent As String
+    fileContent = file.ReadAll                                 ' 读取文件全部内容
+    file.Close                                                 ' 关闭文件
+    
+    filePath = "C:\Users\Administrator\Desktop\" & "铜版纸.txt"   ' 修改为实际要删除的文件路径及文件名
+    On Error Resume Next                                       ' 开启错误处理，忽略运行时错误（后续可检查Err对象判断是否删除成功）
+    Kill filePath
+    fileContent = Replace(fileContent, Symbol1, Symbol2)       ' 删除读取内容中的双引号
+    
+    ' 以下可以选择将处理后的内容保存到新文本文件（示例代码）
+    Dim newFilePath As String
+    newFilePath = "C:\Users\Administrator\Desktop\" & "铜版纸.txt"
+    Set file = fileSystem.CreateTextFile(newFilePath, True)    ' 创建新文本文件
+    file.Write fileContent                                     ' 将处理后的内容写入新文件
+    file.Close                                                 ' 关闭新文件
+End Sub
+

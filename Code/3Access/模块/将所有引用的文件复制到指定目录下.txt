@@ -1,0 +1,23 @@
+'将当前数据库所有引用的文件复制到指定目录下
+Sub CopyReferencedFiles(targetFolder As String)
+    Dim refItem As Reference
+    Dim sourceFile As String
+    Dim targetFile As String
+    On Error Resume Next
+    For Each refItem In References
+        If Not refItem.IsBroken Then
+            sourceFile = refItem.FullPath
+            '获取文件名
+            Dim fileName As String
+            fileName = Mid(sourceFile, InStrRev(sourceFile, "\") + 1)
+            targetFile = targetFolder & "\" & fileName
+            FileCopy sourceFile, targetFile
+        End If
+    Next refItem
+    On Error GoTo 0
+End Sub
+
+Sub ts()
+' 假设要将引用文件复制到 "C:\Temp\ReferencedFiles" 目录下
+Call CopyReferencedFiles("D:\测试")
+End Sub

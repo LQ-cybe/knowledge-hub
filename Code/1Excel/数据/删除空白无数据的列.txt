@@ -1,0 +1,14 @@
+﻿'删除空白无数据的列
+Sub DeleteColumnsWithEmptyHeader()
+    Dim astCol  As Long
+    lastCol = Cells(6, Columns.Count).End(xlToLeft).Column
+
+    Dim col As Long
+    For col = lastCol To 2 Step -1
+        ' 检查当前列第一行单元格是否为空
+        If Cells(2, col).Value = "" Then
+            ' 如果为空，则删除该列
+            Columns(col).Delete
+        End If
+    Next col
+End Sub

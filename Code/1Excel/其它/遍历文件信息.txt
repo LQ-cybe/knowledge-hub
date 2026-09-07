@@ -1,0 +1,15 @@
+﻿'遍历文件信息
+Sub 遍历文件信息()
+    On Error Resume Next
+    Dim oDP As DocumentProperty
+    For Each oDP In Excel.ThisWorkbook.BuiltinDocumentProperties
+        With oDP
+            Debug.Print .Name, .Value
+        End With
+    Next
+     For Each oDP In Excel.ThisWorkbook.CustomDocumentProperties
+        With oDP
+            Debug.Print .Name, .Value
+        End With
+    Next
+End Sub

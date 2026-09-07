@@ -1,0 +1,48 @@
+﻿'遍历所有的模块，查找字符串内容出现的模块
+Sub FindStringInModules(strSearch As String)
+    Dim vbe As Object
+    Dim vbComp As Object
+    Dim codeMod As Object
+    Dim line As String
+    Dim lineNum As Integer
+    Dim foundModules As String
+    foundModules = ""
+    On Error Resume Next
+    Set vbe = Application.vbe
+    If vbe Is Nothing Then
+        MsgBox "无法获取VBA工程对象。"
+        Exit Sub
+    End If
+    On Error GoTo 0
+    For Each vbComp In vbe.ActiveVBProject.VBComponents
+        If vbComp.Type = vbext_ct_StdModule Or vbComp.Type = vbext_ct_ClassModule Then
+            Set codeMod = vbComp.CodeModule
+            lineNum = 1
+            Do While lineNum <= codeMod.CountOfLines
+                line = codeMod.Lines(lineNum, 1)
+                If InStr(1, line, strSearch, vbTextCompare) > 0 Then
+                    If foundModules = "" Then
+                        foundModules = vbComp.Name
+                    Else
+                        foundModules = foundModules & ", " & vbComp.Name
+                    End If
+                    Exit Do
+                End If
+                lineNum = lineNum + 1
+            Loop
+        End If
+    Next vbComp
+    If foundModules = "" Then
+        Debug.Print "未找到包含字符串 '" & strSearch & "' 的模块。"
+    Else
+        Debug.Print "包含字符串 '" & strSearch & "' 的模块有: " & foundModules
+    End If
+    Set codeMod = Nothing
+    Set vbComp = Nothing
+    Set vbe = Nothing
+End Sub
+Sub TestFindStringInModules()
+Dim YourStringHere As String
+YourStringHere = "AddLibraryReference()"
+    Call FindStringInModules(YourStringHere) '将 "YourStringHere" 替换为实际要查找的字符串
+End Sub

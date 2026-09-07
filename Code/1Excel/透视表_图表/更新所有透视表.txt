@@ -1,0 +1,6 @@
+﻿'更新所有透视表
+Sub UpdateAllPivotTables()
+    Dim oWB  As Workbook
+    Set oWB = Excel.ActiveWorkbook
+    oWB.RefreshAll
+End Sub

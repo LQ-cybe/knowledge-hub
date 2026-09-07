@@ -1,0 +1,36 @@
+'插入文件夹的图片并自适应单元格尺寸
+Sub AutoInsertImgsFromFolder(start As Range, folderPath As String)
+    Dim imgPath As String
+    Dim imgIndex As Integer
+    Dim current As Range
+    imgIndex = 0
+    imgName = Dir(folderPath & "\*" & ".jpg")
+    '遍历指定文件夹下所有的jpg图片
+    Do While Len(imgName) > 0
+        imgPath = folderPath & imgName
+        Debug.Print imgPath
+        '当前图片插入的单元格
+        Set current = start.Offset(imgIndex, 0)
+        '将当前图片插入到Excel单元格内
+        With ActiveSheet.Pictures.Insert(imgPath)
+            With .ShapeRange
+                .LockAspectRatio = msoFalse 'msoFalse表示不锁定横纵比，图片填充整个单元格, msoTrue表示锁定横纵比，图片可能不完全填充单元格
+                .Width = current.Width
+                .Height = current.Height
+            End With
+            '设置图片左上角的位置
+            .Left = current.Left
+            .Top = current.Top
+            .Placement = 1
+            .PrintObject = True
+        End With
+        '设置下一个图片
+        imgName = Dir
+        imgIndex = imgIndex + 1
+    Loop
+End Sub
+
+'插入文件夹的图片并自适应单元格尺寸
+Sub AutoInsertImgsFromFolderTest()
+    AutoInsertImgsFromFolder Range("A1"), "D:\Pictures\Camera Roll\"
+End Sub

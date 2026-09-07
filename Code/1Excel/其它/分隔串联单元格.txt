@@ -1,0 +1,48 @@
+﻿'按选定分隔符号来串联单元格区域的内容
+Sub MergeToLastColumnRight()
+    Dim selectedRange As Range
+    Dim delimiter As String
+    Dim targetColumn As Long    ' 目标列：选择区域最后一列 + 1
+    Dim row As Range
+    Dim cell As Range
+    Dim mergedText As String
+
+    ' 让用户选择区域（取消则退出）
+    On Error Resume Next
+    Set selectedRange = Application.InputBox( _
+                            Prompt:="请选择需要合并内容的单元格区域", _
+                            Title:="选择区域", _
+                            Type:=8)
+    On Error GoTo 0
+    If selectedRange Is Nothing Then
+        MsgBox "已取消操作。", vbInformation
+        Exit Sub
+    End If
+
+    ' 设置分隔符（固定为分号）
+    delimiter = ";"
+
+    ' 计算目标列：选择区域的最后一列 + 1
+    targetColumn = selectedRange.Column + selectedRange.Columns.Count + 1
+
+    ' 遍历每行合并内容并写入目标列
+    For Each row In selectedRange.Rows
+        mergedText = ""    ' 重置当前行的合并文本
+
+        ' 拼接当前行的所有单元格内容
+        For Each cell In row.Cells
+            If Len(Trim(cell.Value)) > 0 Then    ' 忽略空单元格
+                If mergedText = "" Then
+                    mergedText = cell.Value    ' 第一部分直接赋值
+                Else
+                    mergedText = mergedText & delimiter & cell.Value    ' 后续部分加分隔符
+                End If
+            End If
+        Next cell
+
+        ' 写入目标列（当前行的 targetColumn 列）
+        Cells(row.row, targetColumn).Value = mergedText
+    Next row
+
+'    MsgBox "合并完成！结果已写入第 " & targetColumn & " 列。", vbInformation
+End Sub

@@ -1,0 +1,9 @@
+﻿'消息窗口，是否
+Sub TEST()
+    response = MsgBox("哎呀,你吃饭了吗", vbYesNo, "提问")
+    If response = vbYes Then
+        MsgBox "那我只好自己去吃啦!"
+    Else
+        MsgBox "太好啦,那我们一起吧!"
+    End If
+End Sub

@@ -1,0 +1,42 @@
+Sub 拆分工作表()
+' ↑↑↑ 大搬运程序开始
+Dim sht As Worksheet
+' ↑↑↑ 请个临时工 用来表示拆分后的工作表
+Dim rng As Range
+' ↑↑↑ 请个临时工 用来表示正在拆分的数据
+On Error Resume Nex
+t' ↑↑↑ 容个错 如果工作表已经存在 不提示错误 继续搬
+i = Sheets("汇总").Cells(Rows.Count, 1).End(xlUp).Row
+' ↑↑↑ 用i表示待拆分的数据条目数
+For Each rng In Sheets("汇总").Range("b2:b" & i)
+' ↑↑↑ 让临时工rng依次表示正在拆分的数据
+Set sht = Worksheets(rng.Value)
+' ↑↑↑ 用临时工sht表示将数据拆分到的目标工作表工作表
+If sht Is Nothing Then
+' ↑↑↑ 如果目标工作表工作表不存在 那么
+Set sht = Worksheets.Add
+' ↑↑↑ 新建一个工作表 仍然用临时工sht表示
+sht.Name = rng.Value
+' ↑↑↑ 以正在拆的数据命名
+End If
+If InStr(mystr, rng) = 0 Then
+' ↑↑↑ 判断这个数据拆过没有 如果没拆过就开始拆，如果已经拆过 就不管了
+With Sheets("汇总")
+' ↑↑↑ 开始操作《汇总》工作表.Select
+' ↑↑↑ 选中汇总表
+.UsedRange.AutoFilter Field:=2, Criteria1:=rng
+' ↑↑↑ 筛选汇总表 的第二列中为当前拆的数据的所有条目
+.UsedRange.SpecialCells(xlCellTypeVisible).Select
+' ↑↑↑ 选中筛选后的结果
+Selection.Copy sht.Range("a1")
+' ↑↑↑ 将筛选后的结果复制到 目标工作表
+mystr = mystr & sht.Name
+' ↑↑↑ 记录已经拆分的数据名称
+End With
+End If
+Set sht = Nothing
+' ↑↑↑ 搬完之后 把数据放下
+NextSheets("汇总").UsedRange.AutoFilter
+' ↑↑↑ 取消筛选
+End Sub
+'将代码复制到模块里面就行了。

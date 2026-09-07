@@ -1,0 +1,11 @@
+'在所选单元格区域第一个单元格中输入“完美Excel”，并将其加粗
+With Selection(1)
+ .Value = "完美Excel"
+ .Font.Bold = True
+End With
+
+'所选择的单元格区域第一行第一列的单元格
+Selection(1).Cells(1, 1)
+
+'所选择的单元格区域的第一个单元格
+Selection(1).Cells(1)

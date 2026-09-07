@@ -1,0 +1,18 @@
+﻿'以当前单元格为基准，往下选择所有有数据的单元格（跳过当前单元格）
+Sub SelectDataBelowCurrentCell()
+    Range("A1").Select
+    Dim currentCell As Range
+    Set currentCell = ActiveCell
+    Dim lastRow As Long
+    lastRow = Cells(Rows.Count, currentCell.Column).End(xlUp).Row
+    Dim rangeToSelect As Range
+    Set rangeToSelect = currentCell.Offset(1, 0).Resize(lastRow - currentCell.Row, 1)
+    rangeToSelect.Select
+'    对选择的单元格进行升序或降序排列
+    Dim selectedRange As Range
+    Set selectedRange = Selection
+    If selectedRange.Cells.Count > 1 Then
+        selectedRange.Sort Key1:=selectedRange.Cells(1), Order1:=xlDescending, Header:=xlNo
+        '        xlDescending 表示降序排列，如果是 xlAscending 则为升序排列
+    End If
+End Sub

@@ -1,0 +1,77 @@
+﻿'添加自定义菜单和子菜单
+Sub AddNewMenu1()
+    Dim HelpMenu As CommandBarControl
+    Dim NewMenu As CommandBarPopup
+    Dim MenuItem As CommandBarControl
+    Dim SubMenuItem As CommandBarButton
+    
+    On Error Resume Next
+    '如果菜单已存在,则删除该菜单
+    CommandBars(1).Controls("统计(&S)").Delete
+    
+    '利用ID属性查找帮助菜单
+    Set HelpMenu = CommandBars(1).FindControl(ID:=30010)
+    
+    If HelpMenu Is Nothing Then
+        '如果该菜单不存在,则将新菜单添加到末尾
+        '设置新菜单为临时的
+        Set NewMenu = CommandBars(1).Controls _
+          .Add(Type:=msoControlPopup, Temporary:=True)
+    Else
+        '将新菜单添加到帮助菜单之前
+        Set NewMenu = CommandBars(1).Controls _
+          .Add(Type:=msoControlPopup, Before:=HelpMenu.Index, _
+          Temporary:=True)
+    End If
+    
+    '添加菜单标题并指定热键
+    NewMenu.Caption = "统计(&S)"
+    
+    '添加第一个菜单项
+    Set MenuItem = NewMenu.Controls.Add _
+      (Type:=msoControlButton)
+    With MenuItem
+        .Caption = "输入数据(&D)..."
+        .FaceId = 162
+        .OnAction = "Macro1"
+    End With
+    
+    '添加第二个菜单项
+    Set MenuItem = NewMenu.Controls.Add _
+      (Type:=msoControlButton)
+    With MenuItem
+        .Caption = "汇总数据(&T)..."
+        '添加快捷键
+        .ShortcutText = "Ctrl+Shift+T"
+        .FaceId = 590
+        .OnAction = "Macro2"
+    End With
+    
+    '添加第三个菜单项
+    '本菜单有子菜单项,因此其类型为msoControlPopup
+    Set MenuItem = NewMenu.Controls.Add _
+      (Type:=msoControlPopup)
+    With MenuItem
+        .Caption = "数据报表(&R)..."
+        '添加分隔线
+        .BeginGroup = True
+    End With
+    
+    '添加子菜单
+    '添加第一个子菜单
+    Set SubMenuItem = MenuItem.Controls.Add(Type:=msoControlButton)
+    With SubMenuItem
+        .Caption = "月汇总(&M)"
+        .FaceId = 110
+        .OnAction = "Macro3"
+    End With
+    
+    '添加第二个子菜单
+    Set SubMenuItem = MenuItem.Controls.Add _
+      (Type:=msoControlButton)
+    With SubMenuItem
+        .Caption = "季度汇总(&Q)"
+        .FaceId = 222
+        .OnAction = "Macro4"
+    End With
+End Sub

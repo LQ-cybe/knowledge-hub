@@ -1,0 +1,27 @@
+﻿'将指定文件夹复制到共享盘的指定目录中
+Sub CopyFolderToShare_BF()
+    
+    Dim fso As Object
+    Dim sourceFolderPath As String
+    Dim targetFolderPath As String
+    '设置源文件夹路径，这里需要替换成你实际的本地文件夹路径，注意路径格式
+    sourceFolderPath = "D:\LQ\SMDA\11测试"
+    '设置目标文件夹路径（共享盘上的路径），替换成实际的共享盘路径，注意路径格式以及确保有权限访问
+    targetFolderPath = "\\192.168.0.254\公共文件可修改\共享F盘\F盘\Y 开头的客户\Y 优特利\数码"
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    '检查源文件夹是否存在
+    If fso.FolderExists(sourceFolderPath) Then
+        '检查目标文件夹是否存在，如果不存在则创建
+        If Not fso.FolderExists(targetFolderPath) Then
+            fso.CreateFolder targetFolderPath
+        End If
+        
+        '执行文件夹复制操作
+        fso.CopyFolder sourceFolderPath, targetFolderPath & "\" & fso.GetFileName(sourceFolderPath)
+    Else
+        MsgBox "源文件夹不存在，请检查路径设置是否正确！"
+    End If
+    Set fso = Nothing
+    MsgBox "完成"
+End Sub
+

@@ -1,0 +1,7 @@
+'破解工作簿保护密码
+Sub WorkbookPasswordCracking()
+    ActiveWorkbook.sheets.Copy
+        For Each sh In ActiveWorkbook.sheets
+        sh.Visible = True
+    Next
+End Sub

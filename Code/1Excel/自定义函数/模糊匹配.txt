@@ -1,0 +1,26 @@
+Function 模糊匹配分类(查找文本 As String, 字典表 As Range, 结果列 As Long) As String
+    '参数说明：
+    '查找文本：需要匹配的文本
+    '字典表：B表的A:B列范围
+    '结果列：返回结果的列号（在字典表中的位置，通常为2）
+    '根据数据包含的条件字符串进行匹配并返回对应的值
+'如【~池标贴;54# 珠光合成纸覆光膜，白底黑~】条件设置【珠光合成纸】即可返回对应的第2列结果
+    Dim dictRange As Range
+    Dim cell As Range
+    Dim result As String
+    
+    result = ""
+    
+    '遍历字典表
+    For Each cell In 字典表.Columns(1).Cells
+        If Len(Trim(cell.Value)) > 0 Then
+            '使用模糊匹配
+            If InStr(1, 查找文本, cell.Value, vbTextCompare) > 0 Then
+                result = cell.Offset(0, 结果列 - 1).Value
+                Exit For
+            End If
+        End If
+    Next cell
+    
+    模糊匹配分类 = result
+End Function

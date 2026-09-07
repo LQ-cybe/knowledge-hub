@@ -1,0 +1,3 @@
+﻿ActiveSheet.ScrollArea = "$A$1:$U$35"   '将工作表的滚动区域限制在A1:F20
+
+ActiveSheet.ScrollArea = ""		'取消工作表的滚动限制

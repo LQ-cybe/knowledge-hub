@@ -1,0 +1,29 @@
+﻿Public CalculationState As Long
+Public EventState As Boolean
+Public PageBreakState As Boolean
+'关闭屏幕更新等开关提升效率
+Sub BeginCode()
+    PageBreakState = False
+    Application.ScreenUpdating = PageBreakState    '关闭屏幕刷新
+    EventState = Application.EnableEvents    '保存当前事件设置状态
+    Application.EnableEvents = PageBreakState    '关闭自动启动事件
+    ActiveSheet.DisplayPageBreaks = PageBreakState   '关闭显示分页符
+    Application.CutCopyMode = PageBreakState   '是否显示警告提示框
+    CalculationState = Application.Calculation    '保存当前计算模式
+    Application.Calculation = xlCalculationManual    '将计算模式设置为手动
+'    PageBreakState = ActiveSheet.DisplayPageBreaks    '保存当前显示分页符设置
+'    Application.CalculateFull          '强制 Excel 立即完成所有公式的计算
+End Sub
+
+'开启屏幕更新等开关
+Sub EndCode()
+    PageBreakState = True
+    Application.ScreenUpdating = PageBreakState    '开启屏幕刷新
+    EventState = Application.EnableEvents    '保存当前事件设置状态
+    Application.EnableEvents = PageBreakState    '开启自动启动事件
+'    ActiveSheet.DisplayPageBreaks = PageBreakState   '开启显示分页符
+    Application.CutCopyMode = PageBreakState   '是否显示警告提示框
+    CalculationState = Application.Calculation    '保存当前计算模式
+    Application.Calculation = xlCalculationAutomatic    '将计算模式设置为自动
+'    Application.CalculateFull          '强制 Excel 立即完成所有公式的计算
+End Sub

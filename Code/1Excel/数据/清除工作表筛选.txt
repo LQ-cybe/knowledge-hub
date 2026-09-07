@@ -1,0 +1,15 @@
+Sub 清除筛选()
+    Dim ws As Worksheet
+    Dim lo As ListObject
+    Dim colCount As Integer
+    DJBname = "登记表"
+    
+    Set ws = ThisWorkbook.ActiveSheet
+    Set lo = ws.ListObjects(DJBname)
+    
+    colCount = lo.ListColumns.Count
+    For I = 1 To colCount
+        ActiveSheet.ListObjects(DJBname).Range.AutoFilter Field:=I
+    Next
+    JumpToLastCell
+End Sub

@@ -1,0 +1,28 @@
+﻿'在加载项显示图标
+Sub ShowFaceIDs()
+    Dim NewToolbar As CommandBar
+    Dim NewButton As CommandBarButton
+    Dim i As Integer, IDStart As Integer, IDStop As Integer
+   
+'删除现有的FaceIds工具栏，如果它存在
+    On Error Resume Next
+    Application.CommandBars("FaceIds").Delete
+    On Error GoTo 0
+   
+'添加一个空工具栏
+    Set NewToolbar = Application.CommandBars.Add _
+        (name:="FaceIds", temporary:=True)
+    NewToolbar.Visible = True
+   
+'更改以下值以查看不同的Faceid
+    IDStart = 1
+    IDStop = 800
+   
+    For i = IDStart To IDStop
+        Set NewButton = NewToolbar.Controls.Add _
+            (Type:=msoControlButton, ID:=2950)
+        NewButton.faceId = i
+        NewButton.caption = "FaceID = " & i
+    Next i
+    NewToolbar.Width = 600
+End Sub

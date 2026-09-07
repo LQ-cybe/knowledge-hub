@@ -1,0 +1,37 @@
+﻿Sub 合并当前目录下的工作簿的所有工作表()
+    Application.ScreenUpdating = False
+    Dim myfile As String
+    Dim wb As Workbook
+    Dim m As Integer
+    Dim rrow As Long
+    
+    sheetIndex = ActiveSheet.Index                             ' 获取同路径下待合并 Excel 文件的文件名
+    myfile = Dir(ThisWorkbook.Path & "\*.xls*")
+    Do While myfile <> ""                                      ' 排除代码所在的汇总工作簿
+        If myfile <> ThisWorkbook.Name Then                    ' 打开待汇总的工作簿
+            On Error Resume Next
+            Set wb = Workbooks.Open(ThisWorkbook.Path & "\" & myfile)
+            If Err.Number <> 0 Then
+                MsgBox "无法打开文件: " & ThisWorkbook.Path & "\" & myfile & vbCrLf & "错误信息: " & Err.Description
+                Err.Clear
+                myfile = Dir
+                GoTo NextIteration
+            End If
+            On Error GoTo 0
+            For m = 1 To wb.Worksheets.Count                   ' 遍历待汇总工作簿中的所有工作表
+                rrow = wb.Worksheets(m).UsedRange.Rows.Count   ' 获取当前工作表使用区域的行数
+    
+'    设定需要汇总的单元格列数
+                wb.Worksheets(m).Range("A1:E" & rrow).Copy _
+                        ThisWorkbook.Worksheets(sheetIndex).Cells(ThisWorkbook.Worksheets(sheetIndex).Rows.Count, "A").End(xlUp).Offset(1, 0)
+            Next m
+    
+            wb.Close False
+        End If
+NextIteration:
+        myfile = Dir
+    Loop
+    
+    Application.ScreenUpdating = True
+    MsgBox "完成"
+End Sub

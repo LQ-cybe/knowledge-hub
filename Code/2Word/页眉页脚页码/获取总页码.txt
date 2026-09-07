@@ -1,0 +1,2 @@
+Selection.EndKey wdStory
+TotalNumber=Selection.Information(wdActiveEndPageNumber)

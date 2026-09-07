@@ -1,0 +1,12 @@
+﻿'到末尾行
+Sub JumpToLastCell()
+    Dim lastRow As Long
+    Dim lastCol As Long
+    
+    ' 获取最后一个有数据的行和列
+    lastRow = ActiveSheet.Cells.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious).Row
+    lastCol = ActiveSheet.Cells.Find("*", SearchOrder:=xlByColumns, SearchDirection:=xlPrevious).Column
+    
+    ' 跳转到最后一个单元格
+    Cells(lastRow + 1, 2).Select
+End Sub

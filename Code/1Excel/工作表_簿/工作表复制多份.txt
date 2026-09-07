@@ -1,0 +1,43 @@
+﻿'总表处理：1.将当前工作表复制多份
+Sub CopyActiveSheetMultipleTimes()
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+
+    Dim ws As Worksheet
+    Dim numCopies As Long
+    Dim inputValue As Variant
+
+    '弹出输入框，获取用户输入的复制份数
+    inputValue = InputBox("请输入要复制的份数：", "设置复制份数", 1)
+
+    '验证输入是否有效（必须是正整数）
+    If inputValue = "" Then
+        '用户取消输入
+        GoTo Cleanup    '跳转到清理部分
+    ElseIf IsNumeric(inputValue) Then
+        numCopies = CLng(inputValue)
+        If numCopies < 1 Then
+            MsgBox "请输入有效的正整数（如1、5、10）！", vbExclamation
+            GoTo Cleanup
+        End If
+    Else
+        MsgBox "请输入有效的正整数（如1、5、10）！", vbExclamation
+        GoTo Cleanup
+    End If
+
+    '设置要复制的工作表（当前活动工作表）
+    Set ws = ActiveSheet
+
+    '循环复制指定份数
+    For i = 1 To numCopies
+        ws.Copy After:=ws    '新工作表插入到原工作表之后
+    Next i
+
+    '提示完成
+    MsgBox "已成功复制 " & numCopies & " 份工作表！", vbInformation
+
+Cleanup:
+    '恢复Excel设置
+    Application.ScreenUpdating = True
+    Application.EnableEvents = True
+End Sub

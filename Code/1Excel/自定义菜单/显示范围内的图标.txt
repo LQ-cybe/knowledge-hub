@@ -1,0 +1,18 @@
+﻿Sub 菜单()
+On Error Resume Next
+Application.VBE.CommandBars("VBA FaceId集合").Delete
+On Error GoTo 0
+Dim 命令栏
+Set 命令栏 = Application.VBE.CommandBars.Add("VBA FaceId集合", Position:=msoBarTop)
+命令栏.Visible = True
+命令栏.Enabled = True
+命令栏.Position = msoBarFloating
+
+Dim 第一个命令
+Dim i
+For i = 1 To 500
+Set 第一个命令 = 命令栏.Controls.Add(Type:=msoControlButton)
+第一个命令.caption = "FaceId：" & i
+第一个命令.faceId = i
+Next i
+End Sub

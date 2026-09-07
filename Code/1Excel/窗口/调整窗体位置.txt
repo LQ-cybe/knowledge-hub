@@ -1,0 +1,12 @@
+﻿'调整窗体的位置
+Sub ShowFloatingForm()
+    Dim frm As UserForm1
+    Set frm = New UserForm1
+
+    ' 设置为无模式并显示
+    frm.Show vbModeless
+
+    ' 手动定位
+    frm.Top = 50
+    frm.Left = Application.width - frm.width - 20
+End Sub

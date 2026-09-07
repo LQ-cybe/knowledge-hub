@@ -1,0 +1,16 @@
+﻿'输出所有模块的实际类型
+Sub CheckModuleTypes()
+    Dim db As Object
+    Dim mdl As Object
+    Dim i As Long
+    
+    Set db = Application.CurrentProject
+    
+    For i = 0 To db.AllModules.count - 1
+        Set mdl = db.AllModules(i)
+        Debug.Print "模块: " & mdl.Name & ", 类型: " & mdl.Type
+    Next
+    
+    Set mdl = Nothing
+    Set db = Nothing
+End Sub

@@ -1,0 +1,1 @@
+﻿DoCmd.OpenForm "frmopen", acDesign          '打开窗体设计视图
