@@ -177,15 +177,17 @@ router.get('/dashboard', (_req, res) => {
   res.json({ code: 0, data: { total, byType, tagCount, topFolders, recent, topTags } });
 });
 
-/** GET /api/timeline?type= —— 垂直时间线：按创建时间倒序的资源流（前端按天分组） */
+/** GET /api/timeline?type= —— 垂直时间线：按创建时间倒序的资源流（前端按天分组，含大小/标签辅助信息） */
 router.get('/timeline', (req, res) => {
   const db = getDb();
   const type = (req.query.type as string || '').trim();
   const rows = db.prepare(
-    `SELECT id, type, title, path, parent_id, created_at FROM resources
-     WHERE status='active' AND (? = '' OR type = ?)
-     ORDER BY created_at DESC LIMIT 500`
-  ).all(type, type) as { id: string; type: string; title: string; path: string; parent_id: string | null; created_at: string }[];
+    `SELECT r.id, r.type, r.title, r.path, r.parent_id, r.created_at, r.size,
+       (SELECT GROUP_CONCAT(t.name, ',') FROM resource_tags rt JOIN tags t ON t.id = rt.tag_id WHERE rt.resource_id = r.id) AS tag_names
+     FROM resources r
+     WHERE r.status='active' AND (? = '' OR r.type = ?)
+     ORDER BY r.created_at DESC LIMIT 500`
+  ).all(type, type) as { id: string; type: string; title: string; path: string; parent_id: string | null; created_at: string; size: number | null; tag_names: string | null }[];
   res.json({ code: 0, data: rows });
 });
 

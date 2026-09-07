@@ -37,9 +37,7 @@ function groupByDay(list: Resource[]): DayGroup[] {
 }
 const groups = ref<DayGroup[]>([]);
 
-const W = ref(1);
-
-/** 日期折叠状态（持久化到 sessionStorage，跨重渲染保持） */
+/** 日期折叠状态（持久化到 sessionStorage，跨重渲染保持）；折叠只隐藏卡片，时间线贯穿不受影响 */
 const COLLAPSE_KEY = 'kh-tl-collapsed';
 function loadCollapsed(): Record<string, boolean> {
   try { return JSON.parse(sessionStorage.getItem(COLLAPSE_KEY) || '{}'); } catch { return {}; }
@@ -56,7 +54,6 @@ async function load() {
   items.value = await getTimeline(typeFilter.value);
   groups.value = groupByDay(items.value);
   loading.value = false;
-  W.value = groups.value.length || 1;
 }
 onMounted(load);
 
@@ -64,6 +61,12 @@ function fmtHM(s: string) {
   if (!s) return '';
   const d = new Date(s.replace(' ', 'T'));
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+function fmtBytes(b?: number | null) {
+  if (!b) return '';
+  if (b >= 1 << 20) return (b / (1 << 20)).toFixed(1) + ' MB';
+  if (b >= 1 << 10) return (b / (1 << 10)).toFixed(1) + ' KB';
+  return b + ' B';
 }
 </script>
 
@@ -78,7 +81,7 @@ function fmtHM(s: string) {
 
     <div class="tl-body">
       <template v-for="g in groups" :key="g.date">
-        <!-- 日期节点（可点击折叠） -->
+        <!-- 日期节点（可点击折叠；时间线贯穿所有天，与折叠无关） -->
         <div class="tl-day">
           <button
             class="tl-date" :class="{ collapsed: isCollapsed(g.date) }"
@@ -94,6 +97,7 @@ function fmtHM(s: string) {
               <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </button>
+          <div class="tl-col-line"></div>
           <div class="tl-cards">
             <button
               v-for="r in g.list" :key="r.id"
@@ -104,6 +108,8 @@ function fmtHM(s: string) {
               <span class="tl-dot"></span>
               <span class="tl-ico">{{ typeIcons[r.type] || '📄' }}</span>
               <span class="tl-name">{{ r.title }}</span>
+              <span v-if="r.tag_names" class="tl-tags" :title="r.tag_names">{{ r.tag_names }}</span>
+              <span v-if="r.size" class="tl-size">{{ fmtBytes(r.size) }}</span>
               <span class="tl-time">{{ fmtHM(r.created_at) }}</span>
             </button>
           </div>
@@ -115,64 +121,74 @@ function fmtHM(s: string) {
 </template>
 
 <style scoped>
-.tl { padding: 8px 20px 20px; display: flex; flex-direction: column; gap: 12px; height: 100%; box-sizing: border-box; overflow-y: auto; }
-.tl-head { display: flex; align-items: center; gap: 14px; flex: none; }
+.tl { padding: 0 20px 20px; display: flex; flex-direction: column; gap: 0; height: 100%; box-sizing: border-box; overflow-y: auto; }
+
+/* 筛选行固定冻结在顶部 */
+.tl-head {
+  position: sticky; top: 0; z-index: 6;
+  display: flex; align-items: center; gap: 14px; flex: none;
+  padding: 10px 0 8px;
+  background: var(--el-bg-color-page, #f5f7fa);
+}
 .tl-title { font-size: 15px; font-weight: 600; color: var(--el-text-color-primary, #1f2937); }
 .tl-title small { font-size: 12px; font-weight: 400; color: var(--el-text-color-secondary, #9ca3af); margin-left: 6px; }
 
-.tl-body { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.tl-day { display: flex; gap: 14px; }
+/* 贯穿时间线：一条实色竖线，贯穿所有日期，与折叠状态无关 */
+.tl-body { flex: 1; min-height: 0; position: relative; --line-x: 164px; }
+.tl-body::before {
+  content: ''; position: absolute; left: calc(var(--line-x) - 1px); top: 0; bottom: 0;
+  width: 2px; background: var(--el-color-primary, #409eff); z-index: 0;
+}
 
-/* 日期头（可点击折叠，含向下连接线；线条为实色主题色，无透明度） */
+.tl-day { display: grid; grid-template-columns: 150px 2px 1fr; column-gap: 12px; }
+.tl-col-line { width: 2px; } /* 占位列：线由 .tl-body::before 提供 */
+
+/* 日期头（可点击折叠；箭头中心与时间线 X 方向重合） */
 .tl-date {
-  flex: none; width: 150px; padding: 12px 0 0; cursor: pointer; user-select: none;
+  position: relative; padding: 14px 0 0; cursor: pointer; user-select: none;
   display: flex; align-items: flex-start; justify-content: flex-end; gap: 8px;
-  text-align: left; font-family: inherit; background: none; border: none; position: relative;
+  text-align: left; font-family: inherit; background: none; border: none;
 }
-.tl-date::before {
-  content: ''; position: absolute; left: 158px; top: 12px; height: 14px; width: 2px;
-  background: var(--el-color-primary, #409eff); z-index: 0;
-}
-.tl-date.collapsed::before { display: none; }
 .tl-date-num { font-size: 22px; font-weight: 700; line-height: 1; color: var(--el-color-primary, #409eff); }
 .tl-date-rest { text-align: left; }
 .tl-date-ym { font-size: 12px; color: var(--el-text-color-secondary, #9ca3af); }
 .tl-date-wd { font-size: 12px; color: var(--el-text-color-secondary, #9ca3af); margin-top: 2px; }
 .caret {
-  flex: none; margin-top: 2px; color: var(--el-color-primary, #409eff);
-  transition: transform .18s;
+  position: absolute; left: calc(var(--line-x) - 7px); top: 14px;
+  color: var(--el-color-primary, #409eff); transition: transform .18s; z-index: 1;
 }
 .tl-date.collapsed .caret { transform: rotate(-90deg); }
 
-/* 卡片列：每条卡片自带左侧实色竖线 + 圆点（折叠时随卡片隐藏，线自然断开） */
-.tl-cards {
-  flex: 1; min-width: 0; display: flex; flex-direction: column;
-  padding: 6px 0 16px 18px; position: relative;
-}
+/* 卡片列：紧凑行高；圆点参考 aihot 样式（主色+背景描边+外圈），中心与时间线重合 */
+.tl-cards { padding: 6px 0 10px; position: relative; }
 .tl-card {
-  position: relative; display: flex; align-items: center; gap: 10px; padding: 7px 12px;
+  position: relative; display: flex; align-items: center; gap: 8px;
+  padding: 4px 12px; margin: 2px 0;
   text-align: left; cursor: pointer; font-family: inherit;
   background: var(--el-bg-color, #fff);
   border: 1px solid var(--el-border-color-lighter, #ebeef5);
   border-radius: 8px; box-sizing: border-box;
-  transition: border-color .15s, transform .15s;
+  transition: border-color .15s;
 }
-.tl-card::before {
-  content: ''; position: absolute; left: -18px; top: 0; bottom: -6px; width: 2px;
-  background: var(--el-color-primary, #409eff); z-index: 0;
-}
-.tl-card:last-child::before { bottom: auto; height: 50%; }
-.tl-card:hover { border-color: var(--el-color-primary, #409eff); transform: translateX(2px); }
+.tl-card:hover { border-color: var(--el-color-primary, #409eff); }
 .tl-dot {
-  position: absolute; left: -22px; top: 50%; margin-top: -5px;
-  width: 10px; height: 10px; border-radius: 50%;
-  background: var(--el-color-primary, #409eff); z-index: 1;
+  position: absolute; left: calc(var(--line-x) - 176px - 4.5px); top: 50%; margin-top: -4.5px;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--el-color-primary, #409eff);
+  border: 2px solid var(--el-bg-color, #fff);
+  box-shadow: 0 0 0 1px var(--el-border-color, #e5e7eb);
+  z-index: 1;
 }
 .tl-ico { font-size: 14px; flex: none; }
 .tl-name {
-  flex: 1; min-width: 0; font-size: 13px; color: var(--el-text-color-primary, #1f2937);
+  flex: 0 1 auto; min-width: 0; font-size: 13px; color: var(--el-text-color-primary, #1f2937);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.tl-tags {
+  flex: 1; min-width: 0; font-size: 11px; color: var(--el-color-primary, #409eff);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left;
+}
+.tl-size { flex: none; font-size: 12px; color: var(--el-text-color-secondary, #9ca3af); }
 .tl-time { flex: none; font-size: 12px; color: var(--el-text-color-secondary, #9ca3af); }
 .tl-empty { color: var(--el-text-color-secondary, #9ca3af); text-align: center; padding: 40px 0; font-size: 13px; }
 </style>
