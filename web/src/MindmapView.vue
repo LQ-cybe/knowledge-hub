@@ -306,6 +306,26 @@ function removeBoundary(b: MMNode) {
   members.value = members.value.filter(m => m.group_id !== b.id);
   selected.value = new Set(); markDirty();
 }
+/** 布局切换：重算渲染坐标；切到自由布局且从未整理过（坐标全 0）时自动按层级填充，避免节点重叠 */
+function onLayoutChange() {
+  applyLayout();
+  if (mapLayout.value === 'free' && nodes.value.some(n => n.kind === 'node') &&
+      nodes.value.filter(n => n.kind === 'node').every(n => n.x === 0 && n.y === 0)) {
+    tidyFree(false);
+  }
+  markDirty();
+}
+/** 按层级整理自由坐标：用向右布局的位置写入存储坐标，供自由布局拖拽的起点 */
+function tidyFree(notify = true) {
+  const saved = mapLayout.value;
+  mapLayout.value = 'right';
+  applyLayout();
+  for (const n of nodes.value) { const p = renderPos.value.get(n.id); if (p) { n.x = Math.round(p.x); n.y = Math.round(p.y); } }
+  mapLayout.value = saved;
+  applyLayout();
+  markDirty();
+  if (notify) ElMessage.success('已按层级整理自由坐标，可继续拖动调整');
+}
 
 // ---------- 渲染辅助 ----------
 const nodeStyle = (n: MMNode) => {
@@ -389,13 +409,14 @@ onBeforeUnmount(() => { window.removeEventListener('keydown', onKeydown); if (sa
         <!-- 左侧：布局 -->
         <div class="mm-side mm-side-left">
           <div class="ms-title">布局</div>
-          <el-radio-group v-model="mapLayout" class="ms-layout" @change="() => { applyLayout(); markDirty(); }">
+          <el-radio-group v-model="mapLayout" class="ms-layout" @change="onLayoutChange">
             <el-radio value="free">自由编辑</el-radio>
             <el-radio value="right">向右</el-radio>
             <el-radio value="left">向左</el-radio>
             <el-radio value="org">组织图</el-radio>
             <el-radio value="radial">放射</el-radio>
           </el-radio-group>
+          <el-button v-if="mapLayout === 'free'" class="ms-tidy" size="small" @click="tidyFree">按层级整理坐标</el-button>
           <p class="ms-hint">Enter 新建同级<br/>Tab 新建子级<br/>双击编辑文字<br/>Delete 删除<br/>Shift 单击多选<br/>拖动节点自由调整<br/>所有修改自动保存</p>
         </div>
 
@@ -523,8 +544,9 @@ onBeforeUnmount(() => { window.removeEventListener('keydown', onKeydown); if (sa
 .ms-dim { font-size: 12px; opacity: 0.65; line-height: 1.7; margin: 0; }
 
 /* 画布 */
-.mm-canvas { flex: 1; min-width: 0; overflow: auto; position: relative; }
-.mm-stage { position: relative; }
+.mm-canvas { flex: 1; min-width: 0; overflow: auto; position: relative; display: flex; }
+.mm-stage { position: relative; margin: auto; flex: none; }
+.ms-tidy { margin-top: 8px; width: 100%; }
 .mm-svg { position: absolute; inset: 0; pointer-events: none; }
 .mm-node { position: absolute; cursor: pointer; border-radius: 8px; border: 1.5px solid transparent; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18); z-index: 2; }
 .mm-node.is-sel { box-shadow: 0 0 0 2px var(--kh-brand, #409eff), 0 1px 5px rgba(0, 0, 0, 0.2); }
