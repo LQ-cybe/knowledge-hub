@@ -7,6 +7,7 @@ import HomeView from './HomeView.vue';
 import BrowserView from './BrowserView.vue';
 import TimelineView from './TimelineView.vue';
 import ReportView from './ReportView.vue';
+import MindmapView from './MindmapView.vue';
 
 const activeTab = ref('browse');
 const browserRef = ref<InstanceType<typeof BrowserView>>();
@@ -95,6 +96,9 @@ async function openResource(parentId: string | null) {
       </el-tab-pane>
       <el-tab-pane label="📊 报表" name="report">
         <ReportView />
+      </el-tab-pane>
+      <el-tab-pane label="📐 导图" name="mindmap">
+        <MindmapView />
       </el-tab-pane>
     </el-tabs>
   </div>

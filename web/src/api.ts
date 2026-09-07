@@ -97,6 +97,24 @@ export const getGraph = (dimension: string) =>
 export const getTimeline = (type = '', tag = '') =>
   http.get('/timeline', { params: { type, tag } }).then(r => r.data.data as Resource[]);
 
+// ---------- 思维导图 ----------
+export interface MindmapMeta { id: string; title: string; layout: string; theme: string; updated_at: string; node_count: number }
+export interface MindmapNode { id: string; parent_id: string | null; title: string; kind: string; x: number; y: number; color: string | null; shape: string; sort: number }
+export interface MindmapLink { id: string; source_id: string; target_id: string; label: string }
+export interface MindmapMember { group_id: string; node_id: string }
+export const getMindmaps = () => http.get('/mindmaps').then(r => r.data.data as MindmapMeta[]);
+export const createMindmap = (title: string) => http.post('/mindmaps', { title }).then(r => r.data.data as { id: string });
+export const deleteMindmap = (id: string) => http.delete(`/mindmaps/${id}`).then(r => r.data.data);
+export const getMindmap = (id: string) => http.get(`/mindmaps/${id}`).then(r => r.data.data as MindmapMeta & { nodes: MindmapNode[]; links: MindmapLink[]; members: MindmapMember[] });
+export const updateMindmap = (id: string, patch: { title?: string; layout?: string; theme?: string }) =>
+  http.put(`/mindmaps/${id}`, patch).then(r => r.data.data);
+export const saveMindmapNodes = (id: string, nodes: MindmapNode[]) =>
+  http.put(`/mindmaps/${id}/nodes`, { nodes }).then(r => r.data.data);
+export const saveMindmapLinks = (id: string, links: MindmapLink[]) =>
+  http.put(`/mindmaps/${id}/links`, { links }).then(r => r.data.data);
+export const saveMindmapMembers = (id: string, members: MindmapMember[]) =>
+  http.put(`/mindmaps/${id}/members`, { members }).then(r => r.data.data);
+
 /** 报表中心 */
 export interface ReportGenResult {
   content: string;

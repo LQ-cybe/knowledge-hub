@@ -65,6 +65,44 @@ CREATE TABLE IF NOT EXISTS attachments (
   hash        TEXT NOT NULL DEFAULT ''
 );
 
+-- ============ 思维导图（独立导图工作区） ============
+CREATE TABLE IF NOT EXISTS mindmaps (
+  id         TEXT PRIMARY KEY,
+  title      TEXT NOT NULL,
+  layout     TEXT NOT NULL DEFAULT 'right',  -- free自由/right向右/left向左/org组织图/radial放射
+  theme      TEXT NOT NULL DEFAULT 'nexa-light', -- nexa-light/nexa-dark/classic/azure
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS mindmap_nodes (
+  id         TEXT PRIMARY KEY,
+  map_id     TEXT NOT NULL REFERENCES mindmaps(id) ON DELETE CASCADE,
+  parent_id  TEXT,                           -- 树结构（自由布局也保留父子语义用于编辑）
+  title      TEXT NOT NULL DEFAULT '',
+  kind       TEXT NOT NULL DEFAULT 'node',   -- node/boundary概要边界/summary概要
+  x          REAL NOT NULL DEFAULT 0,        -- 自由布局坐标
+  y          REAL NOT NULL DEFAULT 0,
+  color      TEXT,                           -- 覆盖色（null=跟随主题）
+  shape      TEXT NOT NULL DEFAULT 'auto',   -- auto/rect/round/ellipse
+  sort       INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_mm_nodes_map ON mindmap_nodes(map_id);
+CREATE TABLE IF NOT EXISTS mindmap_links (
+  id        TEXT PRIMARY KEY,
+  map_id    TEXT NOT NULL REFERENCES mindmaps(id) ON DELETE CASCADE,
+  source_id TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  label     TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_mm_links_map ON mindmap_links(map_id);
+-- 边界/概要包含的成员节点
+CREATE TABLE IF NOT EXISTS mindmap_members (
+  group_id TEXT NOT NULL,
+  node_id  TEXT NOT NULL,
+  PRIMARY KEY (group_id, node_id)
+);
+
 -- ============ FTS5 全文索引 ============
 CREATE VIRTUAL TABLE IF NOT EXISTS resources_fts USING fts5(
   title, content,
