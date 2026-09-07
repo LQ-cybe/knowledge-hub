@@ -90,6 +90,8 @@ mindmapsRouter.put('/mindmaps/:id/members', (req, res) => {
   if (!Array.isArray(members)) { res.status(400).json({ code: 1, msg: 'members 必须是数组' }); return; }
   const tx = db.transaction(() => {
     db.prepare(`DELETE FROM mindmap_members WHERE group_id IN (SELECT id FROM mindmap_nodes WHERE map_id = ?)`).run(req.params.id);
+    // 清理孤儿组员（历史 boundary 节点已删除但组员残留，避免累积）
+    db.prepare(`DELETE FROM mindmap_members WHERE group_id NOT IN (SELECT id FROM mindmap_nodes)`).run();
     const ins = db.prepare(`INSERT OR IGNORE INTO mindmap_members (group_id, node_id) VALUES (?, ?)`);
     for (const m of members) ins.run(m.group_id, m.node_id);
   });
