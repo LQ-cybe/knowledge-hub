@@ -2,10 +2,10 @@
 import { onMounted, ref, watch, nextTick, onBeforeUnmount } from 'vue';
 import * as echarts from 'echarts';
 import { ElMessage } from 'element-plus';
-import { getGraph, getTags, setResourceTags, type GraphData, type TagItem } from './api';
+import { getGraph, type GraphData } from './api';
 
 const dimension = ref<'folder' | 'tag' | 'link'>('folder');
-const view = ref<'graph' | 'sankey' | 'tree' | 'mind'>('graph');
+const view = ref<'graph' | 'sankey' | 'tree'>('graph');
 const chartEl = ref<HTMLElement>();
 const loading = ref(false);
 const nodeCount = ref(0);
@@ -20,7 +20,7 @@ let chart: echarts.ECharts | null = null;
 let data: GraphData = { nodes: [], links: [] };
 
 const dimensionLabels: Record<string, string> = { folder: '文件夹', tag: '标签', link: '引用' };
-const viewLabels: Record<string, string> = { graph: '关系图', sankey: '桑基图', tree: '树图', mind: '思维导图' };
+const viewLabels: Record<string, string> = { graph: '关系图', sankey: '桑基图', tree: '树图' };
 const typeLabels: Record<string, string> = { folder: '文件夹', file: '文件', tag: '标签', resource: '资源' };
 
 /** 当前是否暗色主题（ECharts 画布内文字/连线颜色需随主题切换） */
@@ -154,9 +154,6 @@ function render() {
         }],
       }, true);
       requestAnimationFrame(() => chart?.resize());
-    } else if (view.value === 'mind') {
-      renderMind();
-      return;
     } else {
       renderTree();
       return;
@@ -240,110 +237,6 @@ function renderTree() {
   requestAnimationFrame(() => chart?.resize());
 }
 
-/** ---------- 思维导图：横向树 + 点击节点折叠/展开 + 双击节点打标（编辑） ---------- */
-function renderMind() {
-  if (!chartEl.value) return;
-  const roots = buildTree();
-  let treeData: TreeNode[] = roots;
-  if (collapseMode.value === 'root') {
-    treeData = pruneTree(roots, 2);
-  } else if (collapseMode.value === 'depth') {
-    treeData = pruneTree(roots, collapseDepth.value + 1);
-  }
-  if (treeData.length > 1) {
-    treeData = [{
-      id: '__forest__', name: '__forest__', label: '', category: 'tag', symbolSize: 0,
-      children: treeData, collapsed: false,
-      itemStyle: { color: 'transparent', borderWidth: 0 },
-      lineStyle: { color: 'transparent', opacity: 0 },
-      label: { show: false },
-    } as unknown as TreeNode];
-  }
-  maxDepth.value = visibleDepth(roots);
-
-  const labelMap = nameToLabel();
-  const isFolder = (p: any) => (p.data.category === 'folder');
-  const nodeColor = (p: any) => {
-    const c = p.data.category;
-    if (c === 'folder') return '#409eff';
-    if (c === 'file') return '#9ca3af';
-    if (c === 'tag') return '#52c41a';
-    return '#f4a261';
-  };
-  chart?.dispose();
-  chart = echarts.init(chartEl.value);
-  chart.setOption({
-    tooltip: {
-      trigger: 'item', confine: true, hideDelay: 60,
-      formatter: (p: any) => nodeTip(p.data.category || 'folder', p.data.label || p.data.name, p.data.name) + '<br/><span style="color:' + dimColor() + ';font-size:11px;">双击可编辑标签</span>',
-    },
-    series: [{
-      type: 'tree',
-      data: treeData,
-      layout: 'orthogonal',
-      orient: 'LR',
-      top: 16, left: 24, right: 100, bottom: 16,
-      symbol: 'circle',
-      symbolSize: (val: any, params: any) => (params.data.category === 'folder' ? 12 : 7),
-      initialTreeDepth: -1,
-      itemStyle: { color: (p: any) => nodeColor(p) },
-      label: {
-        formatter: (p: any) => labelMap.get(p.name) || p.name,
-        fontSize: 12, color: (p: any) => (isFolder(p) ? labelColor() : dimColor()),
-        position: 'right', distance: 6,
-        fontWeight: (p: any) => (isFolder(p) ? 600 : 400),
-      },
-      leaves: { label: { position: 'right' } },
-      lineStyle: { color: lineColor(), width: 1, curveness: 0.35 },
-      expandAndCollapse: true,
-    }],
-  }, true);
-  // 双击节点 → 打标（编辑）
-  chart.off('dblclick');
-  chart.on('dblclick', (p: any) => {
-    const n = p.data;
-    if (!n || n.id === '__forest__') return;
-    openTagForNode(n.id, n.label || n.name);
-  });
-  requestAnimationFrame(() => chart?.resize());
-}
-
-// ---------- 思维导图节点打标（编辑）----------
-const tags = ref<TagItem[]>([]);
-const tagDlg = ref({ visible: false, resourceId: '', resourceName: '', checked: [] as string[], newName: '' });
-
-async function openTagForNode(id: string, name: string) {
-  if (tags.value.length === 0) { try { tags.value = await getTags(); } catch { tags.value = []; } }
-  tagDlg.value = { visible: true, resourceId: id, resourceName: name, checked: [], newName: '' };
-  try {
-    // 取当前资源标签（用 getResources 查该 id）
-    const res = await import('./api').then(m => m.getResourcesPage({ page: '1', pageSize: '1', status: 'active', id }));
-    const row = res.list[0];
-    if (row?.tag_ids) tagDlg.value.checked = row.tag_ids.split('|').filter(Boolean);
-  } catch { /* 忽略 */ }
-}
-async function createTagInDlg() {
-  const name = tagDlg.value.newName.trim();
-  if (!name) { ElMessage.warning('请输入标签名'); return; }
-  try {
-    const t = await import('./api').then(m => m.createTag(name));
-    tags.value.push({ id: t.id, name: t.name, color: t.color, count: t.count });
-    tagDlg.value.checked.push(t.id);
-    tagDlg.value.newName = '';
-  } catch (e) { ElMessage.error('创建失败：' + ((e as Error).message)); }
-}
-function toggleTagInDlg(id: string) {
-  const i = tagDlg.value.checked.indexOf(id);
-  if (i >= 0) tagDlg.value.checked.splice(i, 1); else tagDlg.value.checked.push(id);
-}
-async function saveTagDlg() {
-  try {
-    await setResourceTags(tagDlg.value.resourceId, tagDlg.value.checked);
-    ElMessage.success('标签已更新');
-    tagDlg.value.visible = false;
-  } catch (e) { ElMessage.error('保存失败：' + ((e as Error).message)); }
-}
-
 /** 树最大深度（节点层级数，Code=1） */
 function treeMaxDepth(roots: TreeNode[]): number {
   let max = 0;
@@ -421,7 +314,7 @@ onBeforeUnmount(() => {
       </el-radio-group>
       <span class="label" style="margin-left: 16px;">视图</span>
       <el-radio-group v-model="view">
-        <el-radio-button v-for="(v, k) in viewLabels" :key="k" :value="k" :disabled="k === 'mind' && dimension === 'link'">{{ v }}</el-radio-button>
+        <el-radio-button v-for="(v, k) in viewLabels" :key="k" :value="k">{{ v }}</el-radio-button>
       </el-radio-group>
 
       <!-- 层级控制：所有视图可用（关系图/桑基图按层过滤，树图折叠节点） -->
@@ -448,27 +341,6 @@ onBeforeUnmount(() => {
         <div class="ce-hint">{{ dimension === 'link' ? '笔记双链功能尚未建立，后续里程碑可用' : '先在其他页面创建资源或标签' }}</div>
       </div>
     </div>
-
-    <!-- 思维导图节点打标（双击节点触发） -->
-    <el-dialog v-model="tagDlg.visible" :title="`编辑标签：${tagDlg.resourceName}`" width="420">
-      <div class="md-new-tag">
-        <el-input v-model="tagDlg.newName" placeholder="输入新标签名直接创建" style="flex: 1;" @keyup.enter="createTagInDlg" />
-        <el-button type="primary" plain @click="createTagInDlg">新建标签</el-button>
-      </div>
-      <p class="md-hint">点击标签勾选/取消：</p>
-      <div class="md-tags">
-        <el-tag
-          v-for="t in tags" :key="t.id"
-          :effect="tagDlg.checked.includes(t.id) ? 'dark' : 'plain'"
-          class="md-tag" @click.stop="toggleTagInDlg(t.id)"
-        >{{ t.name }}（{{ t.count }}）</el-tag>
-        <p v-if="tags.length === 0" class="md-empty">暂无标签，输入上方名称直接创建</p>
-      </div>
-      <template #footer>
-        <el-button @click="tagDlg.visible = false">取消</el-button>
-        <el-button type="primary" @click="saveTagDlg">保存</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -487,9 +359,4 @@ onBeforeUnmount(() => {
 .ce-icon { font-size: 34px; }
 .ce-title { font-size: 14px; font-weight: 600; color: var(--el-text-color-primary, #4b5563); }
 .ce-hint { font-size: 12px; }
-.md-new-tag { display: flex; gap: 8px; margin-bottom: 10px; }
-.md-hint { margin: 0 0 8px; font-size: 13px; color: var(--el-text-color-secondary, #6b7280); }
-.md-tags { display: flex; flex-wrap: wrap; gap: 6px; max-height: 240px; overflow: auto; padding-right: 4px; }
-.md-tag { cursor: pointer; }
-.md-empty { color: var(--el-text-color-secondary, #9ca3af); font-size: 13px; text-align: center; padding: 16px 0; }
 </style>

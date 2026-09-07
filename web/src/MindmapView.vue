@@ -24,9 +24,9 @@
         <div class="mm-tools">
           <el-button size="small" title="为选中节点添加子主题" @click="addChild">＋子主题</el-button>
           <el-button size="small" title="为选中节点添加同级（根节点除外）" @click="addSibling">＋同级</el-button>
-          <el-button size="small" title="概要：Shift 多选同一父节点的多个子节点后点击，输入多行说明" @click="addSummary">{}概要</el-button>
-          <el-button size="small" title="边界：选中父节点（框住其子节点）或 Shift 多选同级节点，输入边界名称" @click="addOutline">边界</el-button>
-          <el-button size="small" title="关系线：先单击起点节点 → 点此按钮 → 再单击目标节点（支持跨层级）" @click="addAssoc">关系</el-button>
+          <el-button size="small" title="概要：Shift 多选同一父节点的两个及以上子节点后点击，直接进入文本框编辑多行说明" :disabled="selCount < 2" @click="addSummary">{}概要</el-button>
+          <el-button size="small" title="边界：Shift 多选两个及以上节点后点击，将在所选节点外围创建一个矩形，输入边界名称" :disabled="selCount < 2" @click="addOutline">边界</el-button>
+          <el-button size="small" title="关系线：Shift 多选两个节点后点击（多选顺序即连线方向，起点→终点）" :disabled="selCount < 2" @click="addAssoc">关系</el-button>
         </div>
         <div class="mm-zoom">
           <el-button size="small" text @click="zoomOut">－</el-button>
@@ -49,7 +49,7 @@
             <el-radio value="org">组织图</el-radio>
             <el-radio value="radial">放射</el-radio>
           </el-radio-group>
-          <p class="ms-hint">单击选中 · Shift 多选<br/>双击编辑节点 / 关系线 / 边界文字<br/>Enter 新建同级 · Tab 新建子级<br/>Delete 删除<br/>拖拽节点调整层级<br/>关系线：先选起点→点关系→选终点<br/>概要 / 边界：选中节点后点击工具栏<br/>全部修改自动保存</p>
+          <p class="ms-hint">单击选中 · Shift 多选<br/>双击编辑节点 / 关系线 / 边界文字<br/>Enter 新建同级 · Tab 新建子级<br/>Delete 删除选中节点 / 关系线 / 边界<br/>拖拽节点调整层级<br/>概要 / 边界 / 关系：Shift 多选两个及以上节点后点击工具栏对应按钮<br/>概要创建后直接输入多行文本<br/>边界：多选节点 → 一个矩形包裹<br/>关系线：多选顺序即方向（先选为起点）<br/>单击矩形可选中，双击文字可改名<br/>全部修改自动保存</p>
         </div>
 
         <!-- 画布 -->
@@ -83,23 +83,13 @@
         </div>
       </div>
 
-      <!-- 概要多行输入 -->
-      <el-dialog v-model="summaryDialog" title="添加概要" width="420" append-to-body :close-on-click-modal="false">
-        <p class="mm-dialog-tip">概要显示在所选节点上方，用于描述这组子节点的共同属性。支持多行文本。</p>
-        <el-input v-model="summaryText" type="textarea" :rows="5" placeholder="输入概要内容（支持多行）" />
-        <template #footer>
-          <el-button size="small" @click="summaryDialog = false">取消</el-button>
-          <el-button size="small" type="primary" @click="confirmSummary">确定</el-button>
-        </template>
-      </el-dialog>
-
-      <!-- 边界文本输入 -->
-      <el-dialog v-model="outlineDialog" title="添加边界" width="420" append-to-body :close-on-click-modal="false">
-        <p class="mm-dialog-tip">边界将以矩形框包裹所选节点（选中父节点则框住其所有子节点），显示在底层。</p>
+      <!-- 边界名称输入（新建 / 双击边界文字改名共用） -->
+      <el-dialog v-model="outlineDialog" :title="outlineEditId ? '修改边界名称' : '添加边界'" width="420" append-to-body :close-on-click-modal="false">
+        <p class="mm-dialog-tip">边界将以一个矩形整体包裹所选节点，显示在底层。单击矩形可选中（按 Delete 删除），双击文字可改名。</p>
         <el-input v-model="outlineText" placeholder="边界名称" maxlength="30" />
         <template #footer>
           <el-button size="small" @click="outlineDialog = false">取消</el-button>
-          <el-button size="small" type="primary" @click="confirmOutline">确定</el-button>
+          <el-button size="small" type="primary" @click="confirmOutline">{{ outlineEditId ? '保存' : '确定' }}</el-button>
         </template>
       </el-dialog>
     </div>
@@ -183,19 +173,23 @@ let mm: any = null;
 let saveTimer: any = null;
 let dirty = false;
 let loading = false;
-// 概要多行输入弹窗
-const summaryDialog = ref(false);
-const summaryText = ref('');
-// 边界文本输入弹窗
+// 当前选中的有效节点数（驱动概要/边界/关系按钮的可用状态：单选禁用，多选 2 个及以上可用）
+const selCount = ref(0);
+// 边界（自定义包围盒矩形）：{ id, text, nodeIds }[]
+const khBounds = ref<{ id: string; text: string; nodeIds: string[] }[]>([]);
+const khActiveBound = ref('');
+// 边界名称输入弹窗（新建 / 改名共用）
 const outlineDialog = ref(false);
 const outlineText = ref('');
+const outlineEditId = ref('');
 
 const fmtTime = (s: string) => (s ? s.slice(5, 16).replace('T', ' ') : '');
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'n' + Date.now() + Math.random().toString(16).slice(2, 8));
-// 富文本 HTML → 纯文本（DB 统一存纯文本）
+// 富文本 HTML → 纯文本（DB 统一存纯文本；<br>/</p> 转 \n 保留换行，否则多行概要会被压成一行）
 const plain = (s: any): string => {
   if (s == null) return '';
   let t = String(s);
+  t = t.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<\/div>/gi, '\n').replace(/<li[^>]*>/gi, '\n');
   t = t.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
   return t.replace(/<[^>]*>/g, '').trim();
 };
@@ -226,16 +220,20 @@ function dbToSmm(nodes: MindmapNode[], links: MindmapLink[], members: MindmapMem
   const boundaries = nodes.filter(n => n.kind === 'boundary');
   const memByGroup = new Map<string, string[]>();
   for (const m of members) { if (!memByGroup.has(m.group_id)) memByGroup.set(m.group_id, []); memByGroup.get(m.group_id)!.push(m.node_id); }
+  // 边界（自定义包围盒矩形）：从 DB boundary 记录 + 组成员构建（兼容旧 SMM outerFrame 数据）
+  khBounds.value = boundaries.map(b => ({
+    id: b.id,
+    text: plain(b.title) || '边界',
+    nodeIds: memByGroup.get(b.id) || [],
+  }));
   const build = (n: MindmapNode): any => {
     const d: any = { data: { text: plain(n.title), uid: n.id, expand: true }, children: (kids.get(n.id) || []).filter(c => c.kind === 'node').map(build) };
     if (n.color) { d.data.fillColor = n.color; d.data.color = '#ffffff'; }
     if (n.shape && n.shape !== 'auto') d.data.shape = SHAPE_MAP[n.shape] || 'rectangle';
-    // 概要
+    // 概要（每行包成独立 <p>：SMM 富文本转换 removeRichTextStyes 会保留多个 <p> 为独立段落，
+    // 这样多行概要才能正确撑高节点并换行显示；\n 和 <br> 都会被其吞掉，不能用）
     const sums = nodes.filter(s => s.kind === 'summary' && s.parent_id === n.id);
-    if (sums.length) d.data.generalization = sums.map(s => ({ text: plain(s.title) }));
-    // 外框（边界）：取组成员中第一个成员挂外框（SMM 外框含该节点子树）
-    const b = boundaries.find(bd => (memByGroup.get(bd.id) || [])[0] === n.id);
-    if (b) d.data.outerFrame = { text: plain(b.title) || '边界' };
+    if (sums.length) d.data.generalization = sums.map(s => ({ text: plain(s.title).split('\n').map(l => '<p>' + l + '</p>').join(''), richText: true }));
     // 关联线（SMM associativeLineTargets 为 uid 字符串数组）
     const rels = links.filter(l => l.source_id === n.id).map(l => l.target_id);
     if (rels.length) d.data.associativeLineTargets = rels;
@@ -273,18 +271,14 @@ function smmToDb(root: any) {
     (data.associativeLineTargets || []).forEach((uid: string, i: number) => {
       if (uid) links.push({ id: 'l_' + id + '_' + i, source_id: id, target_id: uid, label: '' });
     });
-    if (data.outerFrame) {
-      const bId = 'b_' + id;
-      nodes.push({ id: bId, parent_id: null, title: plain(data.outerFrame.text), kind: 'boundary', x: 0, y: 0, color: null, shape: 'auto', sort: nSort++ });
-      // SMM 外框挂在该节点上（含其子树），组员 = 该节点及其子树
-      const subtree: string[] = [];
-      const collect = (x: any) => { if (x.data?.uid && x.data.uid !== VIRT_ROOT) subtree.push(x.data.uid); (x.children || []).forEach(collect); };
-      collect(d);
-      subtree.forEach(nid => members.push({ group_id: bId, node_id: nid }));
-    }
     (d.children || []).forEach((c: any) => walk(c, effParent, false));
   };
   walk(root, null, true);
+  // 边界（自定义包围盒矩形）：直接由运行时状态生成，不依赖 SMM outerFrame
+  khBounds.value.forEach((b, i) => {
+    nodes.push({ id: b.id, parent_id: null, title: b.text || '边界', kind: 'boundary', x: 0, y: 0, color: null, shape: 'auto', sort: nSort++ });
+    b.nodeIds.forEach(nid => members.push({ group_id: b.id, node_id: nid }));
+  });
   return { nodes, links, members };
 }
 
@@ -315,8 +309,10 @@ async function openMap(id: string) {
     mm.on('node_tree_render_end', () => {
       scale.value = mm.view.scale || 1;
       if (!fitted) { fitted = true; setTimeout(() => { try { mm.view.fit(); } catch {} }, 30); }
+      scheduleRenderBounds();
     });
     bindEvents();
+    window.addEventListener('keydown', onEditorKeydown);
     savedState.value = 'saved';
     dirty = false;
   } catch (e: any) { ElMessage.error('打开导图失败：' + (e?.message || e)); }
@@ -330,24 +326,51 @@ function backToLib() {
 }
 function destroyMindMap() {
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-  if (mm) { try { mm.destroy(); } catch {} mm = null; }
+  if (mm) {
+    try {
+      mm.off('node_active');
+      mm.off('node_tree_render_end');
+      mm.off('data_change');
+      mm.off('view_data_change');
+      mm.off('scale');
+      mm.destroy();
+    } catch {}
+    mm = null;
+  }
+  window.removeEventListener('keydown', onEditorKeydown);
+  khBounds.value = [];
+  khActiveBound.value = '';
+}
+// Delete/Backspace：优先删除已选中的边界矩形（点击矩形时 SMM 已通过 draw_click 清空节点激活，互不冲突）
+function onEditorKeydown(e: KeyboardEvent) {
+  if ((e.key === 'Delete' || e.key === 'Backspace') && khActiveBound.value && mm) {
+    const id = khActiveBound.value;
+    khActiveBound.value = '';
+    khBounds.value = khBounds.value.filter(b => b.id !== id);
+    renderBounds();
+    markDirty();
+    ElMessage.success('已删除边界');
+  }
 }
 function bindEvents() {
   mm.on('node_active', (node: any) => {
     const nd = node?.nodeData?.data;
-    if (!node || !nd || nd.uid === VIRT_ROOT) { activeNode.value = null; return; }
-    if (assocFrom && node !== assocFrom) {
-      const from = assocFrom; assocFrom = null;
-      mm.execCommand('ADD_ASSOCIATIVE_LINE', from, node);
-      ElMessage.success('已创建关联线');
-    }
+    if (!node || !nd || nd.uid === VIRT_ROOT) { activeNode.value = null; selCount.value = 0; return; }
     activeNode.value = node;
     curColor.value = nd.fillColor || THEMES[themeKey.value].rootFill;
     curShape.value = SHAPE_REV[nd.shape] || 'auto';
+    selCount.value = selNodes().length;
   });
   mm.on('node_tree_render_end', () => { scale.value = mm.view.scale || 1; });
   mm.on('data_change', () => markDirty());
   mm.on('view_data_change', () => markDirty());
+  mm.on('scale', () => scheduleRenderBounds());
+  mm.on('draw_click', () => {
+    // 点击画布空白处：取消边界选中
+    khActiveBound.value = '';
+    renderBounds();
+    selCount.value = selNodes().length;
+  });
 }
 function markDirty() {
   if (!mapId.value || view.value !== 'editor') return;
@@ -388,7 +411,6 @@ function setNodeShape(s: string) {
   markDirty();
 }
 // ---------- 工具栏 ----------
-let assocFrom: any = null;
 function active() {
   if (activeNode.value) return activeNode.value;
   const l = mm?.renderer?.activeNodeList || [];
@@ -409,53 +431,129 @@ function addSibling() {
   if (n.isRoot) { ElMessage.warning('根节点不能添加同级'); return; }
   mm.execCommand('INSERT_NODE', true, [n]);
 }
-// 概要：针对同一父节点的多个子节点（按住 Shift 多选），输入多行文本
+// 概要：Shift 多选同一父节点的两个及以上子节点 → 直接进入文本框编辑（无弹窗）
 function addSummary() {
   const ns = selNodes();
-  if (!ns.length) { ElMessage.warning('请先单击选中节点（按住 Shift 可多选同一父节点的多个子节点）'); return; }
+  if (ns.length < 2) { ElMessage.warning('请按住 Shift 多选同一父节点的两个及以上子节点'); return; }
   if (ns.some(n => n.isRoot || n.isGeneralization)) { ElMessage.warning('根节点 / 概要节点不能添加概要'); return; }
   const p = ns[0].parent;
   if (ns.some(n => n.parent !== p)) { ElMessage.warning('概要只能针对同一父节点的多个子节点'); return; }
-  summaryText.value = '';
-  summaryDialog.value = true;
-}
-function confirmSummary() {
-  const ns = selNodes();
-  if (!ns.length) { summaryDialog.value = false; return; }
-  const hasG = ns.some(n => { const d = n.getData ? n.getData('generalization') : null; return d && d.length; });
-  if (hasG) { ElMessage.warning('选中节点已有概要，请先删除旧概要或选择其他节点'); summaryDialog.value = false; return; }
-  const text = summaryText.value.trim();
+  if (ns.some(n => { const d = n.getData ? n.getData('generalization') : null; return d && d.length; })) {
+    ElMessage.warning('选中节点已有概要，请先删除旧概要或选择其他节点'); return;
+  }
   try {
-    mm.execCommand('ADD_GENERALIZATION', { text: text || '概要' }, false);
+    mm.execCommand('ADD_GENERALIZATION', { text: '' }, true); // openEdit=true：创建后直接进入文本编辑
     markDirty();
-    ElMessage.success('已添加概要');
   } catch (e: any) { ElMessage.error('添加概要失败：' + (e?.message || e)); }
-  summaryDialog.value = false;
 }
-// 边界：选中父节点（框住其子节点）或按住 Shift 多选同级节点，输入边界文字
+// 边界：Shift 多选两个及以上节点 → 一个矩形整体包裹所选节点（弹窗输入名称）
 function addOutline() {
   const ns = selNodes();
-  if (!ns.length) { ElMessage.warning('请先单击选中节点：选中父节点可框住其子节点，或按住 Shift 多选同级节点'); return; }
+  if (ns.length < 2) { ElMessage.warning('请按住 Shift 多选两个及以上节点'); return; }
   if (ns.some(n => n.isRoot || n.isGeneralization)) { ElMessage.warning('根节点 / 概要节点不能添加边界'); return; }
+  outlineEditId.value = '';
   outlineText.value = '边界';
   outlineDialog.value = true;
 }
 function confirmOutline() {
-  const ns = selNodes();
-  if (!ns.length) { outlineDialog.value = false; return; }
   const text = outlineText.value.trim();
-  try {
-    mm.execCommand('ADD_OUTER_FRAME', ns, { text: text || '边界' });
-    markDirty();
-    ElMessage.success('已添加边界');
-  } catch (e: any) { ElMessage.error('添加边界失败：' + (e?.message || e)); }
+  if (outlineEditId.value) {
+    // 改名
+    const b = khBounds.value.find(x => x.id === outlineEditId.value);
+    if (b) { b.text = text || '边界'; renderBounds(); markDirty(); }
+    outlineDialog.value = false;
+    return;
+  }
+  const ns = selNodes();
+  if (ns.length < 2) { outlineDialog.value = false; return; }
+  khBounds.value.push({ id: 'b_' + uid(), text: text || '边界', nodeIds: ns.map(n => n.nodeData.data.uid) });
+  renderBounds();
+  markDirty();
+  ElMessage.success('已添加边界');
   outlineDialog.value = false;
 }
-// 关系线：先单击起点节点 → 点「关系」→ 再单击目标节点（支持跨层级）
+// 边界渲染层：SVG g 元素插到 svg 顶层（节点容器之下），坐标用 node.getRect()（rbox 视口坐标）
+const SVG_NS = 'http://www.w3.org/2000/svg';
+let boundsTimer: any = null;
+function scheduleRenderBounds() {
+  if (boundsTimer) clearTimeout(boundsTimer);
+  boundsTimer = setTimeout(renderBounds, 80);
+}
+function renderBounds() {
+  const host = mmEl.value;
+  if (!host || !mm) return;
+  const svg = host.querySelector('.smm-container svg') || host.querySelector('svg');
+  if (!svg) return;
+  let layer = host.querySelector('.kh-bound-layer') as SVGGElement | null;
+  // 无边界时移除层：空的 <g> 会让 SMM Scrollbar 的 rbox() 崩溃，导致整图渲染中断
+  if (!khBounds.value.length) {
+    if (layer) layer.remove();
+    return;
+  }
+  if (!layer) {
+    layer = document.createElementNS(SVG_NS, 'g');
+    layer.setAttribute('class', 'kh-bound-layer');
+    svg.insertBefore(layer, svg.firstChild);
+  }
+  layer.innerHTML = '';
+  // renderer.root 是渲染节点树根（MindMapNode 实例，含 nodeData/getRect），递归收集所有节点
+  const nodes: any[] = [];
+  const walkN = (n: any) => {
+    if (!n) return;
+    if (n.nodeData?.data && n.nodeData.data.uid !== VIRT_ROOT) nodes.push(n);
+    (n.children || []).forEach(walkN);
+  };
+  walkN(mm.renderer.root);
+  const byUid = new Map(nodes.map((n: any) => [n.nodeData?.data?.uid, n]));
+  for (const b of khBounds.value) {
+    const rects = b.nodeIds.map(id => byUid.get(id)).filter(Boolean).map((n: any) => n.getRect()).filter((r: any) => r);
+    if (!rects.length) continue;
+    const pad = 14;
+    const left = Math.min(...rects.map((r: any) => r.x));
+    const top = Math.min(...rects.map((r: any) => r.y));
+    const right = Math.max(...rects.map((r: any) => r.x + r.width));
+    const bottom = Math.max(...rects.map((r: any) => r.y + r.height));
+    const x = left - pad, y = top - pad - 16, w = right - left + pad * 2, h = bottom - top + pad * 2;
+    const sel = khActiveBound.value === b.id;
+    const grp = document.createElementNS(SVG_NS, 'g');
+    grp.setAttribute('class', 'kh-bound');
+    const rect = document.createElementNS(SVG_NS, 'rect');
+    rect.setAttribute('x', String(x)); rect.setAttribute('y', String(y));
+    rect.setAttribute('width', String(w)); rect.setAttribute('height', String(h));
+    rect.setAttribute('rx', '10');
+    rect.setAttribute('fill', 'rgba(96,165,250,0.05)');
+    rect.setAttribute('stroke', sel ? '#e11d48' : '#7ba7e0');
+    rect.setAttribute('stroke-width', sel ? '2' : '1.2');
+    rect.setAttribute('stroke-dasharray', '7,5');
+    const txt = document.createElementNS(SVG_NS, 'text');
+    txt.setAttribute('x', String(x + 8)); txt.setAttribute('y', String(y - 5));
+    txt.setAttribute('fill', sel ? '#e11d48' : '#64748b');
+    txt.setAttribute('font-size', '12');
+    txt.textContent = b.text || '边界';
+    grp.appendChild(rect); grp.appendChild(txt);
+    grp.addEventListener('click', (e) => {
+      e.stopPropagation();
+      khActiveBound.value = b.id;
+      renderBounds();
+    });
+    grp.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      outlineEditId.value = b.id;
+      outlineText.value = b.text || '边界';
+      outlineDialog.value = true;
+    });
+    layer.appendChild(grp);
+  }
+}
+// 关系线：Shift 多选两个节点 → 自动连线（多选顺序即方向：先选为起点，后选为终点）
 function addAssoc() {
-  const n = active(); if (!n) { ElMessage.warning('请先单击起点节点'); return; }
-  assocFrom = n;
-  ElMessage.info('已选起点，请再单击目标节点');
+  const ns = selNodes();
+  if (ns.length < 2) { ElMessage.warning('请按住 Shift 多选两个节点（先选的为起点）'); return; }
+  try {
+    mm.execCommand('ADD_ASSOCIATIVE_LINE', ns[0], ns[1]);
+    markDirty();
+    ElMessage.success('已创建关联线');
+  } catch (e: any) { ElMessage.error('添加关联线失败：' + (e?.message || e)); }
 }
 
 // ---------- 布局 / 主题 / 节点样式 ----------
@@ -502,8 +600,9 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 .mm-side { width: 170px; flex: none; overflow: auto; padding: 10px 12px; border-right: 1px solid #eef0f3; }
 .mm-side-right { border-right: none; border-left: 1px solid #eef0f3; }
 .ms-title { font-weight: 600; font-size: 13px; margin-bottom: 10px; }
-.ms-layout { display: flex; flex-direction: column; gap: 2px; }
-.ms-layout :deep(.el-radio) { margin-right: 0; height: 26px; }
+.ms-layout { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+.ms-layout :deep(.el-radio) { margin-right: 0; height: 26px; width: 100%; }
+.ms-layout :deep(.el-radio__label) { text-align: left; }
 .ms-hint { font-size: 11px; color: #9aa1ab; margin-top: 14px; line-height: 1.8; }
 .ms-themes { display: flex; flex-direction: column; gap: 6px; }
 .ms-theme { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; border: 1px solid transparent; }
@@ -533,10 +632,14 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 .mm-host :deep(.smm-richtext-node-wrap) {
   padding: 0;
   display: flex;
+  /* 纵向排列：flex 容器内多个 <p>（多行富文本）需换行堆叠，而不是横向压成一行 */
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 100%;
   box-sizing: border-box;
+  /* 保留 \n 换行（概要/节点含换行文本时按行显示；也让 SMM 测高 div 正确撑高） */
+  white-space: pre-line;
 }
 .mm-host :deep(.smm-richtext-node-wrap > *),
 .mm-host :deep(.smm-richtext-node-wrap .smm-richtext-node-content) {
@@ -547,6 +650,16 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 .mm-host :deep(.smm-associative-line-container path),
 .mm-host :deep(.smm-associative-line-container line) {
   stroke-width: 1.5 !important;
+}
+/* 2.1) 关联线点击热区：SMM 的 clickPath 是透明描边 path，SVG 默认 pointer-events
+       不命中透明描边，导致无法点选/删除/编辑文字；改为按描边区域接收事件。
+       线文字（text）不拦截点击（文字编辑走 clickPath 的 dblclick） */
+.mm-host :deep(.smm-associative-line-container path) {
+  pointer-events: stroke;
+  cursor: pointer;
+}
+.mm-host :deep(.smm-associative-line-container text) {
+  pointer-events: none;
 }
 /* 3) 概要节点 / 边界文字行高紧凑；概要多行文本（\n）按换行显示
    注：概要节点类名形如 smm-node generalization_{nodeId} */
