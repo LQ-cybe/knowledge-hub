@@ -12,7 +12,15 @@
             <el-button size="small" text :class="{ 'view-on': libView === 'grid' }" title="卡片视图" @click="libView = 'grid'">▦ 卡片</el-button>
             <el-button size="small" text :class="{ 'view-on': libView === 'list' }" title="列表视图" @click="libView = 'list'">☰ 列表</el-button>
           </div>
-          <el-button type="primary" size="small" @click="newMap">＋ 新建导图</el-button>
+          <el-dropdown trigger="click" @command="onNewMapCmd">
+            <el-button type="primary" size="small">＋ 新建 ▾</el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="new">新建导图</el-dropdown-item>
+                <el-dropdown-item command="import">导入导图…</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </div>
 
@@ -133,18 +141,17 @@
               <el-radio-button value="free"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.free"></span>自由</el-radio-button>
               <el-radio-button value="right"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.right"></span>向右</el-radio-button>
               <el-radio-button value="left"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.left"></span>向左</el-radio-button>
+              <el-radio-button value="mind"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.mind"></span>导图</el-radio-button>
               <el-radio-button value="org"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.org"></span>组织</el-radio-button>
               <el-radio-button value="radial"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.radial"></span>放射</el-radio-button>
+              <el-radio-button value="fish2"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.fish2"></span>双鱼骨</el-radio-button>
+              <el-radio-button value="timeline"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.timeline"></span>时间轴</el-radio-button>
             </el-radio-group>
             <div class="ms-title" style="margin-top: 14px;">主题</div>
             <div class="ms-themes">
               <div v-for="(t, k) in THEMES" :key="k" class="ms-theme" :class="{ on: themeKey === k }" @click="setTheme(k)">
                 <span class="mt-swatch" :style="{ background: `linear-gradient(135deg, ${t.rootFill} 0%, ${t.rootFill}88 100%)` }"></span>{{ t.name }}
               </div>
-            </div>
-            <div class="ms-title" style="margin-top: 14px;">画布背景</div>
-            <div class="ms-colors">
-              <span v-for="c in CANVAS_BG" :key="c" class="ms-color" :class="{ on: canvasBg === c }" :style="{ background: c }" :title="canvasBgName(c)" @click="setCanvasBg(c)"></span>
             </div>
             <template v-if="activeNode">
               <div class="ms-title" style="margin-top: 14px;">节点样式</div>
@@ -199,9 +206,23 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="tagsDialog" title="添加标签" width="420" append-to-body :close-on-click-modal="false">
-      <p class="mm-dialog-tip">多个标签用逗号（，）分隔，将覆盖原有标签。</p>
-      <el-input v-model="tagsText" placeholder="如：工作,项目A,学习" @keyup.enter="confirmTags" />
+    <el-dialog v-model="tagsDialog" title="添加标签" width="440" append-to-body :close-on-click-modal="false">
+      <div class="dlg-new-tag">
+        <el-input v-model="tagNewName" placeholder="输入新标签名直接创建" style="flex: 1;" @keyup.enter="createTagInDialog" />
+        <el-button type="primary" plain @click="createTagInDialog">新建标签</el-button>
+      </div>
+      <p class="dlg-hint">点击标签勾选/取消，点 × 删除（将覆盖导图原有标签）：</p>
+      <div class="dlg-tags">
+        <el-tag
+          v-for="t in tagOptions" :key="t.id"
+          :effect="tagChecked.includes(t.id) ? 'dark' : 'plain'"
+          class="dlg-tag"
+          closable
+          @click.stop="toggleTagInDialog(t.id)"
+          @close="removeTagInDialog(t)"
+        >{{ t.name }}</el-tag>
+        <p v-if="tagOptions.length === 0" class="tm-empty">暂无标签，输入上方名称直接创建</p>
+      </div>
       <template #footer>
         <el-button size="small" @click="tagsDialog = false">取消</el-button>
         <el-button size="small" type="primary" @click="confirmTags">保存</el-button>
@@ -234,10 +255,10 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import MindMap from 'simple-mind-map';
 import 'simple-mind-map/full.js';
-import { getMindmaps, createMindmap, deleteMindmap, deleteMindmapPermanent, restoreMindmap, getMindmap, updateMindmap, saveMindmapNodes, saveMindmapLinks, saveMindmapMembers, getRecycleMindmaps, getRecycleInfo, type MindmapNode, type MindmapLink, type MindmapMember, type MindmapMeta, type RecycleInfo } from './api';
+import { getMindmaps, createMindmap, deleteMindmap, deleteMindmapPermanent, restoreMindmap, getMindmap, updateMindmap, saveMindmapNodes, saveMindmapLinks, saveMindmapMembers, getRecycleMindmaps, getRecycleInfo, getTags, createTag, deleteTag, type MindmapNode, type MindmapLink, type MindmapMember, type MindmapMeta, type RecycleInfo } from './api';
 
 const VIRT_ROOT = '__VR__';
-const LAYOUT_MAP: Record<string, string> = { free: 'mindMap', right: 'logicalStructure', left: 'logicalStructureLeft', org: 'organizationStructure', radial: 'fishbone' };
+const LAYOUT_MAP: Record<string, string> = { free: 'mindMap', right: 'logicalStructure', left: 'logicalStructureLeft', mind: 'mindMap', org: 'organizationStructure', radial: 'fishbone', fish2: 'fishbone2', timeline: 'timeline' };
 const LAYOUT_REV: Record<string, string> = { mindMap: 'free', logicalStructure: 'right', logicalStructureLeft: 'left', organizationStructure: 'org', fishbone: 'radial' };
 const SHAPES: Record<string, string> = { auto: '自动', rect: '矩形', round: '圆角', ellipse: '椭圆', diamond: '菱形', parallelogram: '平行四边形', octagon: '八角', outerTri: '外三角', innerTri: '内三角' };
 const SHAPE_MAP: Record<string, string> = {
@@ -302,33 +323,67 @@ const THEMES: Record<string, { name: string; rootFill: string; darkBg: string; c
       node: { fillColor: '#f0f7ff', color: '#334f7c', borderColor: 'transparent' , borderRadius: 10 },
     },
   },
+  // 幕布风格配色（第 5 轮新增：结构布局与配色方案方向）
+  morandi: {
+    name: '莫兰迪', rootFill: '#8d9b6a', darkBg: '#262b20',
+    cfg: {
+      background: '#f3f1ea', backgroundColor: '#f3f1ea', lineColor: '#a8b39a', generalizationLineColor: '#a8b39a',
+      generalization: { borderRadius: 10 },
+      borderRadius: 10,
+      associativeLineWidth: 1.5, associativeLineColor: '#a49e8d', associativeLineDasharray: '6,4', associativeLineTextFontSize: 11, associativeLineTextColor: '#7a756a',
+      root: { fillColor: '#8d9b6a', color: '#ffffff', borderColor: 'transparent' , borderRadius: 10 },
+      second: { fillColor: '#e2e6d6', color: '#4a5238', borderColor: 'transparent' , borderRadius: 10 },
+      node: { fillColor: '#eeede4', color: '#5c5a4e', borderColor: 'transparent' , borderRadius: 10 },
+    },
+  },
+  blackgold: {
+    name: '黑金', rootFill: '#1f2937', darkBg: '#16181d',
+    cfg: {
+      background: '#111318', backgroundColor: '#111318', lineColor: '#c9a24b', generalizationLineColor: '#c9a24b',
+      generalization: { borderRadius: 10 },
+      borderRadius: 10,
+      associativeLineWidth: 1.5, associativeLineColor: '#8a7a52', associativeLineDasharray: '6,4', associativeLineTextFontSize: 11, associativeLineTextColor: '#c9b98a',
+      root: { fillColor: '#1f2937', color: '#f5d77e', borderColor: '#c9a24b' , borderRadius: 10 },
+      second: { fillColor: '#262d3a', color: '#e6d5a3', borderColor: '#c9a24b88' , borderRadius: 10 },
+      node: { fillColor: '#1a1f29', color: '#cfc2a0', borderColor: '#c9a24b55' , borderRadius: 10 },
+    },
+  },
+  spring: {
+    name: '青碧', rootFill: '#0e9f8f', darkBg: '#14221f',
+    cfg: {
+      background: '#f0faf8', backgroundColor: '#f0faf8', lineColor: '#5fc9bd', generalizationLineColor: '#5fc9bd',
+      generalization: { borderRadius: 10 },
+      borderRadius: 10,
+      associativeLineWidth: 1.5, associativeLineColor: '#6db5ad', associativeLineDasharray: '6,4', associativeLineTextFontSize: 11, associativeLineTextColor: '#3f8078',
+      root: { fillColor: '#0e9f8f', color: '#ffffff', borderColor: 'transparent' , borderRadius: 10 },
+      second: { fillColor: '#d4f1ec', color: '#0d5f55', borderColor: 'transparent' , borderRadius: 10 },
+      node: { fillColor: '#eafaf6', color: '#24635c', borderColor: 'transparent' , borderRadius: 10 },
+    },
+  },
+  warm: {
+    name: '暖橙', rootFill: '#f07c3c', darkBg: '#2b2018',
+    cfg: {
+      background: '#fff7ef', backgroundColor: '#fff7ef', lineColor: '#f5b183', generalizationLineColor: '#f5b183',
+      generalization: { borderRadius: 10 },
+      borderRadius: 10,
+      associativeLineWidth: 1.5, associativeLineColor: '#d19a6e', associativeLineDasharray: '6,4', associativeLineTextFontSize: 11, associativeLineTextColor: '#a8703f',
+      root: { fillColor: '#f07c3c', color: '#ffffff', borderColor: 'transparent' , borderRadius: 10 },
+      second: { fillColor: '#fde8d7', color: '#8c4a1d', borderColor: 'transparent' , borderRadius: 10 },
+      node: { fillColor: '#fef2e6', color: '#9a5b2a', borderColor: 'transparent' , borderRadius: 10 },
+    },
+  },
 };
 
-// 画布背景色板（幕布式：可独立于主题单独调整画布背景，再次点击同色取消恢复主题默认）
-const CANVAS_BG = ['#ffffff', '#f5f7fa', '#fff8ec', '#eef7ff', '#eefaf1', '#fdf0f6', '#1e222b', '#20242e', '#232d24', '#2a2331'];
-const canvasBg = ref<string>(localStorage.getItem('kh-mm-canvasbg') || '');
-function canvasBgName(c: string) {
-  const m: Record<string, string> = {
-    '#ffffff': '纯白', '#f5f7fa': '浅灰', '#fff8ec': '米黄', '#eef7ff': '浅蓝', '#eefaf1': '浅绿', '#fdf0f6': '浅粉',
-    '#1e222b': '深灰', '#20242e': '深蓝灰', '#232d24': '墨绿', '#2a2331': '深紫',
-  };
-  return m[c] || c;
-}
-function setCanvasBg(c: string) {
-  canvasBg.value = canvasBg.value === c ? '' : c;
-  if (canvasBg.value) localStorage.setItem('kh-mm-canvasbg', canvasBg.value);
-  else localStorage.removeItem('kh-mm-canvasbg');
-  if (mm) { try { mm.setThemeConfig(themeCfgFor(themeKey.value)); } catch {} }
-  applyCanvasBg();
-  markDirty();
-}
 // 布局按钮可视化图标（内联 SVG：节点+连线示意，16px）
 const LAYOUT_ICONS: Record<string, string> = {
   free: '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="3" cy="3" r="1.6" fill="currentColor"/><circle cx="13" cy="4" r="1.6" fill="currentColor"/><circle cx="4" cy="13" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="M4.4 4.2l1.4 2.2M10.9 5.6l-3 1.4M5.4 11.4l2-2M9.9 10.5l.9-3" stroke="currentColor" stroke-width="1" fill="none"/></svg>',
   right: '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="3" cy="8" r="1.8" fill="currentColor"/><circle cx="9" cy="4" r="1.5" fill="currentColor"/><circle cx="9" cy="8" r="1.5" fill="currentColor"/><circle cx="9" cy="12" r="1.5" fill="currentColor"/><path d="M4.6 7.7h2.6M9.8 4h2.8M9.8 8h2.8M9.8 12h2.8" stroke="currentColor" stroke-width="1"/></svg>',
   left: '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="13" cy="8" r="1.8" fill="currentColor"/><circle cx="7" cy="4" r="1.5" fill="currentColor"/><circle cx="7" cy="8" r="1.5" fill="currentColor"/><circle cx="7" cy="12" r="1.5" fill="currentColor"/><path d="M11.4 7.7h-2.6M6.2 4H3.4M6.2 8H3.4M6.2 12H3.4" stroke="currentColor" stroke-width="1"/></svg>',
+  mind: '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="3" cy="8" r="1.8" fill="currentColor"/><circle cx="8" cy="3" r="1.5" fill="currentColor"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="8" cy="13" r="1.5" fill="currentColor"/><circle cx="13" cy="6" r="1.5" fill="currentColor"/><circle cx="13" cy="11" r="1.5" fill="currentColor"/><path d="M4.6 7.6h2M8 4.4v2.2M8 9.4v2.2M9.4 8h2.4M9.4 6h2.4M9.4 11h2.4" stroke="currentColor" stroke-width="1"/></svg>',
   org: '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="8" cy="2.5" r="1.8" fill="currentColor"/><circle cx="4" cy="8.5" r="1.5" fill="currentColor"/><circle cx="8" cy="8.5" r="1.5" fill="currentColor"/><circle cx="12" cy="8.5" r="1.5" fill="currentColor"/><circle cx="6" cy="13.5" r="1.4" fill="currentColor"/><circle cx="10" cy="13.5" r="1.4" fill="currentColor"/><path d="M7.6 4.2l-2.5 3M8.4 4.2l-.2 2.8M8.4 4.2l2.5 3M5 10v1.8M11 10v1.8M8 10v1.8" stroke="currentColor" stroke-width="1"/></svg>',
   radial: '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="3" cy="8" r="1.8" fill="currentColor"/><path d="M4.6 8h10M7 5.4c1.6-.7 3.2-.7 4.8-.2M7 10.6c1.6.7 3.2.7 4.8.2" stroke="currentColor" stroke-width="1" fill="none"/></svg>',
+  fish2: '<svg viewBox="0 0 16 16" width="14" height="14"><path d="M2 8h12M4.5 3.5c1.5-1 3-1.5 4.5-1.5M4.5 12.5c1.5 1 3 1.5 4.5 1.5M11.5 4.5c-1-1.2-1.8-2.4-2.3-3.6M11.5 11.5c-1 1.2-1.8 2.4-2.3 3.6" stroke="currentColor" stroke-width="1" fill="none"/><circle cx="2" cy="8" r="1.6" fill="currentColor"/></svg>',
+  timeline: '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="2.5" cy="8" r="1.4" fill="currentColor"/><path d="M4 8h10.5M6.5 5l4.5-2M6.5 11l4.5 2" stroke="currentColor" stroke-width="1" fill="none"/><circle cx="7" cy="8" r="1.2" fill="currentColor"/><circle cx="12" cy="8" r="1.2" fill="currentColor"/></svg>',
 };
 
 // 思维导图文件图标（列表视图文件名前）
@@ -370,7 +425,6 @@ const renameDialog = ref(false);
 const renameText = ref('');
 const renameId = ref('');
 const tagsDialog = ref(false);
-const tagsText = ref('');
 const tagsId = ref('');
 
 // ---------- 编辑器：左侧布局/大纲 + 右侧设置 ----------
@@ -427,11 +481,10 @@ async function purgeMap(id: string) {
   try { await deleteMindmapPermanent(id); ElMessage.success('已彻底删除'); refreshRecycle(); } catch (e: any) { ElMessage.error('删除失败：' + (e?.message || e)); }
 }
 function showCtxMenu(e: MouseEvent, m: MindmapMeta) {
-  const el = document.querySelector('.mm-library');
-  const r = el?.getBoundingClientRect();
+  // 菜单为 position:fixed（相对视口），直接使用视口坐标，不再减去容器偏移（此前减了 .mm-library 偏移导致菜单偏离鼠标）
   ctxMenu.value = {
-    x: Math.min(e.clientX - (r?.left || 0), (r?.width || 400) - 150),
-    y: Math.min(e.clientY - (r?.top || 0), (r?.height || 300) - 150),
+    x: Math.min(e.clientX, window.innerWidth - 160),
+    y: Math.min(e.clientY, window.innerHeight - 160),
     id: m.id, pinned: m.pinned, title: m.title, tags: m.tags || '',
   };
 }
@@ -440,12 +493,36 @@ async function togglePin(id: string, pinned: number) {
   ctxMenu.value = null;
 }
 function editTags(id: string, tags: string) {
-  tagsId.value = id; tagsText.value = tags; tagsDialog.value = true;
+  tagsId.value = id;
+  // 初始化选中：导图现有标签（逗号分隔的名称）匹配到标签库 id
+  const names = (tags || '').split(/[,，]/).map(s => s.trim()).filter(Boolean);
+  tagChecked.value = tagOptions.value.filter(t => names.includes(t.name)).map(t => t.id);
+  tagsDialog.value = true;
   ctxMenu.value = null;
 }
+// 标签库（供导图打标多选弹窗共用，与浏览页统一交互）
+const tagOptions = ref<{ id: string; name: string; color?: string }[]>([]);
+const tagChecked = ref<string[]>([]);
+const tagNewName = ref('');
+async function loadTagOptions() {
+  try { tagOptions.value = await getTags(); } catch {}
+}
+function toggleTagInDialog(id: string) {
+  const i = tagChecked.value.indexOf(id);
+  if (i >= 0) tagChecked.value.splice(i, 1); else tagChecked.value.push(id);
+}
+async function createTagInDialog() {
+  const n = tagNewName.value.trim();
+  if (!n) return;
+  try { await createTag(n); tagNewName.value = ''; await loadTagOptions(); } catch (e: any) { ElMessage.error('创建失败：' + (e?.message || e)); }
+}
+async function removeTagInDialog(t: { id: string; name: string }) {
+  try { await deleteTag(t.id); const i = tagChecked.value.indexOf(t.id); if (i >= 0) tagChecked.value.splice(i, 1); await loadTagOptions(); } catch (e: any) { ElMessage.error('删除失败：' + (e?.message || e)); }
+}
 async function confirmTags() {
+  const names = tagOptions.value.filter(t => tagChecked.value.includes(t.id)).map(t => t.name).join(',');
   try {
-    await updateMindmap(tagsId.value, { tags: tagsText.value.trim() });
+    await updateMindmap(tagsId.value, { tags: names });
     ElMessage.success('标签已保存'); tagsDialog.value = false; await loadMaps();
   } catch (e: any) { ElMessage.error('保存失败：' + (e?.message || e)); }
 }
@@ -465,6 +542,11 @@ async function newMap() {
     await createMindmap(title);
     await loadMaps();
   } catch (e: any) { ElMessage.error('创建失败：' + (e?.message || e)); }
+}
+// 新建按钮下拉：新建 / 导入
+function onNewMapCmd(cmd: string) {
+  if (cmd === 'new') newMap();
+  else if (cmd === 'import') importFile();
 }
 async function delMap(id: string) {
   await ElMessageBox.confirm('删除后导图将移入回收站，保留 30 天后自动清理。确定删除？', '移入回收站', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }).catch(() => { throw 0; });
@@ -594,7 +676,7 @@ async function openMap(id: string) {
     mapId.value = id;
     mapTitle.value = data.title;
     view.value = 'editor';
-    layoutKey.value = (['free', 'right', 'left', 'org', 'radial'].includes(data.layout) ? data.layout : 'right');
+    layoutKey.value = (['free', 'right', 'left', 'mind', 'org', 'radial', 'fish2', 'timeline'].includes(data.layout) ? data.layout : 'right');
     themeKey.value = (THEMES[data.theme] ? data.theme : 'nexa-light');
     activeNode.value = null;
     outlineTree.value = []; outlineActiveUid.value = '';
@@ -612,6 +694,8 @@ async function openMap(id: string) {
       fishboneDeg: 72,
       // 分支节点展开/折叠按钮：光标悬停时显示（不常驻）
       alwaysShowExpandBtn: false,
+      // 节点文字编辑采用"就地编辑"：编辑框透明无阴影、原文本隐藏，直接在节点文字原位修改（幕布式，避免悬浮白框）
+      openRealtimeRenderOnNodeTextEdit: true,
       // 关系线激活时不显示两端拖拽调节锚点（用户不需要调节曲线控制点）
       enableAdjustAssociativeLinePoints: false,
       // 关联线渲染在节点下层，避免遮挡节点内容（默认 true 会盖住节点）
@@ -651,12 +735,15 @@ async function openMap(id: string) {
     let fitted = false;
     mm.on('node_tree_render_end', () => {
       scale.value = mm.view.scale || 1;
-      if (!fitted) { fitted = true; setTimeout(() => { try { mm.view.fit(); } catch {} }, 30); }
+      if (!fitted) { fitted = true; setTimeout(() => { try { mm.view.fit(); } catch {} }, 30); setTimeout(() => { try { mm.view.fit(); } catch {} }, 200); }
       scheduleRenderBounds();
       refreshOutline();
     });
     bindEvents();
     window.addEventListener('keydown', onEditorKeydown);
+    // 吸收打开后的初始化脏标记：900ms 后强制复位为"已保存"（无操作退出不再弹未保存提示）
+    absorbDirty = true;
+    setTimeout(() => { absorbDirty = false; savedState.value = 'saved'; dirty = false; }, 900);
     savedState.value = 'saved';
     dirty = false;
     sideTab.value = 'layout';
@@ -690,6 +777,7 @@ function destroyMindMap() {
     mm = null;
   }
   window.removeEventListener('keydown', onEditorKeydown);
+  absorbDirty = false;
   if (themeObserver) { themeObserver.disconnect(); themeObserver = null; }
   khBounds.value = [];
   khActiveBound.value = '';
@@ -728,9 +816,12 @@ function bindEvents() {
     selCount.value = selNodes().length;
   });
 }
+// 打开导图后的"吸收期"：SMM 初始渲染/自动布局（fit、setData 回放等）会触发 data_change/view_data_change
+// 事件并 markDirty，导致"打开后无任何操作却提示未保存"。打开后 900ms 内忽略脏标记并强制复位。
+let absorbDirty = false;
 // 标记有未保存的修改（不再自动保存：由工具栏「保存」按钮手动触发 flushSave）
 function markDirty() {
-  if (!mapId.value || view.value !== 'editor') return;
+  if (!mapId.value || view.value !== 'editor' || absorbDirty) return;
   dirty = true;
   savedState.value = 'saving';
 }
@@ -931,6 +1022,8 @@ function addAssoc() {
 function onLayoutChange() {
   if (!mm) return;
   mm.setLayout(LAYOUT_MAP[layoutKey.value] || 'logicalStructure');
+  // 切换布局后画布尺寸变化，自动收拢到可视范围
+  setTimeout(() => { try { mm.view.fit(); } catch {} }, 30);
   markDirty();
 }
 function setTheme(k: string) {
@@ -948,14 +1041,8 @@ function themeCfgFor(k: string): Record<string, any> {
   if (layoutKey.value === 'radial') {
     cfg.second = { ...(cfg.second || {}), marginX: 10 };
   }
-  // 画布背景独立色板（幕布式）：设置了则覆盖主题背景
-  if (canvasBg.value) {
-    cfg.background = canvasBg.value;
-    cfg.backgroundColor = canvasBg.value;
-  }
   // SMM 重渲染（切布局等）会用 themeConfig.backgroundColor 覆盖容器背景，必须同时替换该字段
-  // 用户手动设置了画布背景时，不再跟随系统深色自动切换（以手动选择为准）
-  return isDark && !canvasBg.value ? { ...cfg, backgroundColor: t.darkBg, background: t.darkBg } : cfg;
+  return isDark ? { ...cfg, backgroundColor: t.darkBg, background: t.darkBg } : cfg;
 }
 // SMM 用内联样式设置容器背景，需手动应用（themeConfig.background 不会自动同步到容器）
 function applyCanvasBg() {
@@ -1246,7 +1333,7 @@ function parseIndented(text: string): any {
   return root;
 }
 
-onMounted(() => { loadMaps(); watchSystemTheme(); });
+onMounted(() => { loadMaps(); loadTagOptions(); watchSystemTheme(); });
 onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 </script>
 
@@ -1286,9 +1373,10 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 /* 右键菜单 */
 .ml-ctx { position: fixed; z-index: 200; background: var(--el-bg-color); border: 1px solid var(--el-border-color); border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, .12); padding: 4px; min-width: 150px; }
 .ml-ctx-item { padding: 6px 12px; font-size: 13px; border-radius: 5px; cursor: pointer; color: var(--el-text-color-primary); }
-.ml-ctx-item:hover { background: rgba(64, 158, 255, .1); }
+/* 高亮行统一全局色（与浏览选中行/大纲高亮行一致） */
+.ml-ctx-item:hover { background: var(--kh-brand, #409eff); color: #fff; }
 .ml-ctx-item.danger { color: #e74c3c; }
-.ml-ctx-item.danger:hover { background: rgba(231, 76, 60, .1); }
+.ml-ctx-item.danger:hover { background: #e74c3c; color: #fff; }
 .ml-ctx-mask { position: fixed; inset: 0; z-index: 98; }
 
 .mm-editor { height: 100%; display: flex; flex-direction: column; min-height: 0; }
@@ -1311,7 +1399,7 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 .ms-outline-count { font-weight: 400; color: var(--el-text-color-secondary); font-size: 12px; margin-left: 4px; }
 /* 布局切换按钮组（左侧面板，紧凑按钮，正常文字高度） */
 .ms-layout-btns { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; }
-.ms-layout-btns :deep(.el-radio-button) { flex: 1 1 48%; }
+.ms-layout-btns :deep(.el-radio-button) { flex: 1 1 31%; }
 .ms-layout-btns :deep(.el-radio-button__inner) { font-size: 12px; padding: 7px 0; width: 100%; display: flex; align-items: center; justify-content: center; gap: 4px; line-height: 1; }
 .ms-lb-icon { display: inline-flex; align-items: center; }
 .mm-save-btn { margin-left: 8px; }
@@ -1377,6 +1465,8 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 .mm-host :deep(.smm-associative-line-container line) {
   stroke-width: 1.5 !important;
 }
+/* 激活节点边框调细（hoverRect 默认无 stroke-width，SVG 默认 1；用户反馈偏粗，统一 0.8） */
+.mm-host :deep(.smm-hover-node) { stroke-width: 0.8 !important; }
 /* 2.1) 关联线点击热区：SMM 的 clickPath 是透明描边 path，SVG 默认 pointer-events
        不命中透明描边，导致无法点选/删除/编辑文字；改为按描边区域接收事件。
        线文字（text）不拦截点击（文字编辑走 clickPath 的 dblclick） */

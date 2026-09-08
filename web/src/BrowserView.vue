@@ -437,7 +437,7 @@ defineExpose({ openFolder, openTag });
 
       <!-- 表格视图 -->
       <div v-if="viewMode === 'table'" class="table-wrap" v-loading="loading">
-        <el-table :data="list" size="small" height="100%" stripe @selection-change="(rows: Resource[]) => selection = rows">
+        <el-table :data="list" size="small" height="100%" stripe highlight-current-row @selection-change="(rows: Resource[]) => selection = rows">
           <el-table-column type="selection" width="38" />
           <el-table-column label="名称" min-width="200">
             <template #default="{ row }">
@@ -565,6 +565,17 @@ html.dark .tree-wrap::-webkit-scrollbar-thumb:hover, html.dark .grid::-webkit-sc
 .table-wrap :deep(.el-table th.el-table__cell) { padding: 4px 0; }
 .table-wrap :deep(.el-table .cell) { padding: 0 8px; line-height: 1.5; }
 .table-wrap :deep(.el-table__empty-block) { min-height: 60px; }
+/* 选中行高亮：统一使用全局主色（--kh-brand），与大纲高亮行/右键菜单高亮一致，深色下保证对比度 */
+.table-wrap :deep(.el-table__body tr.current-row > td.el-table__cell) {
+  background: var(--kh-brand, #409eff) !important;
+}
+.table-wrap :deep(.el-table__body tr.current-row > td.el-table__cell .cell) {
+  color: #fff;
+}
+.table-wrap :deep(.el-table__body tr.current-row > td.el-table__cell .name-ico),
+.table-wrap :deep(.el-table__body tr.current-row > td.el-table__cell .path) {
+  color: #fff;
+}
 /* 结构树行高（变量 + 兜底双重保证） */
 .file-tree :deep(.el-tree-node__content) { height: 21px; }
 .file-tree { --el-tree-node-content-height: 21px; }
