@@ -47,6 +47,9 @@ router.get('/resources', (req: Request, res) => {
     where.push('EXISTS (SELECT 1 FROM resource_tags rt WHERE rt.resource_id = r.id AND rt.tag_id = @tag)');
     params.tag = tag;
   }
+  if (req.query.pending === '1') {
+    where.push(`json_extract(r.meta, '$.pending') = 1`);
+  }
 
   const orderCols: Record<string, string> = {
     title: 'r.title', created_at: 'r.created_at', updated_at: 'r.updated_at',
@@ -253,6 +256,81 @@ router.get('/file/:id', (req, res) => {
   res.sendFile(abs);
 });
 
+/** PUT /api/file/:id —— 保存文本文件内容（写回磁盘 + 更新 FTS；仅限文本类扩展名，防二进制破坏） */
+router.put('/file/:id', (req, res) => {
+  const db = getDb();
+  const row = db.prepare(
+    `SELECT path FROM resources WHERE id = ? AND type = 'file' AND status = 'active'`
+  ).get(req.params.id) as { path: string } | undefined;
+  if (!row) { res.status(404).json({ code: 1, msg: '文件记录不存在' }); return; }
+  const rel = row.path;
+  if (!rel || rel.split(/[\\/]/).includes('..')) {
+    res.status(400).json({ code: 1, msg: '非法路径' });
+    return;
+  }
+  const ext = path.extname(rel).toLowerCase();
+  const TEXT_OK = new Set(['.txt', '.md', '.bas', '.cls', '.frm', '.vba', '.json', '.xml', '.html', '.htm', '.csv', '.js', '.ts', '.py', '.sql', '.ini', '.cfg', '.log', '.bat', '.ps1', '.vbs', '.sh', '.yaml', '.yml']);
+  if (!TEXT_OK.has(ext)) { res.status(400).json({ code: 1, msg: '该文件类型不支持在线编辑' }); return; }
+  const content = String(req.body?.content ?? '');
+  const abs = path.join(STORAGE_ROOT, rel.split('/').join(path.sep));
+  try {
+    fs.writeFileSync(abs, content, 'utf8');
+    const st = fs.statSync(abs);
+    db.prepare(`UPDATE resources SET content = ?, size = ?, updated_at = ? WHERE id = ?`)
+      .run(content, st.size, new Date().toISOString(), req.params.id);
+    res.json({ code: 0, data: { ok: true, size: st.size } });
+  } catch (e: any) {
+    res.status(500).json({ code: 1, msg: '保存失败：' + (e?.message || e) });
+  }
+});
+
+/** POST /api/resources/:id/move —— 移动文件/文件夹到指定目录（物理移动 + 更新 DB 路径与父子关系） */
+router.post('/resources/:id/move', (req, res) => {
+  const db = getDb();
+  const { targetParentId } = req.body as { targetParentId?: string };
+  const row = db.prepare(
+    `SELECT id, type, title, path, parent_id FROM resources WHERE id = ? AND status = 'active'`
+  ).get(req.params.id) as { id: string; type: string; title: string; path: string; parent_id: string | null } | undefined;
+  if (!row) { res.status(404).json({ code: 1, msg: '资源不存在' }); return; }
+  // 目标目录
+  let targetPath = ''; // 相对 STORAGE_ROOT 的目录（'' = 根）
+  if (targetParentId) {
+    const t = db.prepare(`SELECT id, path FROM resources WHERE id = ? AND type = 'folder' AND status = 'active'`)
+      .get(targetParentId) as { id: string; path: string } | undefined;
+    if (!t) { res.status(404).json({ code: 1, msg: '目标文件夹不存在' }); return; }
+    targetPath = t.path;
+  }
+  // 防移动到自身/子孙
+  if (row.type === 'folder' && targetParentId === row.id) { res.status(400).json({ code: 1, msg: '不能移动到自身' }); return; }
+  const oldRel = row.path;
+  const newRel = targetPath ? `${targetPath}/${row.title}` : row.title;
+  if (newRel.toLowerCase() === oldRel.toLowerCase()) { res.status(400).json({ code: 1, msg: '目标位置相同' }); return; }
+  // 物理移动
+  const oldAbs = path.join(STORAGE_ROOT, oldRel.split('/').join(path.sep));
+  const newAbs = path.join(STORAGE_ROOT, newRel.split('/').join(path.sep));
+  if (!fs.existsSync(oldAbs)) { res.status(404).json({ code: 1, msg: '磁盘上不存在该资源' }); return; }
+  try {
+    fs.mkdirSync(path.dirname(newAbs), { recursive: true });
+    fs.renameSync(oldAbs, newAbs);
+  } catch (e: any) {
+    res.status(500).json({ code: 1, msg: '移动失败：' + (e?.message || e) });
+    return;
+  }
+  const tx = db.transaction(() => {
+    db.prepare(`UPDATE resources SET path = ?, parent_id = ?, updated_at = ? WHERE id = ?`)
+      .run(newRel, targetParentId || null, new Date().toISOString(), row.id);
+    // 子文件夹/文件的 path 前缀同步更新
+    if (row.type === 'folder') {
+      const prefix = oldRel ? oldRel + '/' : '';
+      const newPrefix = newRel + '/';
+      db.prepare(`UPDATE resources SET path = ? || substr(path, ?), updated_at = ? WHERE path LIKE ? AND status = 'active'`)
+        .run(newPrefix, prefix.length + 1, new Date().toISOString(), prefix + '%');
+    }
+  });
+  tx();
+  res.json({ code: 0, data: { ok: true, path: newRel } });
+});
+
 /** GET /api/graph?dimension=folder|tag|link —— 图谱数据（统一 nodes+links，渲染层自由选择图表形态） */
 router.get('/graph', (req, res) => {
   const db = getDb();
@@ -361,9 +439,26 @@ router.get('/resources/:id/tags', (req, res) => {
   res.json({ code: 0, data: rows });
 });
 
-/** PUT /api/resources/:id/tags —— 设置资源标签（全量替换；recursive=true 且为文件夹时，子树全部资源合并追加这些标签） */
-router.put('/resources/:id/tags', (req, res) => {
+/** POST /api/resources/pending —— 批量标记/取消"待整理"（meta.pending；工作台/浏览页可筛选） */
+router.post('/resources/pending', (req, res) => {
   const db = getDb();
+  const { ids, pending } = req.body as { ids?: unknown; pending?: unknown };
+  const idList = Array.isArray(ids) ? [...new Set(ids.map(String))] : [];
+  if (idList.length === 0) { res.status(400).json({ code: 1, msg: '未选择资源' }); return; }
+  const p = pending ? 1 : 0;
+  const now = new Date().toISOString();
+  const tx = db.transaction(() => {
+    const upd = db.prepare(
+      `UPDATE resources SET meta = json_set(CASE WHEN json_valid(meta) THEN meta ELSE '{}' END, '$.pending', ?), updated_at = ? WHERE id = ?`
+    );
+    for (const id of idList) upd.run(p, now, id);
+  });
+  tx();
+  res.json({ code: 0, data: { ok: true, count: idList.length, pending: !!pending } });
+});
+
+/** PUT /api/resources/:id/tags —— 设置资源标签（全量替换；recursive=true 且为文件夹时，子树全部资源合并追加这些标签） */
+router.put('/resources/:id/tags', (req, res) => {  const db = getDb();
   const { tagIds, recursive } = req.body as { tagIds?: unknown; recursive?: unknown };
   const ids = Array.isArray(tagIds) ? [...new Set(tagIds.map(String))] : [];
   const row = db.prepare(`SELECT id, type FROM resources WHERE id = ? AND status='active'`).get(req.params.id) as

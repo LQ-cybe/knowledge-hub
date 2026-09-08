@@ -1,0 +1,28 @@
+<!-- asset_hash: 36990f60-5ae86601-58fe3e58-03ae5085-8d0feadc-8cc6ebd8-a57e9bc8 -->
+<!-- sync_id: 254f9fb6-493ef6d7-4b28ae8e-1078c053-9ed97a0a-9f107b0e-b6a80b1e -->
+---
+title: CheckTreeView
+---
+TreeView Control with Checkbox
+
+example:
+
+``` xml
+<hc:CheckTreeView Margin="10" ItemsSource="{Binding TreeRoot}"/>
+```
+
+now you need to create observablecollection
+
+``` CS
+public ObservableCollection<CheckTreeView> TreeRoot { get; set; } = new ObservableCollection<CheckTreeView>();
+
+CheckTreeView item = new CheckTreeView() { Text = "Item 1", IsChecked = false, CTag = "TAG" };
+
+CheckTreeView subItem1 = new CheckTreeView() { Text = "SubItem 1", IsChecked = false, CTag = "TAG" };
+CheckTreeView subItem2 = new CheckTreeView() { Text = "SubItem 2", IsChecked = false, CTag = "TAG" };
+item.Add(subItem1);
+item.Add(subItem2);
+TreeRoot.Add(item);
+```
+
+![CheckTreeView](https://raw.githubusercontent.com/ghost1372/HandyControls/develop/Resources/CheckTreeView.png)

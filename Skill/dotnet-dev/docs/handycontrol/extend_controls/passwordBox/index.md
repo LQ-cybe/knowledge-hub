@@ -1,0 +1,83 @@
+<!-- pkg_hash: f0a492fa-9cd5fb9b-9ec3a3c2-c593cd1f-4b327746-4afb7642-63430652 -->
+<!-- commit_ref: 2495bb76-48e4d217-4af28a4e-11a2e493-9f035eca-9eca5fce-b7722fde -->
+---
+title: PasswordBox
+---
+
+Represents a control for entering and processing passwords.
+
+``` CS
+[TemplatePart(Name = ElementPasswordBox, Type = typeof(System.Windows.Controls.PasswordBox))]
+[TemplatePart(Name = ElementTextBox, Type = typeof(System.Windows.Controls.TextBox))]
+public class PasswordBox : Control, IDataInput
+```
+# Create PasswordBox
+
+``` XML
+<hc:PasswordBox />
+```
+
+``` CS
+var passwordBox = new PasswordBox();
+```
+
+# enter password
+You can enter the password in the textbox, or you can set the date in the XAML clock or code.
+
+``` XML
+<hc:PasswordBox Password="123456"/>
+```
+``` CS
+passwordBox.Password = "123456";
+```
+# show password
+The PasswordBox control can actively display the entered password. Set `ShowEyeButton` to `true` and PasswordBox will display an "eye" button. Click this button to display the password you have entered.
+
+``` xml
+<hc:PasswordBox ShowClearButton="True"/>
+``` 
+
+![PasswordBox](https://raw.githubusercontent.com/HandyOrg/HandyOrgResource/master/HandyControl/Doc/extend_controls/PasswordBox_2.gif)
+
+# Set title and placeholder text
+You can add Headers and Placeholders to the PasswordBox to indicate to the user what they do.
+
+``` XML
+<hc:PasswordBox hc:InfoElement.Placeholder="Please enter the content"
+               hc:InfoElement.Title="Title"
+```
+
+# Attributes
+| Property | Description |
+| ---------------- | ------------------ |
+| Password | Gets or sets the password currently reserved by PasswordBox. |
+| PasswordChar | Gets or sets the mask character of the PasswordBox. |
+| ShowEyeButton | Get or set whether to show an "eye" button. Click to display the password. |
+| ShowPassword | Get or set whether to show the password. |
+| Text | Get the text displayed by **TimePicker**, or set the selected time |
+| VerifyFunc | Get or Set Data Validation Delegation |
+| IsError | Get or set whether the data is wrong |
+| ErrorStr | Get or Set Error Alert |
+| TextType | Get or Set Text Type |
+| ShowClearButton | Gets or sets whether to show the clear button |
+| SelectionOpacity | |
+| CaretBrush | |
+| SelectionTextBrush | |
+| SelectionBrush | |
+| MaxLength | |
+| IsSafeEnabled | if this property is false, we can bind UnsagePassword |
+| UnsafePassword | |
+
+# Method
+| Method | Description |
+| ---------------- | ------------------ |
+| Clear () | Clears the value of the Password property. |
+| Paste () | Replaces the current selection in the PasswordBox with the contents of the clipboard. |
+| SelectAll () | Selects everything in PasswordBox. |
+| VerifyData () | Verify the data. |
+
+# Binding
+``` xml
+ <hc:PasswordBox Name="PasswordBoxDemo" ShowClearButton="True" Password="123456" IsSafeEnabled="False"/>
+<TextBox Text="{Binding UnsafePassword,ElementName=PasswordBoxDemo,UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0"/>
+```

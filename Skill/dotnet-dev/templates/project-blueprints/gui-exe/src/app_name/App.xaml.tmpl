@@ -1,0 +1,14 @@
+<Application x:Class="__ROOT_NAMESPACE__.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
+             StartupUri="Views/MainWindow.xaml">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <hc:Theme Name="HandyTheme" />
+        <ResourceDictionary Source="/__PROJECT_NAME__;component/Resources/ThemeOverrides.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+</Application>

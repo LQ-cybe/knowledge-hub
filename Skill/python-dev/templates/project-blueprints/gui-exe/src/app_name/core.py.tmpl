@@ -1,0 +1,7 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+
+def build_result_message(input_file: Path) -> str:
+    return f"已选择文件：{input_file.name}"

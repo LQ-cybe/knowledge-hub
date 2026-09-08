@@ -1,0 +1,25 @@
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+
+from __PACKAGE_NAME__.logging_setup import configure_logging
+from __PACKAGE_NAME__.workbook_service import export_summary_workbook
+
+
+LOGGER = logging.getLogger(__name__)
+
+
+def main() -> None:
+    log_file = configure_logging()
+    input_dir = Path("input")
+    output_file = Path("output") / "summary.xlsx"
+    output_file.parent.mkdir(exist_ok=True)
+    LOGGER.info("Excel 批处理开始：input=%s output=%s log=%s", input_dir.resolve(), output_file.resolve(), log_file)
+    export_summary_workbook(input_dir=input_dir, output_file=output_file)
+    LOGGER.info("Excel 批处理完成：%s", output_file.resolve())
+    print(f"处理完成：{output_file.resolve()}\n日志目录：{log_file.parent}")
+
+
+if __name__ == "__main__":
+    main()

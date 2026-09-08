@@ -1,0 +1,19 @@
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from __PACKAGE_NAME__.processor import process_directory
+
+
+def test_process_directory_creates_result(tmp_path: Path) -> None:
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    output_dir.mkdir()
+
+    process_directory(input_dir=input_dir, output_dir=output_dir)
+
+    assert (output_dir / "result.txt").exists()

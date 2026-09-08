@@ -1,0 +1,21 @@
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from __PACKAGE_NAME__.workbook_service import export_summary_workbook
+
+
+def test_export_summary_workbook(tmp_path: Path) -> None:
+    input_dir = tmp_path / "input"
+    input_dir.mkdir()
+    output_file = tmp_path / "result.xlsx"
+
+    export_summary_workbook(input_dir=input_dir, output_file=output_file)
+
+    frame = pd.read_excel(output_file)
+    assert not frame.empty

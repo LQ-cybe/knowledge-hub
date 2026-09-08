@@ -36,6 +36,7 @@ export interface TreeNode {
 }
 
 export const getStats = () => http.get('/stats').then(r => r.data.data);
+export const rescan = () => http.post('/rescan').then(r => r.data.data as { folders: number; files: number; textIndexed: number; skipped: number; added: number; removed: number });
 export const getFolders = () => http.get('/folders').then(r => r.data.data);
 export const getTree = () => http.get('/tree').then(r => r.data.data as TreeNode[]);
 export const getResources = (params: Record<string, string>) =>
@@ -73,6 +74,20 @@ export const setResourceTags = (resourceId: string, tagIds: string[], recursive 
 
 /** 文件内容读取地址（供预览/图片缩略图） */
 export const fileUrl = (id: string) => `/api/file/${id}`;
+/** 保存文本文件内容（.txt/.md/代码等） */
+export const saveFile = (id: string, content: string) =>
+  http.put(`/file/${id}`, { content }).then(r => r.data.data);
+/** 读取文本文件内容（供预览编辑） */
+export const readFileText = async (id: string) => {
+  const r = await http.get(`/file/${id}`, { responseType: 'text' });
+  return String(r.data);
+};
+/** 移动资源到指定文件夹（targetParentId 为空 = 根目录） */
+export const moveResource = (id: string, targetParentId: string | null) =>
+  http.post(`/resources/${id}/move`, { targetParentId }).then(r => r.data.data);
+/** 批量标记/取消"待整理" */
+export const setPending = (ids: string[], pending: boolean) =>
+  http.post('/resources/pending', { ids, pending }).then(r => r.data.data);
 
 export interface GraphNode {
   id: string;

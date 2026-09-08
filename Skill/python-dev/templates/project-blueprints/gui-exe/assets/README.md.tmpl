@@ -1,0 +1,21 @@
+# 图标资源说明
+
+- 如果用户提供了程序图标，优先放到 `assets/app_icon.png` 或 `assets/app_icon.ico`
+- 打包 GUI 程序时，优先调用根目录 `scripts/build_windows_exe.ps1`
+- 当 `-IconPath` 指向 PNG 文件时，打包脚本会自动：
+  - 用 `uv add --dev pillow` 安装转换依赖
+  - 将 PNG 转为 `ICO` 供 `PyInstaller --icon` 使用
+  - 把 `app_icon.png` 与 `app_icon.ico` 一起带入打包产物
+- GUI 模板会在源码运行态和打包运行态都优先读取 `assets/` 下的图标，使图标尽量同步显示在任务栏和窗体左上角
+
+推荐打包命令示例：
+
+```powershell
+& .\scripts\build_windows_exe.ps1 `
+  -ProjectRoot . `
+  -EntryScript .\src\__PACKAGE_NAME__\main.py `
+  -AppName __PROJECT_NAME__ `
+  -BuildMode onedir `
+  -Windowed `
+  -IconPath .\assets\app_icon.png
+```

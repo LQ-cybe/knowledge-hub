@@ -1,0 +1,143 @@
+from __future__ import annotations
+
+from datetime import datetime, timedelta
+import logging
+from pathlib import Path
+import os
+import subprocess
+import sys
+
+from dotenv import load_dotenv
+
+
+_LOG_FILE_PREFIX = "app"
+_MAX_LOG_BYTES = 5 * 1024 * 1024
+_RETENTION_DAYS = 30
+
+
+class DateSizedFileHandler(logging.Handler):
+    def __init__(
+        self,
+        log_dir: Path,
+        *,
+        prefix: str = _LOG_FILE_PREFIX,
+        max_bytes: int = _MAX_LOG_BYTES,
+        retention_days: int = _RETENTION_DAYS,
+        encoding: str = "utf-8",
+    ) -> None:
+        super().__init__()
+        self.log_dir = log_dir
+        self.prefix = prefix
+        self.max_bytes = max_bytes
+        self.retention_days = retention_days
+        self.encoding = encoding
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+
+    def get_current_log_file(self, message: str = "") -> Path:
+        date_part = datetime.now().strftime("%Y-%m-%d")
+        message_size = len((message + "\n").encode(self.encoding)) if message else 0
+        index = 0
+
+        while True:
+            suffix = "" if index == 0 else f"-{index}"
+            log_file = self.log_dir / f"{self.prefix}-{date_part}{suffix}.log"
+            if not log_file.exists():
+                return log_file
+            if log_file.stat().st_size + message_size <= self.max_bytes:
+                return log_file
+            index += 1
+
+    def cleanup_old_logs(self) -> None:
+        cutoff = datetime.now() - timedelta(days=self.retention_days)
+        for log_file in self.log_dir.glob(f"{self.prefix}-*.log"):
+            try:
+                modified = datetime.fromtimestamp(log_file.stat().st_mtime)
+            except OSError:
+                continue
+            if modified < cutoff:
+                try:
+                    log_file.unlink()
+                except OSError:
+                    continue
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            message = self.format(record)
+            log_file = self.get_current_log_file(message)
+            with log_file.open("a", encoding=self.encoding) as handle:
+                handle.write(message + "\n")
+        except Exception:
+            self.handleError(record)
+
+
+def get_runtime_root() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parents[2]
+
+
+def load_runtime_env() -> Path | None:
+    runtime_root = get_runtime_root()
+    for candidate in (runtime_root / ".env", runtime_root / ".env.example"):
+        if candidate.exists():
+            load_dotenv(candidate, override=False)
+            return candidate
+    return None
+
+
+def get_log_dir() -> Path:
+    log_dir = get_runtime_root() / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    return log_dir
+
+
+def get_log_file() -> Path:
+    handler = DateSizedFileHandler(get_log_dir())
+    return handler.get_current_log_file()
+
+
+def configure_logging() -> Path:
+    env_file = load_runtime_env()
+    logger = logging.getLogger()
+    if logger.handlers:
+        return get_log_file()
+
+    log_level_name = os.getenv("LOG_LEVEL", "INFO").upper()
+    log_level = getattr(logging, log_level_name, logging.INFO)
+    logger.setLevel(log_level)
+
+    formatter = logging.Formatter(
+        "%(asctime)s | %(levelname)s | pid=%(process)d | tid=%(thread)d | module=%(module)s | %(message)s"
+    )
+
+    file_handler = DateSizedFileHandler(get_log_dir())
+    file_handler.setFormatter(formatter)
+    file_handler.cleanup_old_logs()
+
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+
+    log_file = file_handler.get_current_log_file()
+    logger.info(
+        "日志系统初始化完成：log=%s env=%s runtime_root=%s",
+        log_file,
+        env_file if env_file is not None else "未找到",
+        get_runtime_root(),
+    )
+    return log_file
+
+
+def open_log_dir() -> None:
+    log_dir = get_log_dir()
+    if sys.platform.startswith("win"):
+        os.startfile(str(log_dir))
+        return
+
+    if sys.platform == "darwin":
+        subprocess.run(["open", str(log_dir)], check=False)
+        return
+
+    subprocess.run(["xdg-open", str(log_dir)], check=False)

@@ -3,7 +3,7 @@ import { onMounted, ref, nextTick, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   getTree, getResourcesPage, getTags, createTag, updateTag, deleteTag, setResourceTags,
-  search as apiSearch, fileUrl,
+  search as apiSearch, fileUrl, rescan, saveFile, readFileText, moveResource, setPending,
   type Resource, type TagItem, type TreeNode,
 } from './api';
 
@@ -222,6 +222,146 @@ function rowTagIds(r: Resource): string[] {
   return (r.tag_ids || '').split('|').filter(Boolean);
 }
 
+// ---------- 刷新（重扫磁盘增量入库） ----------
+const refreshing = ref(false);
+async function onRefresh() {
+  if (refreshing.value) return;
+  refreshing.value = true;
+  try {
+    const r = await rescan();
+    ElMessage.success(`扫描完成：新增 ${r.added}，移除 ${r.removed}，文件 ${r.files}`);
+    await refreshTags();
+    await loadTree();
+  } catch (e: any) {
+    ElMessage.error('扫描失败：' + (e?.response?.data?.msg || e?.message || '服务异常'));
+  } finally {
+    refreshing.value = false;
+  }
+}
+
+// ---------- 单击打开：文件夹进目录，文本/图片预览，其他提示 ----------
+const TEXT_PREVIEW_EXT = /\.(txt|md|bas|cls|frm|vba|json|xml|html|htm|csv|js|ts|py|sql|ini|cfg|log|bat|ps1|vbs|sh|yaml|yml)$/i;
+const preview = ref({
+  visible: false, id: '', title: '', path: '', ext: '', isText: false, isImage: false,
+  content: '', loading: false,
+});
+const previewRef = ref();
+
+function isTextPreview(r: Resource) {
+  return r.type === 'file' && TEXT_PREVIEW_EXT.test(r.title);
+}
+async function onRowClick(row: Resource) {
+  if (row.type === 'folder') {
+    // 文件夹：进入目录
+    currentFolderId.value = row.id;
+    searchMode.value = false;
+    filters.value.q = '';
+    page.value = 1;
+    await loadResources();
+    return;
+  }
+  if (row.type !== 'file') { ElMessage.info('该类型暂不支持预览'); return; }
+  if (isImage(row)) {
+    preview.value = { visible: true, id: row.id, title: row.title, path: row.path || '', ext: '', isText: false, isImage: true, content: '', loading: false };
+    return;
+  }
+  if (isTextPreview(row)) {
+    preview.value = { ...preview.value, visible: true, id: row.id, title: row.title, path: row.path || '', ext: (row.title.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1]) || '', isText: true, isImage: false, content: '', loading: true };
+    try {
+      preview.value.content = await readFileText(row.id);
+    } catch (e: any) {
+      ElMessage.error('读取失败：' + (e?.message || '服务异常'));
+    } finally {
+      preview.value.loading = false;
+    }
+    await nextTick();
+    // md 渲染预览
+    if (preview.value.ext === 'md') renderMdPreview();
+    return;
+  }
+  ElMessage.info('该文件类型暂不支持预览');
+}
+
+// ---------- MD 渲染预览（右侧只读渲染） ----------
+const mdHtml = ref('');
+function renderMdPreview() {
+  const src = preview.value.content || '';
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // 极简 MD 渲染：标题/列表/代码块/行内代码/链接/粗体/分割线（够用即可，不引入重依赖）
+  let html = esc(src)
+    .replace(/```([\s\S]*?)```/g, (_m, c: string) => `<pre><code>${c}</code></pre>`)
+    .replace(/`([^`]+)`/g, (_m, c: string) => `<code>${c}</code>`)
+    .replace(/^### (.*)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.*)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.*)$/gm, '<h1>$1</h1>')
+    .replace(/^- (.*)$/gm, '<li>$1</li>')
+    .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/^---$/gm, '<hr/>')
+    .replace(/\n/g, '<br/>');
+  mdHtml.value = html;
+}
+
+/** 保存文本文件（写回磁盘 + 提示） */
+async function savePreview() {
+  if (!preview.value.id) return;
+  try {
+    await saveFile(preview.value.id, preview.value.content);
+    ElMessage.success('已保存');
+    if (preview.value.ext === 'md') renderMdPreview();
+    loadResources();
+  } catch (e: any) {
+    ElMessage.error('保存失败：' + (e?.response?.data?.msg || e?.message || '服务异常'));
+  }
+}
+
+// ---------- 批量操作：移动位置 / 加入待整理 ----------
+const batchMenu = ref({ visible: false });
+const moveDialog = ref({
+  visible: false, ids: [] as string[], names: [] as string[], targetId: '', target: [] as TreeNode[], loading: false,
+});
+function openMoveDialog() {
+  if (selection.value.length === 0) { ElMessage.warning('请先勾选要移动的资源'); return; }
+  moveDialog.value = {
+    visible: true,
+    ids: selection.value.map(r => r.id),
+    names: selection.value.map(r => r.title),
+    targetId: '', target: treeData.value, loading: false,
+  };
+}
+async function doMove() {
+  const d = moveDialog.value;
+  if (!d.targetId) { ElMessage.warning('请选择目标文件夹（不选 = 移动到根目录）'); return; }
+  d.loading = true;
+  try {
+    for (const id of d.ids) await moveResource(id, d.targetId);
+    ElMessage.success('移动完成');
+    d.visible = false;
+    await loadTree();
+    await loadResources();
+  } catch (e: any) {
+    ElMessage.error('移动失败：' + (e?.response?.data?.msg || e?.message || '服务异常'));
+  } finally {
+    d.loading = false;
+  }
+}
+async function markPending(pending: boolean) {
+  if (selection.value.length === 0) { ElMessage.warning('请先勾选资源'); return; }
+  try {
+    await setPending(selection.value.map(r => r.id), pending);
+    ElMessage.success(pending ? `已将 ${selection.value.length} 项加入待整理` : '已取消待整理标记');
+    loadResources();
+  } catch (e: any) {
+    ElMessage.error('操作失败：' + (e?.message || '服务异常'));
+  }
+}
+function onBatchCmd(cmd: string) {
+  if (cmd === 'tag') openBatchDialog();
+  else if (cmd === 'move') openMoveDialog();
+  else if (cmd === 'pending') markPending(true);
+}
+
 // ---------- 打标对话框（行内 / 批量共用，可直接新建标签；文件夹可选递归） ----------
 const tagDialog = ref({
   visible: false, mode: 'single' as 'single' | 'batch',
@@ -431,14 +571,24 @@ defineExpose({ openFolder, openTag });
           <el-radio-button value="grid">卡片</el-radio-button>
         </el-radio-group>
         <div class="tb-sep"></div>
-        <el-button type="primary" plain @click="openBatchDialog">批量打标</el-button>
+        <el-dropdown @command="onBatchCmd">
+          <el-button type="primary" plain :disabled="selection.length === 0">批量操作 ▾</el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="tag">批量打标</el-dropdown-item>
+              <el-dropdown-item command="move">移动位置</el-dropdown-item>
+              <el-dropdown-item command="pending">加入待整理</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+        <el-button :loading="refreshing" @click="onRefresh" title="重新扫描磁盘（新增文件/文件夹入库）">刷新</el-button>
         <span class="total">共 {{ total }} 项</span>
       </div>
 
       <!-- 表格视图 -->
       <div v-if="viewMode === 'table'" class="table-wrap" v-loading="loading">
-        <el-table :data="list" size="small" height="100%" stripe highlight-current-row @selection-change="(rows: Resource[]) => selection = rows">
-          <el-table-column type="selection" width="38" />
+        <el-table :data="list" size="small" height="100%" stripe highlight-current-row @selection-change="(rows: Resource[]) => selection = rows" @row-click="onRowClick" :row-class-name="() => 'browse-row'">
+          <el-table-column type="selection" width="38" @click.stop />
           <el-table-column label="名称" min-width="200">
             <template #default="{ row }">
               <span class="name-cell">
@@ -450,11 +600,13 @@ defineExpose({ openFolder, openTag });
           <el-table-column prop="path" label="路径" min-width="220" show-overflow-tooltip>
             <template #default="{ row }"><span class="path">{{ row.path || '-' }}</span></template>
           </el-table-column>
-          <el-table-column label="标签" min-width="150">
+          <el-table-column label="标签" min-width="140">
             <template #default="{ row }">
-              <div class="tag-cell">
+              <div class="tag-cell" v-if="rowTagNames(row).length > 0">
                 <span v-for="(n, i) in rowTagNames(row)" :key="i" class="cell-tag" :title="n">{{ n }}</span>
-                <el-button size="small" text type="primary" @click="openTagDialog(row)">打标</el-button>
+              </div>
+              <div class="tag-cell" v-else>
+                <el-button size="small" text type="primary" class="add-tag-btn" @click.stop="openTagDialog(row)">加标签</el-button>
               </div>
             </template>
           </el-table-column>
@@ -470,7 +622,7 @@ defineExpose({ openFolder, openTag });
       <!-- 卡片视图 -->
       <div v-else class="grid" v-loading="loading">
         <div v-if="list.length === 0" class="empty" style="grid-column: 1 / -1;">无结果</div>
-        <div v-for="r in list" :key="r.id" class="card">
+        <div v-for="r in list" :key="r.id" class="card" @click="onRowClick(r)">
           <div class="thumb" :class="{ 'thumb-img': isImage(r) }">
             <img v-if="isImage(r)" :src="fileUrl(r.id)" loading="lazy" :alt="r.title" />
             <span v-else class="thumb-icon">{{ typeIcons[r.type] || '📄' }}</span>
@@ -479,6 +631,7 @@ defineExpose({ openFolder, openTag });
           <div class="card-meta">{{ r.type === 'file' ? r.path : typeLabels[r.type] }}</div>
           <div class="card-tags">
             <span v-for="(n, i) in rowTagNames(r)" :key="i" class="cell-tag" :title="n">{{ n }}</span>
+            <el-button v-if="rowTagNames(r).length === 0" size="small" text type="primary" class="add-tag-btn" @click.stop="openTagDialog(r)">加标签</el-button>
           </div>
         </div>
       </div>
@@ -526,6 +679,81 @@ defineExpose({ openFolder, openTag });
       <template #footer>
         <el-button @click="tagDialog.visible = false">取消</el-button>
         <el-button type="primary" @click="saveTagDialog">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 文件预览 / 文本编辑（md 左右布局：左编辑右预览） -->
+    <el-dialog
+      v-model="preview.visible"
+      :title="preview.title"
+      width="76%"
+      top="4vh"
+      class="preview-dialog"
+      destroy-on-close
+    >
+      <div v-if="preview.isImage" class="pv-img-wrap">
+        <img :src="fileUrl(preview.id)" :alt="preview.title" style="max-width: 100%;" />
+      </div>
+      <div v-else-if="preview.isText" class="pv-text">
+        <div v-if="preview.ext === 'md'" class="pv-md">
+          <div class="pv-pane">
+            <div class="pv-pane-title">编辑</div>
+            <el-input
+              ref="previewRef"
+              v-model="preview.content"
+              type="textarea"
+              :rows="22"
+              class="pv-editor"
+              spellcheck="false"
+            />
+          </div>
+          <div class="pv-pane">
+            <div class="pv-pane-title">预览</div>
+            <div class="pv-md-render" v-html="mdHtml"></div>
+          </div>
+        </div>
+        <el-input
+          v-else
+          ref="previewRef"
+          v-model="preview.content"
+          type="textarea"
+          :rows="22"
+          class="pv-editor-full"
+          spellcheck="false"
+        />
+      </div>
+      <div v-else-if="preview.loading" class="pv-loading">加载中…</div>
+      <template #footer>
+        <span class="pv-path">{{ preview.path }}</span>
+        <el-button @click="preview.visible = false">关闭</el-button>
+        <el-button v-if="preview.isText" type="primary" @click="savePreview">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 移动位置：选择目标文件夹 -->
+    <el-dialog v-model="moveDialog.visible" title="移动位置" width="440">
+      <p class="dlg-hint">将 {{ moveDialog.names.length }} 项移动到：</p>
+      <div class="move-tree">
+        <el-tree
+          :data="moveDialog.target"
+          node-key="id"
+          :props="{ label: 'title', children: 'children' }"
+          highlight-current
+          :default-expand-all="false"
+          @node-click="(d: TreeNode) => moveDialog.targetId = d.type === 'folder' ? d.id : ''"
+        >
+          <template #default="{ data }">
+            <span class="tn">
+              <span class="tn-icon">{{ nodeIcon(data) }}</span>
+              <span class="tn-text">{{ data.title }}</span>
+            </span>
+          </template>
+        </el-tree>
+      </div>
+      <p class="dlg-hint" style="margin-top: 8px;">不选择任何文件夹 = 移动到根目录</p>
+      <template #footer>
+        <el-button @click="moveDialog.visible = false">取消</el-button>
+        <el-button type="primary" :loading="moveDialog.loading" @click="doMove">移动</el-button>
       </template>
     </el-dialog>
   </div>
@@ -613,4 +841,39 @@ html.dark .tree-wrap::-webkit-scrollbar-thumb:hover, html.dark .grid::-webkit-sc
 .dlg-tag { cursor: pointer; }
 .dlg-recursive { margin-top: 12px; }
 .tm-empty { color: var(--el-text-color-secondary, #9ca3af); font-size: 13px; text-align: center; padding: 16px 0; }
+
+/* 行内"加标签"按钮：小号、不撑高行 */
+.add-tag-btn { margin: 0; padding: 0 6px; font-size: 12px; }
+.table-wrap :deep(.browse-row) { cursor: pointer; }
+.tag-cell .el-button { flex: none; }
+
+/* 预览对话框 */
+.pv-img-wrap { text-align: center; padding: 8px 0; }
+.pv-loading { text-align: center; color: var(--el-text-color-secondary, #9ca3af); padding: 30px 0; }
+.pv-text { display: flex; flex-direction: column; }
+.pv-md { display: flex; gap: 10px; }
+.pv-pane { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+.pv-pane-title { font-size: 12px; color: var(--el-text-color-secondary, #6b7280); margin-bottom: 6px; }
+.pv-editor :deep(textarea), .pv-editor-full :deep(textarea) {
+  font-family: Consolas, "Courier New", monospace; font-size: 13px; line-height: 1.6;
+  background: var(--el-bg-color, #fff); color: var(--el-text-color-primary, #1f2937);
+}
+.pv-md-render {
+  flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--el-border-color, #e5e7eb);
+  border-radius: 6px; padding: 12px 16px; font-size: 14px; line-height: 1.8;
+  color: var(--el-text-color-primary, #1f2937); background: var(--el-bg-color, #fff);
+}
+.pv-md-render h1 { font-size: 20px; margin: 10px 0 6px; }
+.pv-md-render h2 { font-size: 17px; margin: 8px 0 5px; }
+.pv-md-render h3 { font-size: 15px; margin: 6px 0 4px; }
+.pv-md-render ul { margin: 4px 0; padding-left: 22px; }
+.pv-md-render code { background: var(--el-fill-color, #f0f2f5); border-radius: 4px; padding: 1px 6px; font-family: Consolas, "Courier New", monospace; font-size: 13px; }
+.pv-md-render pre { background: var(--el-fill-color, #f0f2f5); border-radius: 6px; padding: 10px 12px; overflow: auto; }
+.pv-md-render pre code { background: transparent; padding: 0; }
+.pv-md-render hr { border: none; border-top: 1px solid var(--el-border-color, #e5e7eb); margin: 10px 0; }
+.pv-md-render a { color: var(--el-color-primary, #409eff); }
+.pv-path { flex: 1; color: var(--el-text-color-secondary, #9ca3af); font-size: 12px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.move-tree { max-height: 320px; overflow: auto; border: 1px solid var(--el-border-color, #e5e7eb); border-radius: 6px; padding: 6px; }
+.move-tree .tn { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.move-tree .tn-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
 </style>

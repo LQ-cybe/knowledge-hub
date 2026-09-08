@@ -1,0 +1,36 @@
+<!-- schema_v: 7f0e4d89-137f24e8-11697cb1-4a39126c-c498a835-c551a931-ece9d921 -->
+---
+title: Menu
+---
+
+# Attached Property
+| Properties | Description |
+| - | - |
+| AnimationMode  | Change Transition Animation  `Only Custom Version` |
+| IsEnabledAnimation  | Enable or Disable Transition Animation  `Only Custom Version` |
+
+```xml
+     <Menu hc:MenuAttach.AnimationMode="Fade"/>
+<!--OR-->
+    <Menu hc:MenuAttach.IsEnabledAnimation="False"/>
+```
+
+# MenuBaseStyle
+
+The default style of the menu is not recommended. It should always be used by other styles in the manner of BasedOn.
+
+{% note info no-icon %}
+example:
+{% code lang:xml %}
+    <Menu ItemsSource="{Binding Menus}">
+        <Menu.ItemTemplate>
+            <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                <TextBlock Text="{Binding Name}"></TextBlock>
+            </HierarchicalDataTemplate>
+        </Menu.ItemTemplate>
+</Menu>
+{% endcode %}
+
+![Menu.BaseStyle](https://raw.githubusercontent.com/HandyOrg/HandyOrgResource/master/HandyControl/Doc/native_controls/Menu.BaseStyle.png)
+
+{% endnote %}

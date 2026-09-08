@@ -1,0 +1,8 @@
+# __APP_NAME__ 交付说明
+
+- 启动入口：`dist\__APP_NAME__\__APP_NAME__.exe`
+- 配置文件：`dist\__APP_NAME__\appsettings.json`
+- 日志目录：`dist\__APP_NAME__\logs\`
+- 如果交付时带了授权信息，请同时保留 `LICENSE_NOTICE.txt` 与 `distribution-license.json`
+- 版本建议：默认优先发布 `net6.0`；如果 `.NET 6` 不够，再升级到 `net8.0`
+- 如果这是框架依赖发布，且目标机环境分散，再评估是否需要 `RollForward`

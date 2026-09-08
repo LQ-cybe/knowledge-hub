@@ -1,0 +1,57 @@
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import requests
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from __PACKAGE_NAME__.scraper import fetch_titles, redact_url
+
+
+class _FakeResponse:
+    def __init__(self, text: str) -> None:
+        self.text = text
+        self.status_code = 200
+
+    def raise_for_status(self) -> None:
+        return None
+
+
+def test_fetch_titles(monkeypatch) -> None:
+    def fake_get(url: str, timeout: int) -> _FakeResponse:
+        assert url == "https://example.com"
+        assert timeout == 10
+        return _FakeResponse("<h1>A</h1><h2>B</h2>")
+
+    monkeypatch.setattr("__PACKAGE_NAME__.scraper.requests.get", fake_get)
+    result = fetch_titles("https://example.com")
+    assert result == ["A", "B"]
+
+
+def test_redact_url_hides_query() -> None:
+    result = redact_url("https://example.com/path?token=123&name=test")
+    assert result == "https://example.com/path?[REDACTED]"
+
+
+def test_fetch_titles_retries(monkeypatch) -> None:
+    calls: list[int] = []
+
+    def fake_get(url: str, timeout: float) -> _FakeResponse:
+        calls.append(1)
+        if len(calls) < 3:
+            raise requests.RequestException("temporary failure")
+        return _FakeResponse("<h1>A</h1>")
+
+    monkeypatch.setattr("__PACKAGE_NAME__.scraper.requests.get", fake_get)
+    monkeypatch.setattr("__PACKAGE_NAME__.scraper.time.sleep", lambda _: None)
+
+    result = fetch_titles(
+        "https://example.com?token=123",
+        max_attempts=3,
+        retry_delay_seconds=0,
+    )
+
+    assert result == ["A"]
+    assert len(calls) == 3

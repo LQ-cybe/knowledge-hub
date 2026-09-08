@@ -5,11 +5,6 @@ import utils from './fishboneUtils'
 import { SVG } from '@svgdotjs/svg.js'
 import { shapeStyleProps } from '../core/render/node/Style'
 
-// 折叠占位宽度缓存：uid -> 该节点最近一次展开渲染时的子树水平宽度。
-// 折叠后渲染树中不再包含子节点实例，无法计算子树宽度，用此缓存保持兄弟节点位置稳定，
-// 避免鱼骨（放射）布局折叠中间分支后右侧分支整体前移、破坏层级顺序。
-const expandedWidthCache = new Map()
-
 //  鱼骨图
 class Fishbone extends Base {
   //  构造函数
@@ -217,18 +212,18 @@ class Fishbone extends Base {
       null,
       (node, parent, isRoot, layerIndex) => {
         if (node.isRoot) {
-          // 鱼骨（放射）横向紧凑方案：二级节点分"上/下"两行，起点对齐根节点右侧；
-          // 每个二级节点的 x 先按自身宽度 + 留白排布（后续 adjustLeftTopValue 再按
-          // "子树最大宽度 + 留白"二次推进，保证下一个兄弟紧跟上一子树，无空白浪费）
-          const marginX = this.getMarginX(layerIndex + 1)
-          let topTotalLeft = node.left + node.width + marginX
-          let bottomTotalLeft = node.left + node.width + marginX
+          let marginX = this.getMarginX(layerIndex + 1)
+          const heightOffsetRatio = this.isFishbone2() ? 2 : 1
+          let topTotalLeft =
+            node.left + node.width + node.height / heightOffsetRatio + marginX
+          let bottomTotalLeft =
+            node.left + node.width + node.height / heightOffsetRatio + marginX
           node.children.forEach(item => {
             if (this.checkIsTop(item)) {
               item.left = topTotalLeft
               topTotalLeft += item.width + marginX
             } else {
-              item.left = bottomTotalLeft
+              item.left = bottomTotalLeft + 20
               bottomTotalLeft += item.width + marginX
             }
           })
@@ -251,8 +246,9 @@ class Fishbone extends Base {
       this.root,
       null,
       (node, parent, isRoot, layerIndex) => {
-        // 折叠节点：不调整内部子节点，但保留其子树布局占位（子树边界仍参与兄弟节点间距计算），
-        // 保证折叠后同级兄弟节点位置稳定、层级顺序不被破坏（鱼骨/放射布局核心修复）
+        if (!node.getData('expand')) {
+          return
+        }
         let params = { node, parent, layerIndex, ctx: this }
         if (this.checkIsTop(node)) {
           utils.top.adjustLeftTopValueBefore(params)
@@ -269,38 +265,20 @@ class Fishbone extends Base {
         }
         // 调整二级节点的子节点的left值
         if (node.isRoot) {
-          // 紧凑拼接：每个二级节点的子树按"子树最大水平宽度 + 小留白"横向推进，
-          // 下一个兄弟紧跟上一子树最右端，消除固定角度产生的横向空白（用户要求的
-          // "每个节点最长文字 + 留白 = 下一个节点位置"）。折叠节点无子节点实例，
-          // 用最近一次展开渲染时缓存的子树宽度占位，保证折叠后兄弟位置稳定不跳位。
-          const gap = 10
-          let topTotalLeft = 0
-          let bottomTotalLeft = 0
           let maxx = -Infinity
           node.children.forEach(item => {
-            const isExpanded = item.getData('expand')
-            const isTop = this.checkIsTop(item)
-            let w = 0
-            if (isExpanded) {
-              let { left, right } = this.getNodeBoundaries(item, 'h')
-              w = right - left
-              expandedWidthCache.set(item.uid, w)
+            if (this.checkIsTop(item)) {
+              let { right } = this.getNodeBoundaries(item, 'h')
+              if (right > maxx) {
+                maxx = right
+              }
+              // 紧凑：不再按子树水平宽二次平移（computedLeftTopValue 已按"前兄弟宽 + second.marginX"绝对排布），
+              // 消除短文本节点后大片横向空白；子树随节点整体平移，保持父子相对位置
             } else {
-              const cachedW = expandedWidthCache.get(item.uid)
-              w = typeof cachedW === 'number' ? cachedW : item.width || 0
-            }
-            const step = w + gap
-            if (isTop) {
-              item.left += topTotalLeft
-              this.updateChildren(item.children, 'left', topTotalLeft)
-              topTotalLeft += step
-            } else {
-              item.left += bottomTotalLeft
-              this.updateChildren(item.children, 'left', bottomTotalLeft)
-              bottomTotalLeft += step
-            }
-            if (item.left + w > maxx) {
-              maxx = item.left + w
+              let { right } = this.getNodeBoundaries(item, 'h')
+              if (right > maxx) {
+                maxx = right
+              }
             }
           })
           this.maxx = maxx
@@ -398,54 +376,107 @@ class Fishbone extends Base {
     let len = node.children.length
     if (node.isRoot) {
       // 当前节点是根节点
-      // 列式布局：根节点右侧画一条主干水平线到二级列，再逐条直连到每个二级节点
-      // （二级节点同列且上下分布，直连斜线比固定角度汇聚线更贴合列式坐标）
+      // 根节点的子节点是和根节点同一水平线排列
+      let maxx = -Infinity
+      node.children.forEach(item => {
+        if (item.left > maxx) {
+          maxx = item.left
+        }
+        // 水平线段到二级节点的连线
+        let marginY = this.getMarginY(item.layerIndex)
+        let nodeLineX = item.left
+        let offset =
+          node.height / 2 + marginY - (this.isFishbone2() ? node.height / 4 : 0)
+        let offsetX = offset / Math.tan(degToRad(this.mindMap.opt.fishboneDeg))
+        let line = this.lineDraw.path()
+        if (this.checkIsTop(item)) {
+          line.plot(
+            this.transformPath(
+              `M ${nodeLineX - offsetX},${item.top + item.height + offset} L ${
+                item.left
+              },${item.top + item.height}`
+            )
+          )
+        } else {
+          line.plot(
+            this.transformPath(
+              `M ${nodeLineX - offsetX},${item.top - offset} L ${nodeLineX},${
+                item.top
+              }`
+            )
+          )
+        }
+        node.style.line(line)
+        node._lines.push(line)
+        style && style(line, node)
+      })
+      // 从根节点出发的水平线
       let nodeHalfTop = node.top + node.height / 2
-      let marginY = this.getMarginY(1)
-      let offset = node.height / 2 + marginY
-      // 二级列起点（与 computedLeftTopValue 的 rootRight 一致）
-      const rootRight = node.left + node.width + this.getMarginX(1)
-      // 主干水平线
+      let offset = node.height / 2 + this.getMarginY(node.layerIndex + 1)
       let line = this.lineDraw.path()
+      const lineEndX = this.isFishbone2()
+        ? this.maxx
+        : maxx - offset / Math.tan(degToRad(this.mindMap.opt.fishboneDeg))
       line.plot(
         this.transformPath(
-          `M ${node.left + node.width},${nodeHalfTop} L ${
-            rootRight - offset / Math.tan(degToRad(this.mindMap.opt.fishboneDeg))
-          },${nodeHalfTop}`
+          `M ${
+            node.left + node.width
+          },${nodeHalfTop} L ${lineEndX},${nodeHalfTop}`
         )
       )
       node.style.line(line)
       node._lines.push(line)
       style && style(line, node)
-      // 二级节点直连斜线
-      node.children.forEach(item => {
-        let cy = item.top + item.height / 2
-        let line = this.lineDraw.path()
-        line.plot(
-          this.transformPath(
-            `M ${
-              rootRight - offset / Math.tan(degToRad(this.mindMap.opt.fishboneDeg))
-            },${nodeHalfTop} L ${item.left},${cy}`
-          )
-        )
-        node.style.line(line)
-        node._lines.push(line)
-        style && style(line, node)
-      })
     } else {
       // 当前节点为非根节点
-      // 列式布局：子节点全部位于下一列，父节点中心到每个子节点中心直接连线
-      // （原固定角度汇聚斜线已不适用列式坐标；直接创建 path，不依赖外部 lines 数组）
+      let maxy = -Infinity
+      let miny = Infinity
+      let maxx = -Infinity
       let x = node.left + node.width * this.indent
-      let y = node.top + node.height / 2
-      node.children.forEach(item => {
-        let cy = item.top + item.height / 2
+      node.children.forEach((item, index) => {
+        if (item.left > maxx) {
+          maxx = item.left
+        }
+        let y = item.top + item.height / 2
+        if (y > maxy) {
+          maxy = y
+        }
+        if (y < miny) {
+          miny = y
+        }
+        // 水平线
+        if (node.layerIndex > 1) {
+          let path = `M ${x},${y} L ${item.left},${y}`
+          this.setLineStyle(style, lines[index], path, item)
+        }
+      })
+      // 斜线
+      if (len >= 0) {
         let line = this.lineDraw.path()
-        line.plot(this.transformPath(`M ${x},${y} L ${item.left},${cy}`))
+        expandBtnSize = len > 0 ? expandBtnSize : 0
+        let lineLength = maxx - node.left - node.width * this.indent
+        lineLength = Math.max(lineLength, 0)
+        let params = {
+          node,
+          line,
+          top,
+          x,
+          lineLength,
+          height,
+          expandBtnSize,
+          maxy,
+          miny,
+          ctx: this
+        }
+        if (this.checkIsTop(node)) {
+          utils.top.renderLine(params)
+        } else {
+          utils.bottom.renderLine(params)
+        }
         node.style.line(line)
         node._lines.push(line)
         style && style(line, node)
-      })
+      }
     }
   }
 

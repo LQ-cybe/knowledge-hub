@@ -1,0 +1,24 @@
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+
+import pandas as pd
+
+
+LOGGER = logging.getLogger(__name__)
+
+
+def export_summary_workbook(input_dir: Path, output_file: Path) -> None:
+    LOGGER.info("准备导出 Excel 汇总：input=%s output=%s", input_dir, output_file)
+    try:
+        summary = pd.DataFrame(
+            [
+                {"input_dir": str(input_dir.resolve()), "status": "ready"},
+            ]
+        )
+        summary.to_excel(output_file, index=False)
+        LOGGER.info("Excel 汇总导出成功：%s", output_file)
+    except Exception:
+        LOGGER.exception("Excel 汇总导出失败：%s", output_file)
+        raise

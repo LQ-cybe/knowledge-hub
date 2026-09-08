@@ -1,0 +1,13 @@
+using __ROOT_NAMESPACE__.Services;
+using __ROOT_NAMESPACE__.ViewModels;
+
+namespace __ROOT_NAMESPACE__.Views;
+
+public partial class MainWindow
+{
+    public MainWindow()
+    {
+        InitializeComponent();
+        DataContext = new MainWindowViewModel(new ShellService());
+    }
+}

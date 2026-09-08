@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>__TARGET_FRAMEWORK__</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>__ROOT_NAMESPACE__</RootNamespace>
+    <AssemblyName>__PROJECT_NAME__</AssemblyName>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>Assets\AppIcon\app.ico</ApplicationIcon>
+
+    <!-- 发布优化默认配置 -->
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
+    <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="HandyControl" Version="3.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\AppIcon\app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Update="Properties\DesignTimeResources.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+      <ContainsDesignTimeResources>true</ContainsDesignTimeResources>
+    </Page>
+  </ItemGroup>
+</Project>

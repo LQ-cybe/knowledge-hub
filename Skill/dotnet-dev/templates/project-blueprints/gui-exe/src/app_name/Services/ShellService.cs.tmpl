@@ -1,0 +1,23 @@
+using System.Diagnostics;
+using System.IO;
+
+namespace __ROOT_NAMESPACE__.Services;
+
+public sealed class ShellService : IShellService
+{
+    public string EnsureDirectory(string path)
+    {
+        Directory.CreateDirectory(path);
+        return path;
+    }
+
+    public void OpenDirectory(string path)
+    {
+        var resolvedPath = EnsureDirectory(path);
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = resolvedPath,
+            UseShellExecute = true
+        });
+    }
+}

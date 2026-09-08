@@ -1,0 +1,20 @@
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from __PACKAGE_NAME__.core import build_result_message
+from __PACKAGE_NAME__.logging_setup import get_log_file
+
+
+def test_build_result_message() -> None:
+    result = build_result_message(Path("demo.xlsx"))
+    assert "demo.xlsx" in result
+
+
+def test_log_file_name() -> None:
+    log_file = get_log_file()
+    assert log_file.name.startswith("app-")
+    assert log_file.suffix == ".log"

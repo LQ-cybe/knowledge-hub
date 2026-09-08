@@ -1,0 +1,39 @@
+using System;
+using System.IO;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using __ROOT_NAMESPACE__.Services;
+
+namespace __ROOT_NAMESPACE__.ViewModels;
+
+public partial class MainWindowViewModel : ObservableObject
+{
+    private readonly IShellService _shellService;
+    private readonly string _baseDirectory;
+
+    public MainWindowViewModel(IShellService shellService)
+    {
+        _shellService = shellService;
+        _baseDirectory = AppContext.BaseDirectory;
+    }
+
+    [ObservableProperty]
+    private string windowTitle = "__PROJECT_NAME__";
+
+    [ObservableProperty]
+    private string welcomeMessage = "__PROJECT_NAME__ 已准备好。__WIN7_NOTE__ 现在的界面结构默认适合继续扩展文件选择、批量处理和结果导出。";
+
+    [ObservableProperty]
+    private string statusMessage = "点击“打开日志目录”可以检查日志输出位置，后续也适合接入运行记录、错误提示和导出结果。";
+
+    [ObservableProperty]
+    private string hintMessage = "交付建议：优先做明确按钮、可见状态、可回看日志，减少普通用户和 AI 反复排错成本。";
+
+    [RelayCommand]
+    private void OpenLogDirectory()
+    {
+        var logDirectory = _shellService.EnsureDirectory(Path.Combine(_baseDirectory, "logs"));
+        _shellService.OpenDirectory(logDirectory);
+        StatusMessage = "已打开日志目录，可继续查看运行日志。";
+    }
+}

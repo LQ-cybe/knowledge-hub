@@ -1,0 +1,50 @@
+<!-- content_sig: b6d068ad-daa101cc-d8b75995-83e73748-0d468d11-0c8f8c15-2537fc05 -->
+<!-- node_ref: 4724d279-2b55bb18-2943e341-72138d9c-fcb237c5-fd7b36c1-d4c346d1 -->
+---
+title: MorphingAnimation
+---
+
+With MorphingAnimation You can change a geometry with animation to a different geometry
+
+{% note info no-icon %}
+Geometries must have the same number of points!
+{% endnote %}
+
+in your xaml add resources and storyboard
+
+```xml
+ <UserControl.Resources>
+        <Storyboard x:Key="StoryboardOnLoaded" RepeatBehavior="Forever" AutoReverse="True">
+            <hc:GeometryAnimationUsingKeyFrames Storyboard.TargetProperty="Data" Storyboard.TargetName="PathDemo">
+                <hc:DiscreteGeometryKeyFrame KeyTime="0:0:0.7" Value="{StaticResource FaceBookGeometry}"/>
+                <hc:EasingGeometryKeyFrame KeyTime="0:0:1.2" Value="{StaticResource TwitterGeometry}">
+                    <hc:EasingGeometryKeyFrame.EasingFunction>
+                        <QuarticEase EasingMode="EaseInOut"/>
+                    </hc:EasingGeometryKeyFrame.EasingFunction>
+                </hc:EasingGeometryKeyFrame>
+            </hc:GeometryAnimationUsingKeyFrames>
+            <ColorAnimationUsingKeyFrames Storyboard.TargetProperty="Fill.(SolidColorBrush.Color)" Storyboard.TargetName="PathDemo">
+                <DiscreteColorKeyFrame KeyTime="0:0:0.7" Value="#3b5998"/>
+                <EasingColorKeyFrame KeyTime="0:0:1.2" Value="#4099ff">
+                    <EasingColorKeyFrame.EasingFunction>
+                        <QuarticEase EasingMode="EaseInOut"/>
+                    </EasingColorKeyFrame.EasingFunction>
+                </EasingColorKeyFrame>
+                <EasingColorKeyFrame KeyTime="0:0:1.9" Value="#4099ff"/>
+            </ColorAnimationUsingKeyFrames>
+        </Storyboard>
+    </UserControl.Resources>
+    <UserControl.Triggers>
+        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource StoryboardOnLoaded}"/>
+        </EventTrigger>
+    </UserControl.Triggers>
+```
+
+now we need a path to display geometry
+
+```xml
+<Path Name="PathDemo" Width="100" Height="100" Data="{StaticResource FaceBookGeometry}" Fill="#3b5998"/>
+```
+
+![MorphingAnimation](https://raw.githubusercontent.com/HandyOrg/HandyOrgResource/master/HandyControl/Resources/GeometryAnimation.gif)

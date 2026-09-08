@@ -1,0 +1,135 @@
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+import sys
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk
+
+from __PACKAGE_NAME__.core import build_result_message
+from __PACKAGE_NAME__.logging_setup import get_log_dir, open_log_dir
+
+
+LOGGER = logging.getLogger(__name__)
+
+
+def _get_runtime_root() -> Path:
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        return Path(sys._MEIPASS)
+
+    return Path(__file__).resolve().parents[3]
+
+
+def _get_icon_candidates() -> list[Path]:
+    assets_dir = _get_runtime_root() / "assets"
+    preferred_candidates = [
+        assets_dir / "app_icon.ico",
+        assets_dir / "app_icon.png",
+    ]
+    discovered_candidates = sorted(assets_dir.glob("*.ico")) + sorted(assets_dir.glob("*.png"))
+    ordered_candidates: list[Path] = []
+
+    for candidate in preferred_candidates + discovered_candidates:
+        if candidate.exists() and candidate not in ordered_candidates:
+            ordered_candidates.append(candidate)
+
+    return ordered_candidates
+
+
+def _apply_window_icon(root: tk.Tk) -> None:
+    icon_candidates = _get_icon_candidates()
+    if not icon_candidates:
+        LOGGER.info("未检测到窗口图标资源，继续使用系统默认图标")
+        return
+
+    for icon_path in icon_candidates:
+        if icon_path.suffix.lower() == ".ico":
+            try:
+                root.iconbitmap(default=str(icon_path))
+                LOGGER.info("已应用 ICO 窗口图标：%s", icon_path)
+                break
+            except tk.TclError:
+                LOGGER.warning("ICO 图标加载失败：%s", icon_path, exc_info=True)
+
+    for icon_path in icon_candidates:
+        if icon_path.suffix.lower() != ".png":
+            continue
+
+        try:
+            icon_image = tk.PhotoImage(file=str(icon_path))
+            root.iconphoto(True, icon_image)
+            setattr(root, "_app_icon_image", icon_image)
+            LOGGER.info("已应用 PNG 窗口图标：%s", icon_path)
+            return
+        except tk.TclError:
+            LOGGER.warning("PNG 图标加载失败：%s", icon_path, exc_info=True)
+
+
+def launch_app() -> None:
+    root = tk.Tk()
+    root.title("桌面工具模板")
+    root.geometry("520x280")
+    root.resizable(True, True)
+    _apply_window_icon(root)
+
+    # 使用 ttk 主题，让界面在现代 Windows 上更好看
+    style = ttk.Style()
+    available_themes = style.theme_names()
+    # 优先使用 Windows 原生主题，其次使用跨平台通用主题
+    if "vista" in available_themes:
+        style.theme_use("vista")
+    elif "clam" in available_themes:
+        style.theme_use("clam")
+
+    # 主容器，带内边距
+    main_frame = ttk.Frame(root, padding=20)
+    main_frame.pack(fill=tk.BOTH, expand=True)
+
+    selected_path = tk.StringVar(value="未选择文件")
+    log_dir_text = tk.StringVar(value=f"日志目录：{get_log_dir()}")
+
+    def choose_file() -> None:
+        file_path = filedialog.askopenfilename(title="选择输入文件")
+        if not file_path:
+            LOGGER.info("用户取消选择输入文件")
+            return
+
+        try:
+            selected = Path(file_path)
+            LOGGER.info("用户选择文件：%s", selected)
+            selected_path.set(str(selected))
+            messagebox.showinfo("处理结果", build_result_message(selected))
+        except Exception:
+            LOGGER.exception("处理用户选择文件时发生异常")
+            messagebox.showerror(
+                "处理失败",
+                '这一步没有成功。你可以点击"打开日志目录"，把日志文件发给开发者排查。',
+            )
+
+    def reveal_logs() -> None:
+        try:
+            open_log_dir()
+        except Exception:
+            LOGGER.exception("打开日志目录失败")
+            messagebox.showerror("打开失败", f"无法打开日志目录，请手动前往：{get_log_dir()}")
+
+    # 标题区
+    ttk.Label(main_frame, text="请选择要处理的文件", font=("Microsoft YaHei UI", 11)).pack(pady=(0, 12))
+
+    # 文件路径显示区（带边框的框）
+    path_frame = ttk.LabelFrame(main_frame, text="已选文件", padding=8)
+    path_frame.pack(fill=tk.X, pady=(0, 8))
+    ttk.Label(path_frame, textvariable=selected_path, wraplength=450).pack()
+
+    # 日志目录提示
+    ttk.Label(main_frame, textvariable=log_dir_text, wraplength=450).pack(pady=(0, 12))
+
+    # 按钮区
+    button_frame = ttk.Frame(main_frame)
+    button_frame.pack(pady=(0, 4))
+
+    ttk.Button(button_frame, text="选择文件并处理", command=choose_file).pack(side=tk.LEFT, padx=(0, 10))
+    ttk.Button(button_frame, text="打开日志目录", command=reveal_logs).pack(side=tk.LEFT)
+
+    LOGGER.info("GUI 主界面初始化完成")
+    root.mainloop()

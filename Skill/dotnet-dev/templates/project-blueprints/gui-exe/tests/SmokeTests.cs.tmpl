@@ -1,0 +1,37 @@
+using Xunit;
+using __ROOT_NAMESPACE__.Services;
+using __ROOT_NAMESPACE__.ViewModels;
+
+public sealed class SmokeTests
+{
+    [Fact]
+    public void OpenLogDirectoryCommand_Should_UpdateStatus_And_OpenTargetFolder()
+    {
+        var shellService = new FakeShellService();
+        var viewModel = new MainWindowViewModel(shellService);
+
+        viewModel.OpenLogDirectoryCommand.Execute(null);
+
+        Assert.Equal("已打开日志目录，可继续查看运行日志。", viewModel.StatusMessage);
+        Assert.EndsWith("logs", shellService.LastOpenedPath);
+        Assert.Equal(shellService.LastOpenedPath, shellService.LastEnsuredPath);
+    }
+
+    private sealed class FakeShellService : IShellService
+    {
+        public string LastEnsuredPath { get; private set; } = string.Empty;
+
+        public string LastOpenedPath { get; private set; } = string.Empty;
+
+        public string EnsureDirectory(string path)
+        {
+            LastEnsuredPath = path;
+            return path;
+        }
+
+        public void OpenDirectory(string path)
+        {
+            LastOpenedPath = path;
+        }
+    }
+}

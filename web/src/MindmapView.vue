@@ -159,6 +159,9 @@
               <div class="ms-colors">
                 <span v-for="c in nodeColors" :key="c" class="ms-color" :class="{ on: curColor === c }" :style="{ background: c }"
                   @click="setNodeColor(c)"></span>
+                <span class="ms-color ms-color-default" :class="{ on: !curColor }" title="恢复主题自动色" @click="resetNodeColor">
+                  <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="3.6" y1="12.4" x2="12.4" y2="3.6" stroke="currentColor" stroke-width="1.6"/></svg>
+                </span>
               </div>
               <div class="ms-label" style="margin-top: 10px;">节点形状</div>
               <div class="ms-shapes">
@@ -799,7 +802,7 @@ function bindEvents() {
     const nd = node?.nodeData?.data;
     if (!node || !nd || nd.uid === VIRT_ROOT) { activeNode.value = null; selCount.value = 0; return; }
     activeNode.value = node;
-    curColor.value = nd.fillColor || THEMES[themeKey.value].rootFill;
+    curColor.value = nd.fillColor || '';
     curShape.value = SHAPE_REV[nd.shape] || 'auto';
     nodeDescText.value = nd.desc || '';
     selCount.value = selNodes().length;
@@ -852,6 +855,14 @@ function setNodeColor(c: string) {
   curColor.value = c;
   mm.execCommand('SET_NODE_STYLE', activeNode.value, 'fillColor', c);
   mm.execCommand('SET_NODE_STYLE', activeNode.value, 'color', c === '#ffffff' ? '#333' : '#ffffff');
+  markDirty();
+}
+/** 恢复主题自动色（清除手动颜色，跟随当前主题） */
+function resetNodeColor() {
+  if (!activeNode.value) return;
+  curColor.value = '';
+  mm.execCommand('SET_NODE_STYLE', activeNode.value, 'fillColor', null);
+  mm.execCommand('SET_NODE_STYLE', activeNode.value, 'color', null);
   markDirty();
 }
 function setNodeShape(s: string) {
@@ -1022,6 +1033,9 @@ function addAssoc() {
 function onLayoutChange() {
   if (!mm) return;
   mm.setLayout(LAYOUT_MAP[layoutKey.value] || 'logicalStructure');
+  // 切布局后必须重设主题配置：放射分支会覆盖 second.marginX（横向紧凑），否则沿用旧 marginX 间距不生效
+  try { mm.setThemeConfig(themeCfgFor(themeKey.value)); } catch {}
+  applyCanvasBg();
   // 切换布局后画布尺寸变化，自动收拢到可视范围
   setTimeout(() => { try { mm.view.fit(); } catch {} }, 30);
   markDirty();
@@ -1037,9 +1051,10 @@ function themeCfgFor(k: string): Record<string, any> {
   const t = THEMES[k] || THEMES['nexa-light'];
   const isDark = document.documentElement.classList.contains('dark');
   const cfg = { ...t.cfg };
-  // 放射（鱼骨）布局：收紧二级节点横向间距（marginX），配合 fishboneDeg 72 进一步压缩横向距离
+  // 放射（鱼骨）布局：收紧二级节点横向间距（second.marginX=6），配合 fishboneDeg 72 进一步压缩横向距离；
+  // 官方 second.marginX 默认 100 会造成"短文本节点+大空白"，此处压到正常留白
   if (layoutKey.value === 'radial') {
-    cfg.second = { ...(cfg.second || {}), marginX: 10 };
+    cfg.second = { ...(cfg.second || {}), marginX: 6 };
   }
   // SMM 重渲染（切布局等）会用 themeConfig.backgroundColor 覆盖容器背景，必须同时替换该字段
   return isDark ? { ...cfg, backgroundColor: t.darkBg, background: t.darkBg } : cfg;
@@ -1410,16 +1425,19 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 .ms-o-row.on { background: var(--kh-brand, #409eff); color: #fff; }
 .ms-o-row.on .ms-o-text { color: #fff; }
 .ms-o-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ms-themes { display: flex; flex-direction: column; gap: 6px; }
-.ms-theme { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; border: 1px solid transparent; color: var(--el-text-color-regular); }
+.ms-themes { display: flex; flex-direction: column; gap: 4px; }
+.ms-theme { display: flex; align-items: center; gap: 7px; padding: 3px 7px; border-radius: 5px; cursor: pointer; font-size: 12px; border: 1px solid transparent; color: var(--el-text-color-regular); line-height: 1.3; }
 .ms-theme.on { border-color: var(--kh-brand, #409eff); background: rgba(64, 158, 255, .06); }
-.mt-swatch { width: 22px; height: 22px; border-radius: 6px; flex: none; border: 1px solid rgba(0, 0, 0, .08); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.mt-swatch { width: 16px; height: 16px; border-radius: 4px; flex: none; border: 1px solid rgba(0, 0, 0, .08); box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
 .ms-layout-row { display: flex; flex-wrap: wrap; gap: 2px; }
 .ms-layout-row :deep(.el-radio-button__inner) { font-size: 12px; padding: 4px 8px; }
 .ms-font-size { width: 100%; }
-.ms-colors { display: flex; flex-wrap: wrap; gap: 8px; }
-.ms-color { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+.ms-colors { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ms-color { width: 16px; height: 16px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; box-sizing: content-box; }
 .ms-color.on { border-color: #333; }
+.ms-color-default { border: 1.5px dashed var(--el-text-color-secondary, #9ca3af); box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; color: var(--el-text-color-secondary, #9ca3af); background: transparent; }
+.ms-color-default.on { border-color: #333; color: #333; }
+.ms-color-default:hover { color: var(--kh-brand, #409eff); border-color: var(--kh-brand, #409eff); }
 .ms-shapes { display: flex; flex-wrap: wrap; gap: 6px; }
 .ms-shape { padding: 3px 8px; border: 1px solid var(--el-border-color); border-radius: 6px; font-size: 12px; cursor: pointer; color: var(--el-text-color-regular); }
 .ms-shape.on { border-color: var(--kh-brand, #409eff); color: var(--kh-brand, #409eff); }

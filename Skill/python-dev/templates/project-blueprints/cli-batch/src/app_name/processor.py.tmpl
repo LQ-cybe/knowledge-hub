@@ -1,0 +1,19 @@
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+
+
+LOGGER = logging.getLogger(__name__)
+
+
+def process_directory(input_dir: Path, output_dir: Path) -> None:
+    output_file = output_dir / "result.txt"
+    LOGGER.info("开始写出批处理结果：%s", output_file)
+    try:
+        summary = f"input={input_dir.resolve()}\noutput={output_dir.resolve()}\n"
+        output_file.write_text(summary, encoding="utf-8")
+        LOGGER.info("批处理结果写出完成：%s", output_file)
+    except Exception:
+        LOGGER.exception("写出批处理结果失败：%s", output_file)
+        raise
