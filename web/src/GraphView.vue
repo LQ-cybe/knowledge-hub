@@ -283,6 +283,15 @@ function onWheel(e: WheelEvent) {
   }
 }
 
+/** 在原始层级树中按 id 找节点（下钻用干净节点，避免 ECharts 加工后的数据项 name 丢失 → 未命名） */
+function findNode(ns: HierarchyNode[], id: string): HierarchyNode | null {
+  for (const n of ns) {
+    if (n.id === id) return n;
+    if (n.children?.length) { const r = findNode(n.children, id); if (r) return r; }
+  }
+  return null;
+}
+
 function renderHierarchy() {
   if (!chartEl.value) return;
   if (hierarchy.length === 0) { chart?.clear(); nodeCount.value = 0; linkCount.value = 0; return; }
@@ -308,10 +317,18 @@ function renderHierarchy() {
   // 点击组节点 → 下钻到该组（只显示它和它的子节点）；点击空白 → 返回上一级
   chart.on('click', (p: any) => {
     if (view.value !== 'sunburst' && view.value !== 'pack') return;
-    // pack：custom 系列 params.data 是渲染项（含 src 引用）；sunburst：params.data 即树节点
-    const target = p?.data?.src || (p?.data && Array.isArray(p.data.children) ? p.data : null);
+    // pack：custom 系列 params.data 是渲染项（含 src 原始引用）；sunburst：用 id 回原始树找干净节点（name 不丢）
+    // 注意：找不到干净节点（如点击中心孔的虚拟根）时不下钻，避免虚拟根入栈产生“未命名”
+    const pid = p?.data?.id ?? p?.data?.src?.id;
+    const target = p?.data?.src || (pid ? findNode(hierarchy, String(pid)) : null);
     if (target && Array.isArray(target.children) && target.children.length > 0) {
-      drillStack.value.push(target);
+      // 点击的是当前根（中心圆）→ 返回上一级；否则下钻（按 id 判定，避免 HMR/重载后引用失效重复 push）
+      const top = drillStack.value[drillStack.value.length - 1];
+      if (drillStack.value.length > 0 && top && String(target.id) === String(top.id)) {
+        drillStack.value.pop();
+      } else {
+        drillStack.value.push(target);
+      }
       renderHierarchy();
     } else if (!p?.data) {
       goBack();
@@ -503,7 +520,7 @@ function renderChord() {
   // 每个节点独立配色（原为默认同色），roam 支持缩放平移
   const sNodes = tagNodes.filter(n => used.has(n.id)).map((n, i) => ({
     name: n.name,
-    symbolSize: n.symbolSize,
+    symbolSize: Math.min(10, (n.symbolSize || 22) * 0.5), // 节点缩小（原 22 过大；10 上限避免大标签节点过大）
     itemStyle: { color: packPalette[i % packPalette.length] },
   }));
   chart?.dispose();
@@ -529,7 +546,7 @@ function renderChord() {
       data: sNodes.map(n => ({ ...n, label: { show: showLabels.value, formatter: n.name, fontSize: 12, color: labelColor() } })),
       links: chordLinks.map(l => ({
         source: l.source, target: l.target, value: l.value,
-        lineStyle: { color: colorById.get(l.source) || '#909399', width: Math.min(4, 0.5 + l.value * 0.6), opacity: 0.6, curveness: 0.08 }, // 连线宽度减半（用户：太粗，一半就够）
+        lineStyle: { color: colorById.get(l.source) || '#909399', width: 1.6, opacity: 0.6, curveness: 0.08 }, // 连线统一粗细（用户：粗细不统一，按统一线条）
       })),
       categories: [],
       emphasis: { focus: 'adjacency', scale: 1.15 },
