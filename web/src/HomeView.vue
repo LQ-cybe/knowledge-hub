@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref, nextTick } from 'vue';
 import * as echarts from 'echarts';
-import { getDashboard, type DashboardData } from './api';
+import { getDashboard, getRecycleInfo, type DashboardData, type RecycleInfo } from './api';
 
 const emit = defineEmits<{ (e: 'open-folder', id: string): void; (e: 'open-tag', id: string): void }>();
 
 const dash = ref<DashboardData | null>(null);
 const loading = ref(true);
+const recycle = ref<RecycleInfo>({ count: 0, clear_at: null, days: 30 });
 
 const typeIcons: Record<string, string> = {
   folder: '📂', file: '📄', note: '📝', bookmark: '🔖', todo: '✅', report: '📊',
@@ -127,6 +128,7 @@ onMounted(async () => {
   }
   window.addEventListener('resize', onResize);
   window.addEventListener('kh-theme-change', onThemeChange);
+  getRecycleInfo().then(r => recycle.value = r).catch(() => {});
 });
 onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize);
@@ -164,6 +166,12 @@ function fmtTime(s: string) {
         <div class="card-num">{{ dash?.tagCount ?? 0 }}</div>
         <div class="card-label">标签数</div>
       </div>
+    </div>
+
+    <!-- 回收站清理信息：全局删除约定——删除先移入回收站，超期自动清理 -->
+    <div class="recycle-banner" v-if="recycle.count > 0">
+      🗑 回收站现有 <b>{{ recycle.count }}</b> 项内容，将在 {{ fmtTime(recycle.clear_at || '') }} 前自动清理（保留 {{ recycle.days }} 天）。
+      可在导图库「回收站」中恢复或彻底删除。
     </div>
 
     <div class="cols">
@@ -228,6 +236,8 @@ function fmtTime(s: string) {
 .home { padding: 8px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
 
 .cards { display: flex; gap: 12px; flex-wrap: wrap; }
+.recycle-banner { margin-top: 12px; font-size: 13px; color: var(--el-text-color-regular, #4b5563); background: rgba(230, 162, 60, .1); border: 1px solid rgba(230, 162, 60, .3); border-radius: 10px; padding: 10px 14px; line-height: 1.6; }
+.recycle-banner b { color: #e6a23c; }
 .card {
   flex: 1 1 160px; min-width: 0; padding: 14px 18px;
   background: var(--el-bg-color, #fff);

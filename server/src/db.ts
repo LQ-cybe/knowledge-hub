@@ -132,6 +132,17 @@ function migrate(db: Database.Database): void {
   if (!cols.some(c => c.name === 'size')) {
     db.exec(`ALTER TABLE resources ADD COLUMN size INTEGER NOT NULL DEFAULT 0`);
   }
+  const mcols = db.prepare(`PRAGMA table_info(mindmaps)`).all() as { name: string }[];
+  if (!mcols.some(c => c.name === 'pinned')) {
+    db.exec(`ALTER TABLE mindmaps ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0`);
+  }
+  if (!mcols.some(c => c.name === 'tags')) {
+    db.exec(`ALTER TABLE mindmaps ADD COLUMN tags TEXT NOT NULL DEFAULT ''`);
+  }
+  if (!mcols.some(c => c.name === 'deleted_at')) {
+    // 回收站软删除：NULL=正常；有值=已移入回收站（记录删除时间，超期自动清理）
+    db.exec(`ALTER TABLE mindmaps ADD COLUMN deleted_at TEXT`);
+  }
 }
 
 /** 获取全局数据库连接（单例，初始化建表） */

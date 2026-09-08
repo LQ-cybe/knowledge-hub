@@ -5,16 +5,54 @@ import { getDb } from '../db';
 export const mindmapsRouter = Router();
 
 const fmt = (d: Date) => d.toISOString().slice(0, 19).replace('T', ' ');
+/** 回收站保留期限（天）：超过后自动物理清理 */
+const RECYCLE_DAYS = 30;
 
-/** GET /api/mindmaps —— 导图库列表 */
+/** 惰性清理：删除超过保留期限的回收站导图（级联删除 nodes/links/members） */
+function purgeExpired(db: ReturnType<typeof getDb>): void {
+  const cutoff = fmt(new Date(Date.now() - RECYCLE_DAYS * 86400000));
+  db.prepare(`DELETE FROM mindmaps WHERE deleted_at IS NOT NULL AND deleted_at < ?`).run(cutoff);
+}
+
+/** GET /api/mindmaps —— 导图库列表（仅未删除；置顶优先，再按更新时间倒序；惰性清理过期回收站） */
 mindmapsRouter.get('/mindmaps', (_req, res) => {
   const db = getDb();
+  purgeExpired(db);
   const rows = db.prepare(
-    `SELECT m.id, m.title, m.layout, m.theme, m.updated_at,
+    `SELECT m.id, m.title, m.layout, m.theme, m.pinned, m.tags, m.updated_at,
        (SELECT COUNT(*) FROM mindmap_nodes n WHERE n.map_id = m.id AND n.kind = 'node') AS node_count
-     FROM mindmaps m ORDER BY m.updated_at DESC`
+     FROM mindmaps m WHERE m.deleted_at IS NULL
+     ORDER BY m.pinned DESC, m.updated_at DESC`
   ).all();
   res.json({ code: 0, data: rows });
+});
+
+/** GET /api/mindmaps/recycle —— 回收站列表（软删除的导图） */
+mindmapsRouter.get('/mindmaps/recycle', (_req, res) => {
+  const db = getDb();
+  purgeExpired(db);
+  const rows = db.prepare(
+    `SELECT m.id, m.title, m.layout, m.theme, m.deleted_at, m.updated_at,
+       (SELECT COUNT(*) FROM mindmap_nodes n WHERE n.map_id = m.id AND n.kind = 'node') AS node_count
+     FROM mindmaps m WHERE m.deleted_at IS NOT NULL
+     ORDER BY m.deleted_at DESC`
+  ).all();
+  res.json({ code: 0, data: rows });
+});
+
+/** GET /api/mindmaps/recycle/info —— 回收站统计（工作台显示清理信息用） */
+mindmapsRouter.get('/mindmaps/recycle/info', (_req, res) => {
+  const db = getDb();
+  purgeExpired(db);
+  const row = db.prepare(
+    `SELECT COUNT(*) AS count, MIN(deleted_at) AS earliest FROM mindmaps WHERE deleted_at IS NOT NULL`
+  ).get() as { count: number; earliest: string | null };
+  let clearAt: string | null = null;
+  if (row.earliest) {
+    const t = new Date(row.earliest.replace(' ', 'T') + 'Z').getTime() + RECYCLE_DAYS * 86400000;
+    clearAt = fmt(new Date(t));
+  }
+  res.json({ code: 0, data: { count: row.count, clear_at: clearAt, days: RECYCLE_DAYS } });
 });
 
 /** POST /api/mindmaps —— 新建导图（含根节点） */
@@ -34,7 +72,7 @@ mindmapsRouter.post('/mindmaps', (req, res) => {
 /** GET /api/mindmaps/:id —— 导图完整数据（nodes + links + members） */
 mindmapsRouter.get('/mindmaps/:id', (req, res) => {
   const db = getDb();
-  const map = db.prepare(`SELECT * FROM mindmaps WHERE id = ?`).get(req.params.id);
+  const map = db.prepare(`SELECT * FROM mindmaps WHERE id = ? AND deleted_at IS NULL`).get(req.params.id);
   if (!map) { res.status(404).json({ code: 1, msg: '导图不存在' }); return; }
   const nodes = db.prepare(`SELECT * FROM mindmap_nodes WHERE map_id = ? ORDER BY sort, created_at`).all(req.params.id);
   const links = db.prepare(`SELECT * FROM mindmap_links WHERE map_id = ?`).all(req.params.id);
@@ -42,14 +80,14 @@ mindmapsRouter.get('/mindmaps/:id', (req, res) => {
   res.json({ code: 0, data: { ...map, nodes, links, members } });
 });
 
-/** PUT /api/mindmaps/:id —— 更新元信息（title/layout/theme） */
+/** PUT /api/mindmaps/:id —— 更新元信息（title/layout/theme/pinned/tags） */
 mindmapsRouter.put('/mindmaps/:id', (req, res) => {
   const db = getDb();
-  const row = db.prepare(`SELECT id FROM mindmaps WHERE id = ?`).get(req.params.id) as { id: string } | undefined;
+  const row = db.prepare(`SELECT id FROM mindmaps WHERE id = ? AND deleted_at IS NULL`).get(req.params.id) as { id: string } | undefined;
   if (!row) { res.status(404).json({ code: 1, msg: '导图不存在' }); return; }
-  const { title, layout, theme } = req.body as { title?: string; layout?: string; theme?: string };
-  db.prepare(`UPDATE mindmaps SET title = COALESCE(?, title), layout = COALESCE(?, layout), theme = COALESCE(?, theme), updated_at = ? WHERE id = ?`)
-    .run(title?.trim() || null, layout || null, theme || null, fmt(new Date()), req.params.id);
+  const { title, layout, theme, pinned, tags } = req.body as { title?: string; layout?: string; theme?: string; pinned?: number; tags?: string };
+  db.prepare(`UPDATE mindmaps SET title = COALESCE(?, title), layout = COALESCE(?, layout), theme = COALESCE(?, theme), pinned = COALESCE(?, pinned), tags = COALESCE(?, tags), updated_at = ? WHERE id = ?`)
+    .run(title?.trim() || null, layout || null, theme || null, typeof pinned === 'number' ? (pinned ? 1 : 0) : null, tags ?? null, fmt(new Date()), req.params.id);
   res.json({ code: 0, data: { ok: true } });
 });
 
@@ -99,9 +137,26 @@ mindmapsRouter.put('/mindmaps/:id/members', (req, res) => {
   res.json({ code: 0, data: { ok: true } });
 });
 
-/** DELETE /api/mindmaps/:id —— 删除导图（级联） */
+/** POST /api/mindmaps/:id/restore —— 从回收站恢复导图 */
+mindmapsRouter.post('/mindmaps/:id/restore', (req, res) => {
+  const db = getDb();
+  const r = db.prepare(`UPDATE mindmaps SET deleted_at = NULL, updated_at = ? WHERE id = ? AND deleted_at IS NOT NULL`).run(fmt(new Date()), req.params.id);
+  if (!r.changes) { res.status(404).json({ code: 1, msg: '回收站中没有该导图' }); return; }
+  res.json({ code: 0, data: { ok: true } });
+});
+
+/** DELETE /api/mindmaps/:id —— 删除导图（软删除：移入回收站，记录删除时间，超期自动清理） */
 mindmapsRouter.delete('/mindmaps/:id', (req, res) => {
   const db = getDb();
-  db.prepare(`DELETE FROM mindmaps WHERE id = ?`).run(req.params.id);
+  const r = db.prepare(`UPDATE mindmaps SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL`).run(fmt(new Date()), fmt(new Date()), req.params.id);
+  if (!r.changes) { res.status(404).json({ code: 1, msg: '导图不存在或已在回收站' }); return; }
+  res.json({ code: 0, data: { ok: true } });
+});
+
+/** DELETE /api/mindmaps/:id/permanent —— 彻底删除（回收站内，级联删除 nodes/links/members） */
+mindmapsRouter.delete('/mindmaps/:id/permanent', (req, res) => {
+  const db = getDb();
+  const r = db.prepare(`DELETE FROM mindmaps WHERE id = ? AND deleted_at IS NOT NULL`).run(req.params.id);
+  if (!r.changes) { res.status(404).json({ code: 1, msg: '回收站中没有该导图' }); return; }
   res.json({ code: 0, data: { ok: true } });
 });

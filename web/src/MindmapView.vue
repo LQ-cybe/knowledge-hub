@@ -4,16 +4,69 @@
     <div v-if="view === 'library'" class="mm-library">
       <div class="ml-head">
         <h3>📐 思维导图库</h3>
-        <el-button type="primary" size="small" @click="newMap">＋ 新建导图</el-button>
-      </div>
-      <div class="ml-grid">
-        <div v-for="m in maps" :key="m.id" class="ml-card" @click="openMap(m.id)">
-          <div class="ml-title">{{ m.title }}</div>
-          <div class="ml-meta">{{ m.node_count }} 节点 · {{ fmtTime(m.updated_at) }}</div>
-          <div class="ml-del" @click.stop="delMap(m.id)">✕</div>
+        <div class="ml-head-right">
+          <el-button size="small" text :class="{ 'recycle-on': showRecycle }" title="回收站：删除的导图将保留 30 天，超期自动清理" @click="toggleRecycle">
+            🗑 回收站<template v-if="recycleInfo.count">（{{ recycleInfo.count }}）</template>
+          </el-button>
+          <div class="ml-views">
+            <el-button size="small" text :class="{ 'view-on': libView === 'grid' }" title="卡片视图" @click="libView = 'grid'">▦ 卡片</el-button>
+            <el-button size="small" text :class="{ 'view-on': libView === 'list' }" title="列表视图" @click="libView = 'list'">☰ 列表</el-button>
+          </div>
+          <el-button type="primary" size="small" @click="newMap">＋ 新建导图</el-button>
         </div>
       </div>
-      <div v-if="!maps.length" class="ml-empty">暂无导图，点击右上角「＋ 新建导图」开始</div>
+
+      <!-- 回收站列表 -->
+      <template v-if="showRecycle">
+        <div class="ml-recycle-tip" v-if="recycleInfo.count">回收站中的导图将在 {{ recycleInfo.clear_at ? fmtTime(recycleInfo.clear_at) : '—' }} 前自动清理（保留 {{ recycleInfo.days }} 天），可手动恢复或彻底删除。</div>
+        <div class="ml-recycle-list" v-if="recycleMaps.length">
+          <div v-for="m in recycleMaps" :key="m.id" class="ml-row">
+            <span class="ml-row-title">{{ m.title }}</span>
+            <span class="ml-row-meta">删除于 {{ fmtTime(m.deleted_at) }} · {{ m.node_count }} 节点</span>
+            <span class="ml-row-ops">
+              <el-button size="small" text type="primary" @click="restoreMap(m.id)">恢复</el-button>
+              <el-button size="small" text type="danger" @click="purgeMap(m.id)">彻底删除</el-button>
+            </span>
+          </div>
+        </div>
+        <div v-else class="ml-empty">回收站是空的</div>
+      </template>
+
+      <!-- 卡片视图 -->
+      <template v-else-if="libView === 'grid'">
+        <div class="ml-grid">
+          <div v-for="m in maps" :key="m.id" class="ml-card" @click="openMap(m.id)" @contextmenu.prevent="showCtxMenu($event, m)">
+            <div class="ml-card-pin" v-if="m.pinned">📌</div>
+            <div class="ml-title">{{ m.title }}</div>
+            <div class="ml-meta">{{ m.node_count }} 节点 · {{ fmtTime(m.updated_at) }}</div>
+            <div class="ml-tags" v-if="m.tags">{{ m.tags }}</div>
+            <div class="ml-del" @click.stop="delMap(m.id)">✕</div>
+          </div>
+        </div>
+        <div v-if="!maps.length" class="ml-empty">暂无导图，点击右上角「＋ 新建导图」开始</div>
+      </template>
+
+      <!-- 列表视图 -->
+      <template v-else>
+        <div class="ml-list">
+          <div v-for="m in maps" :key="m.id" class="ml-row" @click="openMap(m.id)" @contextmenu.prevent="showCtxMenu($event, m)">
+            <span class="ml-row-pin">{{ m.pinned ? '📌' : '' }}</span>
+            <span class="ml-row-title">{{ m.title }}</span>
+            <span class="ml-row-meta">{{ m.node_count }} 节点 · {{ fmtTime(m.updated_at) }}</span>
+            <span class="ml-row-tags" v-if="m.tags">{{ m.tags }}</span>
+          </div>
+        </div>
+        <div v-if="!maps.length" class="ml-empty">暂无导图，点击右上角「＋ 新建导图」开始</div>
+      </template>
+
+      <!-- 右键菜单 -->
+      <div v-if="ctxMenu" class="ml-ctx" :style="{ left: ctxMenu.x + 'px', top: ctxMenu.y + 'px' }" @contextmenu.prevent @click.stop>
+        <div class="ml-ctx-item" @click="togglePin(ctxMenu.id, ctxMenu.pinned)">{{ ctxMenu.pinned ? '取消置顶' : '置顶' }}</div>
+        <div class="ml-ctx-item" @click="editTags(ctxMenu.id, ctxMenu.tags)">添加标签</div>
+        <div class="ml-ctx-item" @click="renameMap(ctxMenu.id, ctxMenu.title)">重命名</div>
+        <div class="ml-ctx-item danger" @click="delMap(ctxMenu.id)">删除（移入回收站）</div>
+      </div>
+      <div v-if="ctxMenu" class="ml-ctx-mask" @click="ctxMenu = null" @contextmenu.prevent="ctxMenu = null"></div>
     </div>
 
     <!-- ============ 编辑器 ============ -->
@@ -27,6 +80,22 @@
           <el-button size="small" title="概要：Shift 多选同一父节点的两个及以上子节点后点击，直接进入文本框编辑多行说明" :disabled="selCount < 2" @click="addSummary">{}概要</el-button>
           <el-button size="small" title="边界：Shift 多选两个及以上节点后点击，将在所选节点外围创建一个矩形，输入边界名称" :disabled="selCount < 2" @click="addOutline">边界</el-button>
           <el-button size="small" title="关系线：Shift 多选两个节点后点击（多选顺序即连线方向，起点→终点）" :disabled="selCount < 2" @click="addAssoc">关系</el-button>
+          <el-dropdown trigger="click" @command="exportMap" class="mm-export">
+            <el-button size="small" title="导出导图为图片 / PDF / 文本等格式">导出 ▾</el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="png">PNG 图片</el-dropdown-item>
+                <el-dropdown-item command="jpg">JPG 图片</el-dropdown-item>
+                <el-dropdown-item command="svg">SVG 矢量图</el-dropdown-item>
+                <el-dropdown-item command="pdf">PDF 文档</el-dropdown-item>
+                <el-dropdown-item command="md">Markdown</el-dropdown-item>
+                <el-dropdown-item command="txt">纯文本</el-dropdown-item>
+                <el-dropdown-item command="xmind">XMind</el-dropdown-item>
+                <el-dropdown-item command="json">JSON 数据</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+          <el-button size="small" title="导入导图：支持 Freemind(.mm) / CSV / TXT / Markdown / JSON" @click="importFile">导入</el-button>
         </div>
         <div class="mm-zoom">
           <el-button size="small" text @click="zoomOut">－</el-button>
@@ -39,29 +108,70 @@
       </div>
 
       <div class="mm-body">
-        <!-- 左侧：布局 -->
-        <div class="mm-side mm-side-left">
-          <div class="ms-title">布局</div>
-          <el-radio-group v-model="layoutKey" class="ms-layout" @change="onLayoutChange">
-            <el-radio value="free">自由编辑</el-radio>
-            <el-radio value="right">向右</el-radio>
-            <el-radio value="left">向左</el-radio>
-            <el-radio value="org">组织图</el-radio>
-            <el-radio value="radial">放射</el-radio>
-          </el-radio-group>
+        <!-- 左侧：布局 / 大纲（tab 切换，宽度可拖拽调整） -->
+        <div class="mm-side mm-side-left" :style="{ width: sideWidth + 'px' }">
+          <div class="ms-tabs">
+            <span class="ms-tab" :class="{ on: sideTab === 'layout' }" @click="sideTab = 'layout'">布局</span>
+            <span class="ms-tab" :class="{ on: sideTab === 'outline' }" @click="sideTab = 'outline'">大纲</span>
+          </div>
+          <template v-if="sideTab === 'layout'">
+            <div class="ms-title">布局</div>
+            <el-radio-group v-model="layoutKey" class="ms-layout" @change="onLayoutChange">
+              <el-radio value="free">自由编辑</el-radio>
+              <el-radio value="right">向右</el-radio>
+              <el-radio value="left">向左</el-radio>
+              <el-radio value="org">组织图</el-radio>
+              <el-radio value="radial">放射</el-radio>
+            </el-radio-group>
+          </template>
+          <template v-else>
+            <div class="ms-title">大纲 <span class="ms-outline-count">{{ outlineCount }}</span></div>
+            <div class="ms-outline" v-if="outlineTree.length">
+              <div v-for="o in flatOutline" :key="o.uid" class="ms-o-row" :class="{ on: o.uid === outlineActiveUid }"
+                :style="{ paddingLeft: 8 + o.depth * 14 + 'px' }"
+                @click="outlineSelect(o.uid)" @dblclick="outlineRename(o)">
+                <span class="ms-o-btns">
+                  <span class="ms-o-btn" title="添加子主题" @click.stop="outlineAddChild(o)">＋</span>
+                  <span class="ms-o-btn" title="添加同级" @click.stop="outlineAddSibling(o)">⇥</span>
+                  <span class="ms-o-btn" title="删除节点" @click.stop="outlineRemove(o)">✕</span>
+                </span>
+                <span class="ms-o-text">{{ o.text || '（空）' }}</span>
+              </div>
+            </div>
+            <div v-else class="ms-tip">暂无节点</div>
+          </template>
         </div>
+        <div class="mm-side-drag" title="拖动调整面板宽度" @mousedown.prevent="startSideDrag"></div>
 
         <!-- 画布 -->
         <div class="mm-canvas"><div ref="mmEl" class="mm-host"></div></div>
 
-        <!-- 右侧：节点属性 -->
+        <!-- 右侧：设置 + 节点属性 -->
         <div class="mm-side mm-side-right">
-          <div class="ms-title">节点属性</div>
+          <div class="ms-title">设置</div>
+          <div class="ms-group">
+            <div class="ms-label">布局</div>
+            <el-radio-group v-model="layoutKey" class="ms-layout-row" @change="onLayoutChange">
+              <el-radio-button value="free">自由</el-radio-button>
+              <el-radio-button value="right">向右</el-radio-button>
+              <el-radio-button value="left">向左</el-radio-button>
+              <el-radio-button value="org">组织</el-radio-button>
+              <el-radio-button value="radial">放射</el-radio-button>
+            </el-radio-group>
+          </div>
+          <div class="ms-group">
+            <div class="ms-label">文档字号</div>
+            <el-select v-model="docSize" size="small" class="ms-font-size" @change="onDocSizeChange">
+              <el-option label="小" :value="12" />
+              <el-option label="标准" :value="14" />
+              <el-option label="大" :value="16" />
+            </el-select>
+          </div>
           <div class="ms-group">
             <div class="ms-label">文档主题</div>
             <div class="ms-themes">
               <div v-for="(t, k) in THEMES" :key="k" class="ms-theme" :class="{ on: themeKey === k }" @click="setTheme(k)">
-                <span class="mt-dot" :style="{ background: t.rootFill }"></span>{{ t.name }}
+                <span class="mt-swatch" :style="{ background: `linear-gradient(135deg, ${t.rootFill} 0%, ${t.rootFill}88 100%)` }"></span>{{ t.name }}
               </div>
             </div>
           </div>
@@ -81,17 +191,44 @@
           </div>
         </div>
       </div>
-
-      <!-- 边界名称输入（新建 / 双击边界文字改名共用） -->
-      <el-dialog v-model="outlineDialog" :title="outlineEditId ? '修改边界名称' : '添加边界'" width="420" append-to-body :close-on-click-modal="false">
-        <p class="mm-dialog-tip">边界将以一个矩形整体包裹所选节点，显示在底层。单击矩形可选中（按 Delete 删除），双击文字可改名。</p>
-        <el-input v-model="outlineText" placeholder="边界名称" maxlength="30" />
-        <template #footer>
-          <el-button size="small" @click="outlineDialog = false">取消</el-button>
-          <el-button size="small" type="primary" @click="confirmOutline">{{ outlineEditId ? '保存' : '确定' }}</el-button>
-        </template>
-      </el-dialog>
     </div>
+
+    <!-- 弹窗与文件选择（置于根层，导图库 / 编辑器共用） -->
+    <el-dialog v-model="outlineDialog" :title="outlineEditId ? '修改边界名称' : '添加边界'" width="420" append-to-body :close-on-click-modal="false">
+      <p class="mm-dialog-tip">边界将以一个矩形整体包裹所选节点，显示在底层。单击矩形可选中（按 Delete 删除），双击文字可改名。</p>
+      <el-input v-model="outlineText" placeholder="边界名称" maxlength="30" />
+      <template #footer>
+        <el-button size="small" @click="outlineDialog = false">取消</el-button>
+        <el-button size="small" type="primary" @click="confirmOutline">{{ outlineEditId ? '保存' : '确定' }}</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="renameDialog" title="重命名导图" width="420" append-to-body :close-on-click-modal="false">
+      <el-input v-model="renameText" placeholder="导图名称" maxlength="50" @keyup.enter="confirmRename" />
+      <template #footer>
+        <el-button size="small" @click="renameDialog = false">取消</el-button>
+        <el-button size="small" type="primary" @click="confirmRename">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="tagsDialog" title="添加标签" width="420" append-to-body :close-on-click-modal="false">
+      <p class="mm-dialog-tip">多个标签用逗号（，）分隔，将覆盖原有标签。</p>
+      <el-input v-model="tagsText" placeholder="如：工作,项目A,学习" @keyup.enter="confirmTags" />
+      <template #footer>
+        <el-button size="small" @click="tagsDialog = false">取消</el-button>
+        <el-button size="small" type="primary" @click="confirmTags">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="nodeEditDialog" title="修改节点文字" width="420" append-to-body :close-on-click-modal="false">
+      <el-input v-model="nodeEditText" placeholder="节点文字" @keyup.enter="confirmNodeEdit" />
+      <template #footer>
+        <el-button size="small" @click="nodeEditDialog = false">取消</el-button>
+        <el-button size="small" type="primary" @click="confirmNodeEdit">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <input ref="importInput" type="file" accept=".mm,.csv,.txt,.md,.markdown,.json" class="mm-import-input" @change="onImportFile" />
   </div>
 </template>
 
@@ -100,14 +237,22 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import MindMap from 'simple-mind-map';
 import 'simple-mind-map/full.js';
-import { getMindmaps, createMindmap, deleteMindmap, getMindmap, updateMindmap, saveMindmapNodes, saveMindmapLinks, saveMindmapMembers, type MindmapNode, type MindmapLink, type MindmapMember, type MindmapMeta } from './api';
+import { getMindmaps, createMindmap, deleteMindmap, deleteMindmapPermanent, restoreMindmap, getMindmap, updateMindmap, saveMindmapNodes, saveMindmapLinks, saveMindmapMembers, getRecycleMindmaps, getRecycleInfo, type MindmapNode, type MindmapLink, type MindmapMember, type MindmapMeta, type RecycleInfo } from './api';
 
 const VIRT_ROOT = '__VR__';
 const LAYOUT_MAP: Record<string, string> = { free: 'mindMap', right: 'logicalStructure', left: 'logicalStructureLeft', org: 'organizationStructure', radial: 'fishbone' };
 const LAYOUT_REV: Record<string, string> = { mindMap: 'free', logicalStructure: 'right', logicalStructureLeft: 'left', organizationStructure: 'org', fishbone: 'radial' };
-const SHAPES: Record<string, string> = { auto: '自动', rect: '矩形', round: '圆角', ellipse: '椭圆' };
-const SHAPE_MAP: Record<string, string> = { auto: 'rectangle', rect: 'rectangle', round: 'roundedRectangle', ellipse: 'ellipse' };
-const SHAPE_REV: Record<string, string> = { rectangle: 'rect', roundedRectangle: 'round', ellipse: 'ellipse' };
+const SHAPES: Record<string, string> = { auto: '自动', rect: '矩形', round: '圆角', ellipse: '椭圆', diamond: '菱形', parallelogram: '平行四边形', octagon: '八角', outerTri: '外三角', innerTri: '内三角' };
+const SHAPE_MAP: Record<string, string> = {
+  auto: 'rectangle', rect: 'rectangle', round: 'roundedRectangle', ellipse: 'ellipse',
+  diamond: 'diamond', parallelogram: 'parallelogram', octagon: 'octagonalRectangle',
+  outerTri: 'outerTriangularRectangle', innerTri: 'innerTriangularRectangle',
+};
+const SHAPE_REV: Record<string, string> = {
+  rectangle: 'rect', roundedRectangle: 'round', ellipse: 'ellipse', diamond: 'diamond',
+  parallelogram: 'parallelogram', octagonalRectangle: 'octagon',
+  outerTriangularRectangle: 'outerTri', innerTriangularRectangle: 'innerTri',
+};
 
 // 四套主题（NexaNote 风格），基于默认主题的覆盖配置
 // 关联线全局样式：细线（1.5）+ 主题色；分支节点与父节点同色系（second/node 取 root 的浅色调变体）
@@ -190,6 +335,33 @@ const outlineDialog = ref(false);
 const outlineText = ref('');
 const outlineEditId = ref('');
 
+// ---------- 导图库：双视图 + 回收站 + 右键菜单 ----------
+const libView = ref<'grid' | 'list'>('grid');
+const showRecycle = ref(false);
+const recycleMaps = ref<MindmapMeta[]>([]);
+const recycleInfo = ref<RecycleInfo>({ count: 0, clear_at: null, days: 30 });
+const ctxMenu = ref<{ x: number; y: number; id: string; pinned: number; title: string; tags: string } | null>(null);
+const renameDialog = ref(false);
+const renameText = ref('');
+const renameId = ref('');
+const tagsDialog = ref(false);
+const tagsText = ref('');
+const tagsId = ref('');
+
+// ---------- 编辑器：左侧布局/大纲 + 右侧设置 ----------
+const sideTab = ref<'layout' | 'outline'>('layout');
+const sideWidth = ref(170);
+interface OutlineNode { uid: string; text: string; depth: number; children: OutlineNode[] }
+const outlineTree = ref<OutlineNode[]>([]);
+const outlineActiveUid = ref('');
+const outlineCount = ref(0);
+const flatOutline = ref<{ uid: string; text: string; depth: number }[]>([]);
+const nodeEditDialog = ref(false);
+const nodeEditText = ref('');
+const nodeEditUid = ref('');
+const docSize = ref(Number(localStorage.getItem('kh-mm-fontsize') || 14));
+const importInput = ref<HTMLInputElement>();
+
 const fmtTime = (s: string) => (s ? s.slice(5, 16).replace('T', ' ') : '');
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'n' + Date.now() + Math.random().toString(16).slice(2, 8));
 // 富文本 HTML → 纯文本（DB 统一存纯文本；<br>/</p> 转 \n 保留换行，否则多行概要会被压成一行）
@@ -204,6 +376,56 @@ const plain = (s: any): string => {
 // ---------- 导图库 ----------
 async function loadMaps() {
   maps.value = await getMindmaps();
+  refreshRecycle();
+}
+async function refreshRecycle() {
+  try {
+    recycleInfo.value = await getRecycleInfo();
+    if (showRecycle.value) recycleMaps.value = await getRecycleMindmaps();
+  } catch {}
+}
+function toggleRecycle() {
+  showRecycle.value = !showRecycle.value;
+  if (showRecycle.value) getRecycleMindmaps().then(r => recycleMaps.value = r).catch(() => {});
+}
+async function restoreMap(id: string) {
+  try { await restoreMindmap(id); ElMessage.success('已恢复'); showRecycle.value = false; await loadMaps(); } catch (e: any) { ElMessage.error('恢复失败：' + (e?.message || e)); }
+}
+async function purgeMap(id: string) {
+  await ElMessageBox.confirm('彻底删除后不可恢复，确定删除该导图？', '彻底删除', { confirmButtonText: '彻底删除', cancelButtonText: '取消', type: 'warning' }).catch(() => { throw 0; });
+  try { await deleteMindmapPermanent(id); ElMessage.success('已彻底删除'); refreshRecycle(); } catch (e: any) { ElMessage.error('删除失败：' + (e?.message || e)); }
+}
+function showCtxMenu(e: MouseEvent, m: MindmapMeta) {
+  const el = document.querySelector('.mm-library');
+  const r = el?.getBoundingClientRect();
+  ctxMenu.value = {
+    x: Math.min(e.clientX - (r?.left || 0), (r?.width || 400) - 150),
+    y: Math.min(e.clientY - (r?.top || 0), (r?.height || 300) - 150),
+    id: m.id, pinned: m.pinned, title: m.title, tags: m.tags || '',
+  };
+}
+async function togglePin(id: string, pinned: number) {
+  try { await updateMindmap(id, { pinned: pinned ? 0 : 1 }); await loadMaps(); } catch (e: any) { ElMessage.error('操作失败：' + (e?.message || e)); }
+  ctxMenu.value = null;
+}
+function editTags(id: string, tags: string) {
+  tagsId.value = id; tagsText.value = tags; tagsDialog.value = true;
+  ctxMenu.value = null;
+}
+async function confirmTags() {
+  try {
+    await updateMindmap(tagsId.value, { tags: tagsText.value.trim() });
+    ElMessage.success('标签已保存'); tagsDialog.value = false; await loadMaps();
+  } catch (e: any) { ElMessage.error('保存失败：' + (e?.message || e)); }
+}
+function renameMap(id: string, title: string) {
+  renameId.value = id; renameText.value = title; renameDialog.value = true;
+  ctxMenu.value = null;
+}
+async function confirmRename() {
+  const t = renameText.value.trim();
+  if (!t) return;
+  try { await updateMindmap(renameId.value, { title: t }); renameDialog.value = false; await loadMaps(); } catch (e: any) { ElMessage.error('重命名失败：' + (e?.message || e)); }
 }
 async function newMap() {
   const title = await ElMessageBox.prompt('请输入导图名称', '新建思维导图', { confirmButtonText: '创建', cancelButtonText: '取消', inputValue: '' }).then(r => r.value.trim()).catch(() => null);
@@ -214,8 +436,8 @@ async function newMap() {
   } catch (e: any) { ElMessage.error('创建失败：' + (e?.message || e)); }
 }
 async function delMap(id: string) {
-  await ElMessageBox.confirm('确定删除该导图？', '删除', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }).catch(() => { throw 0; });
-  try { await deleteMindmap(id); await loadMaps(); } catch (e: any) { ElMessage.error('删除失败：' + (e?.message || e)); }
+  await ElMessageBox.confirm('删除后导图将移入回收站，保留 30 天后自动清理。确定删除？', '移入回收站', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }).catch(() => { throw 0; });
+  try { await deleteMindmap(id); ElMessage.success('已移入回收站'); ctxMenu.value = null; await loadMaps(); } catch (e: any) { ElMessage.error('删除失败：' + (e?.message || e)); }
 }
 
 // ---------- 数据映射：DB → simple-mind-map ----------
@@ -299,6 +521,7 @@ async function openMap(id: string) {
     layoutKey.value = (['free', 'right', 'left', 'org', 'radial'].includes(data.layout) ? data.layout : 'right');
     themeKey.value = (THEMES[data.theme] ? data.theme : 'nexa-light');
     activeNode.value = null;
+    outlineTree.value = []; outlineActiveUid.value = '';
     await nextTickRender();
     const smmData = dbToSmm(data.nodes, data.links, data.members);
     mm = new MindMap({
@@ -320,11 +543,13 @@ async function openMap(id: string) {
       scale.value = mm.view.scale || 1;
       if (!fitted) { fitted = true; setTimeout(() => { try { mm.view.fit(); } catch {} }, 30); }
       scheduleRenderBounds();
+      refreshOutline();
     });
     bindEvents();
     window.addEventListener('keydown', onEditorKeydown);
     savedState.value = 'saved';
     dirty = false;
+    sideTab.value = 'layout';
   } catch (e: any) { ElMessage.error('打开导图失败：' + (e?.message || e)); }
 }
 function nextTickRender() { return new Promise(r => setTimeout(r, 50)); }
@@ -332,6 +557,8 @@ function backToLib() {
   flushSave();
   destroyMindMap();
   view.value = 'library';
+  showRecycle.value = false;
+  ctxMenu.value = null;
   loadMaps();
 }
 function destroyMindMap() {
@@ -351,6 +578,7 @@ function destroyMindMap() {
   if (themeObserver) { themeObserver.disconnect(); themeObserver = null; }
   khBounds.value = [];
   khActiveBound.value = '';
+  outlineTree.value = []; flatOutline.value = []; outlineCount.value = 0; outlineActiveUid.value = '';
 }
 // Delete/Backspace：优先删除已选中的边界矩形（点击矩形时 SMM 已通过 draw_click 清空节点激活，互不冲突）
 function onEditorKeydown(e: KeyboardEvent) {
@@ -371,10 +599,11 @@ function bindEvents() {
     curColor.value = nd.fillColor || THEMES[themeKey.value].rootFill;
     curShape.value = SHAPE_REV[nd.shape] || 'auto';
     selCount.value = selNodes().length;
+    outlineActiveUid.value = nd.uid;
   });
   mm.on('node_tree_render_end', () => { scale.value = mm.view.scale || 1; });
-  mm.on('data_change', () => markDirty());
-  mm.on('view_data_change', () => markDirty());
+  mm.on('data_change', () => { markDirty(); refreshOutline(); });
+  mm.on('view_data_change', () => { markDirty(); refreshOutline(); });
   mm.on('scale', () => scheduleRenderBounds());
   mm.on('draw_click', () => {
     // 点击画布空白处：取消边界选中
@@ -579,12 +808,27 @@ function setTheme(k: string) {
   applyCanvasBg();
   markDirty();
 }
-// 主题配置：系统深色时画布背景自动切为该主题的深色背景（跟随系统主题）
+// 主题配置：系统深色时画布背景自动切为该主题的深色背景（跟随系统主题）；文档字号覆盖各层级节点字号
 function themeCfgFor(k: string): Record<string, any> {
   const t = THEMES[k] || THEMES['nexa-light'];
   const isDark = document.documentElement.classList.contains('dark');
   // SMM 重渲染（切布局等）会用 themeConfig.backgroundColor 覆盖容器背景，必须同时替换该字段
-  return isDark ? { ...t.cfg, backgroundColor: t.darkBg, background: t.darkBg } : t.cfg;
+  const base = isDark ? { ...t.cfg, backgroundColor: t.darkBg, background: t.darkBg } : t.cfg;
+  const fs = docSize.value;
+  return {
+    ...base,
+    root: { ...(base.root || {}), fontSize: fs + 2 },
+    second: { ...(base.second || {}), fontSize: fs },
+    node: { ...(base.node || {}), fontSize: fs - 1 },
+    generalization: { ...(base.generalization || {}), fontSize: fs - 1 },
+  };
+}
+function onDocSizeChange(v: any) {
+  docSize.value = Number(v);
+  localStorage.setItem('kh-mm-fontsize', String(docSize.value));
+  if (mm) { try { mm.setThemeConfig(themeCfgFor(themeKey.value)); } catch {} }
+  applyCanvasBg();
+  markDirty();
 }
 // SMM 用内联样式设置容器背景，需手动应用（themeConfig.background 不会自动同步到容器）
 function applyCanvasBg() {
@@ -603,23 +847,290 @@ function watchSystemTheme() {
 function zoomIn() { mm?.view.enlarge(); }
 function zoomOut() { mm?.view.narrow(); }
 
+// ---------- 大纲视图（左侧 tab）：快速查看 / 增删改节点 ----------
+function refreshOutline() {
+  if (!mm || view.value !== 'editor') return;
+  try {
+    const root = mm.getData();
+    const tree: OutlineNode[] = [];
+    const walk = (d: any, depth: number, arr: OutlineNode[]) => {
+      const data = d?.data || {};
+      if (!data.uid || data.uid === VIRT_ROOT) {
+        (d?.children || []).forEach((c: any) => walk(c, depth, arr));
+        return;
+      }
+      const n: OutlineNode = { uid: data.uid, text: plain(data.text), depth, children: [] };
+      arr.push(n);
+      (d?.children || []).forEach((c: any) => walk(c, depth + 1, n.children));
+    };
+    walk(root, 0, tree);
+    outlineTree.value = tree;
+    const flat: { uid: string; text: string; depth: number }[] = [];
+    const flatWalk = (arr: OutlineNode[]) => arr.forEach(n => { flat.push({ uid: n.uid, text: n.text, depth: n.depth }); flatWalk(n.children); });
+    flatWalk(tree);
+    flatOutline.value = flat;
+    outlineCount.value = flat.length;
+  } catch {}
+}
+// uid → SMM 节点实例（含概要/边界，供大纲操作）
+function uidToNode(uid: string): any {
+  if (!mm?.renderer?.root) return null;
+  const nodes: any[] = [];
+  const walkN = (n: any) => {
+    if (!n) return;
+    if (n.nodeData?.data && n.nodeData.data.uid) nodes.push(n);
+    (n.children || []).forEach(walkN);
+  };
+  walkN(mm.renderer.root);
+  return nodes.find(n => n.nodeData.data.uid === uid) || null;
+}
+function outlineSelect(uid: string) {
+  const node = uidToNode(uid);
+  if (!node) return;
+  try {
+    mm.renderer.activeNodeList.slice().forEach((n: any) => { try { n.deactivate(); } catch {} });
+    // 节点实例的 active()：手动激活单个节点（SMM 官方入口），会触发渲染与 node_active 事件
+    node.active();
+    outlineActiveUid.value = uid;
+  } catch {}
+}
+function outlineAddChild(o: { uid: string }) {
+  const node = uidToNode(o.uid);
+  if (!node) return;
+  mm.execCommand('INSERT_CHILD_NODE', true, [node]);
+  setTimeout(refreshOutline, 100);
+}
+function outlineAddSibling(o: { uid: string }) {
+  const node = uidToNode(o.uid);
+  if (!node) return;
+  if (node.isRoot) { ElMessage.warning('根节点不能添加同级'); return; }
+  mm.execCommand('INSERT_NODE', true, [node]);
+  setTimeout(refreshOutline, 100);
+}
+function outlineRemove(o: { uid: string }) {
+  const node = uidToNode(o.uid);
+  if (!node) return;
+  if (node.isRoot) { ElMessage.warning('根节点不能删除'); return; }
+  ElMessageBox.confirm('确定删除该节点及其子节点？', '删除节点', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' })
+    .then(() => { mm.execCommand('REMOVE_NODE', [node]); setTimeout(refreshOutline, 100); })
+    .catch(() => {});
+}
+function outlineRename(o: { uid: string; text: string }) {
+  nodeEditUid.value = o.uid;
+  nodeEditText.value = o.text;
+  nodeEditDialog.value = true;
+}
+function confirmNodeEdit() {
+  const node = uidToNode(nodeEditUid.value);
+  if (!node) { nodeEditDialog.value = false; return; }
+  const t = nodeEditText.value.trim();
+  if (!t) { ElMessage.warning('节点文字不能为空'); return; }
+  try {
+    mm.execCommand('SET_NODE_TEXT', node, t);
+    nodeEditDialog.value = false;
+    setTimeout(refreshOutline, 100);
+  } catch (e: any) { ElMessage.error('修改失败：' + (e?.message || e)); }
+}
+// 左侧面板宽度拖拽（2px 拖拽条）
+let dragStartX = 0;
+let dragStartW = 0;
+function startSideDrag(e: MouseEvent) {
+  dragStartX = e.clientX;
+  dragStartW = sideWidth.value;
+  const move = (ev: MouseEvent) => {
+    const w = Math.min(Math.max(dragStartW + (ev.clientX - dragStartX), 120), 380);
+    sideWidth.value = w;
+  };
+  const up = () => {
+    window.removeEventListener('mousemove', move);
+    window.removeEventListener('mouseup', up);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  };
+  window.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', up);
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+}
+
+// ---------- 导出 / 导入 ----------
+async function exportMap(type: string) {
+  if (!mm) return;
+  const name = mapTitle.value?.trim() || '思维导图';
+  try {
+    await mm.export(type, true, name);
+    ElMessage.success('已导出：' + type.toUpperCase());
+  } catch (e: any) { ElMessage.error('导出失败：' + (e?.message || e)); }
+}
+function importFile() { importInput.value?.click(); }
+function onImportFile(e: Event) {
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const text = String(reader.result || '');
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    try {
+      let data: any = null;
+      if (ext === 'json') { data = JSON.parse(text); }
+      else if (ext === 'mm') { data = parseFreemind(text); }
+      else if (ext === 'csv') { data = parseCsv(text); }
+      else if (ext === 'md' || ext === 'markdown') { data = parseMarkdown(text); }
+      else if (ext === 'txt') { data = parseIndented(text); }
+      else { ElMessage.warning('不支持的格式：' + ext); return; }
+      if (!data || !data.data) { ElMessage.error('导入内容为空或格式无法识别'); return; }
+      if (!data.data.uid) data.data.uid = uid();
+      await ElMessageBox.confirm('导入将覆盖当前导图内容，确定导入？', '导入导图', { confirmButtonText: '导入', cancelButtonText: '取消', type: 'warning' });
+      mm.setData(data);
+      markDirty();
+      flushSave();
+      ElMessage.success('导入成功');
+    } catch (err: any) {
+      if (err === 0) return;
+      ElMessage.error('导入失败：' + (err?.message || err));
+    }
+  };
+  reader.readAsText(file);
+}
+// Freemind（.mm XML）→ SMM data
+function parseFreemind(xml: string): any {
+  const doc = new DOMParser().parseFromString(xml, 'application/xml');
+  const rootEl = doc.querySelector('map > node');
+  if (!rootEl) throw new Error('Freemind 文件中未找到根节点');
+  const walk = (el: Element): any => {
+    const text = el.getAttribute('TEXT') || '';
+    const d: any = { data: { text, uid: uid(), expand: true }, children: [] };
+    d.children = Array.from(el.children).filter(c => c.tagName === 'node').map(walk);
+    return d;
+  };
+  const mapEl = rootEl.parentElement;
+  const topLevel = mapEl ? Array.from(mapEl.children).filter(c => c.tagName === 'node') : [];
+  // 多个一级节点 → 包一层虚拟根（与 DB 多根处理一致）
+  if (topLevel.length > 1) {
+    return { data: { text: '导入导图', uid: uid(), expand: true }, children: topLevel.map(walk) };
+  }
+  return walk(rootEl);
+}
+// CSV：每行「路径,备注」或「路径」；路径用 / 或 \ 分隔 → 层级
+function parseCsv(text: string): any {
+  const rows = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const children: any[] = [];
+  const byPath = new Map<string, any>();
+  const root = { data: { text: '导入导图', uid: uid(), expand: true }, children };
+  for (const row of rows) {
+    const segs = row.split(',');
+    const path = segs[0].trim().replace(/\\/g, '/');
+    const note = segs.slice(1).join(',').trim();
+    if (!path) continue;
+    const parts = path.split('/').filter(Boolean);
+    let cur = root;
+    let curPath = '';
+    for (let i = 0; i < parts.length; i++) {
+      curPath += (curPath ? '/' : '') + parts[i];
+      if (!byPath.has(curPath)) {
+        const n: any = { data: { text: parts[i], uid: uid(), expand: true }, children: [] };
+        byPath.set(curPath, n);
+        cur.children.push(n);
+      }
+      cur = byPath.get(curPath);
+    }
+    if (note) cur.data.text = parts[parts.length - 1] + '：' + note;
+  }
+  return root;
+}
+// Markdown：标题（#）与列表（- * 1.）混合，按层级构建
+function parseMarkdown(text: string): any {
+  const lines = text.split(/\r?\n/);
+  const root = { data: { text: '导入导图', uid: uid(), expand: true }, children: [] as any[] };
+  const stack: { depth: number; node: any }[] = [{ depth: 0, node: root }];
+  for (const raw of lines) {
+    const line = raw.replace(/\t/g, '  ').replace(/\s+$/, '');
+    if (!line.trim()) continue;
+    let depth = 0;
+    let content = line.trim();
+    const h = content.match(/^(#{1,6})\s+(.*)$/);
+    if (h) { depth = h[1].length; content = h[2].trim(); }
+    else {
+      const bullet = content.match(/^([-*+]|\d+[.)])\s+(.*)$/);
+      if (bullet) {
+        const lead = line.match(/^(\s*)/)![1].length;
+        depth = Math.max(1, Math.round(lead / 2));
+        content = bullet[2].trim();
+      } else {
+        const lead = line.match(/^(\s*)/)![1].length;
+        depth = Math.max(1, Math.round(lead / 2));
+      }
+    }
+    while (stack.length > 1 && stack[stack.length - 1].depth >= depth) stack.pop();
+    const parent = stack[stack.length - 1].node;
+    const n: any = { data: { text: content.replace(/[*_`]/g, '').trim(), uid: uid(), expand: true }, children: [] };
+    parent.children.push(n);
+    stack.push({ depth, node: n });
+  }
+  return root;
+}
+// 缩进文本（空格缩进）→ SMM data
+function parseIndented(text: string): any {
+  const lines = text.split(/\r?\n/).map(l => l.replace(/\t/g, '  ')).filter(l => l.trim());
+  const root = { data: { text: '导入导图', uid: uid(), expand: true }, children: [] as any[] };
+  const stack: { depth: number; node: any }[] = [{ depth: -1, node: root }];
+  for (const line of lines) {
+    const indent = (line.match(/^(\s*)/) || ['', ''])[1].length;
+    const content = line.trim().replace(/^([-*+]|\d+[.)])\s+/, '').trim();
+    const depth = Math.round(indent / 2);
+    while (stack.length > 1 && stack[stack.length - 1].depth >= depth) stack.pop();
+    const n: any = { data: { text: content, uid: uid(), expand: true }, children: [] };
+    stack[stack.length - 1].node.children.push(n);
+    stack.push({ depth, node: n });
+  }
+  return root;
+}
+
 onMounted(() => { loadMaps(); watchSystemTheme(); });
 onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 </script>
 
 <style scoped>
 .mm-view { height: 100%; display: flex; flex-direction: column; }
-.mm-library { padding: 12px 16px; overflow: auto; }
-.ml-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.mm-library { padding: 12px 16px; overflow: auto; position: relative; }
+.ml-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; }
 .ml-head h3 { margin: 0; font-size: 16px; }
+.ml-head-right { display: flex; align-items: center; gap: 8px; }
+.ml-views { display: flex; align-items: center; }
+.ml-views .view-on { color: var(--kh-brand, #409eff); font-weight: 600; }
+.ml-head .recycle-on { color: #e6a23c; font-weight: 600; }
+.ml-recycle-tip { font-size: 12px; color: var(--el-text-color-secondary); background: rgba(230, 162, 60, .1); border: 1px solid rgba(230, 162, 60, .3); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
 .ml-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
 .ml-card { position: relative; border: 1px solid var(--el-border-color); border-radius: 10px; padding: 14px; cursor: pointer; background: var(--el-bg-color); transition: box-shadow .15s; }
 .ml-card:hover { box-shadow: 0 3px 12px var(--el-box-shadow-light); }
+.ml-card-pin { position: absolute; top: 8px; left: 10px; font-size: 14px; }
 .ml-title { font-weight: 600; margin-bottom: 6px; color: var(--el-text-color-primary); }
 .ml-meta { font-size: 12px; color: var(--el-text-color-secondary); }
+.ml-tags { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+.ml-tags, .ml-row-tags { font-size: 11px; color: var(--kh-brand, #409eff); background: rgba(64, 158, 255, .08); border-radius: 4px; padding: 1px 6px; width: fit-content; }
 .ml-del { position: absolute; top: 8px; right: 10px; color: var(--el-text-color-placeholder); font-size: 12px; display: none; }
 .ml-card:hover .ml-del { display: block; }
 .ml-empty { color: var(--el-text-color-secondary); text-align: center; padding: 60px 0; }
+.ml-list { display: flex; flex-direction: column; border: 1px solid var(--el-border-color); border-radius: 10px; overflow: hidden; }
+.ml-row { display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-bottom: 1px solid var(--el-border-color); cursor: pointer; font-size: 13px; line-height: 1.4; }
+.ml-row:last-child { border-bottom: none; }
+.ml-row:hover { background: rgba(64, 158, 255, .05); }
+.ml-row-pin { width: 18px; flex: none; text-align: center; }
+.ml-row-title { font-weight: 500; color: var(--el-text-color-primary); flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ml-row-meta { font-size: 12px; color: var(--el-text-color-secondary); flex: 1; min-width: 0; }
+.ml-row-tags { flex: none; }
+.ml-row-ops { flex: none; display: flex; gap: 2px; }
+.ml-recycle-list { display: flex; flex-direction: column; border: 1px solid var(--el-border-color); border-radius: 10px; overflow: hidden; }
+.ml-recycle-list .ml-row-title { max-width: none; }
+/* 右键菜单 */
+.ml-ctx { position: absolute; z-index: 99; background: var(--el-bg-color); border: 1px solid var(--el-border-color); border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, .12); padding: 4px; min-width: 150px; }
+.ml-ctx-item { padding: 6px 12px; font-size: 13px; border-radius: 5px; cursor: pointer; color: var(--el-text-color-primary); }
+.ml-ctx-item:hover { background: rgba(64, 158, 255, .1); }
+.ml-ctx-item.danger { color: #e74c3c; }
+.ml-ctx-item.danger:hover { background: rgba(231, 76, 60, .1); }
+.ml-ctx-mask { position: fixed; inset: 0; z-index: 98; }
 
 .mm-editor { height: 100%; display: flex; flex-direction: column; min-height: 0; }
 .mm-toolbar { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-bottom: 1px solid var(--el-border-color); flex-wrap: nowrap; }
@@ -630,16 +1141,35 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 .mm-saved.err { color: #e74c3c; }
 
 .mm-body { flex: 1; display: flex; min-height: 0; }
-.mm-side { width: 170px; flex: none; overflow: auto; padding: 10px 12px; border-right: 1px solid var(--el-border-color); }
-.mm-side-right { border-right: none; border-left: 1px solid var(--el-border-color); }
+.mm-side { width: 170px; flex: none; overflow: auto; padding: 10px 12px; border-right: 1px solid var(--el-border-color); box-sizing: border-box; }
+.mm-side-left { width: 170px; }
+.mm-side-right { border-right: none; border-left: 1px solid var(--el-border-color); width: 190px; }
+.mm-side-drag { width: 2px; flex: none; cursor: col-resize; background: var(--el-border-color); opacity: .5; }
+.mm-side-drag:hover { opacity: 1; background: var(--kh-brand, #409eff); }
+.ms-tabs { display: flex; gap: 2px; margin-bottom: 8px; border-bottom: 1px solid var(--el-border-color); }
+.ms-tab { padding: 4px 12px; font-size: 13px; cursor: pointer; color: var(--el-text-color-regular); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.ms-tab.on { color: var(--kh-brand, #409eff); border-bottom-color: var(--kh-brand, #409eff); font-weight: 600; }
 .ms-title { font-weight: 600; font-size: 13px; margin-bottom: 10px; color: var(--el-text-color-primary); }
+.ms-outline-count { font-weight: 400; color: var(--el-text-color-secondary); font-size: 12px; margin-left: 4px; }
 .ms-layout { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
 .ms-layout :deep(.el-radio) { margin-right: 0; height: 26px; width: 100%; }
 .ms-layout :deep(.el-radio__label) { text-align: left; }
+.ms-outline { display: flex; flex-direction: column; font-size: 13px; }
+.ms-o-row { display: flex; align-items: center; gap: 4px; padding: 3px 6px; border-radius: 5px; cursor: pointer; color: var(--el-text-color-primary); line-height: 1.4; }
+.ms-o-row:hover { background: rgba(64, 158, 255, .08); }
+.ms-o-row.on { background: rgba(64, 158, 255, .16); }
+.ms-o-btns { display: none; gap: 1px; flex: none; }
+.ms-o-row:hover .ms-o-btns { display: inline-flex; }
+.ms-o-btn { width: 18px; height: 18px; line-height: 16px; text-align: center; border-radius: 4px; font-size: 11px; color: var(--el-text-color-secondary); border: 1px solid var(--el-border-color); cursor: pointer; background: var(--el-bg-color); }
+.ms-o-btn:hover { color: var(--kh-brand, #409eff); border-color: var(--kh-brand, #409eff); }
+.ms-o-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ms-themes { display: flex; flex-direction: column; gap: 6px; }
 .ms-theme { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; border: 1px solid transparent; color: var(--el-text-color-regular); }
 .ms-theme.on { border-color: var(--kh-brand, #409eff); background: rgba(64, 158, 255, .06); }
-.mt-dot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+.mt-swatch { width: 22px; height: 22px; border-radius: 6px; flex: none; border: 1px solid rgba(0, 0, 0, .08); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.ms-layout-row { display: flex; flex-wrap: wrap; gap: 2px; }
+.ms-layout-row :deep(.el-radio-button__inner) { font-size: 12px; padding: 4px 8px; }
+.ms-font-size { width: 100%; }
 .ms-colors { display: flex; flex-wrap: wrap; gap: 8px; }
 .ms-color { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
 .ms-color.on { border-color: #333; }
@@ -655,6 +1185,8 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 :global(.dark) .mm-host { background: #1e222b; }
 .mm-host :deep(.smm-container) { width: 100%; height: 100%; }
 .mm-dialog-tip { font-size: 12px; color: var(--el-text-color-secondary); margin: 0 0 10px; line-height: 1.6; }
+.mm-export { margin-left: 4px; }
+.mm-import-input { display: none; }
 
 /* ===== simple-mind-map 外观修正 ===== */
 /* 1) 节点文字垂直居中：消除富文本 <p> 默认上下 margin 导致的文字偏下溢出 */
