@@ -132,13 +132,12 @@
         <!-- 左侧：布局 / 大纲（tab 切换，宽度可拖拽调整） -->
         <div class="mm-side mm-side-left" :style="{ width: sideWidth + 'px' }">
           <div class="ms-tabs">
-            <span class="ms-tab" :class="{ on: sideTab === 'layout' }" @click="sideTab = 'layout'">布局</span>
+            <span class="ms-tab" :class="{ on: sideTab === 'layout' }" @click="sideTab = 'layout'">设置</span>
             <span class="ms-tab" :class="{ on: sideTab === 'outline' }" @click="sideTab = 'outline'">大纲</span>
           </div>
           <template v-if="sideTab === 'layout'">
             <div class="ms-title">布局</div>
             <el-radio-group v-model="layoutKey" class="ms-layout-btns" @change="onLayoutChange">
-              <el-radio-button value="free"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.free"></span>自由</el-radio-button>
               <el-radio-button value="right"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.right"></span>向右</el-radio-button>
               <el-radio-button value="left"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.left"></span>向左</el-radio-button>
               <el-radio-button value="mind"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.mind"></span>导图</el-radio-button>
@@ -261,7 +260,7 @@ import 'simple-mind-map/full.js';
 import { getMindmaps, createMindmap, deleteMindmap, deleteMindmapPermanent, restoreMindmap, getMindmap, updateMindmap, saveMindmapNodes, saveMindmapLinks, saveMindmapMembers, getRecycleMindmaps, getRecycleInfo, getTags, createTag, deleteTag, type MindmapNode, type MindmapLink, type MindmapMember, type MindmapMeta, type RecycleInfo } from './api';
 
 const VIRT_ROOT = '__VR__';
-const LAYOUT_MAP: Record<string, string> = { free: 'mindMap', right: 'logicalStructure', left: 'logicalStructureLeft', mind: 'mindMap', org: 'organizationStructure', radial: 'fishbone', fish2: 'fishbone2', timeline: 'timeline' };
+const LAYOUT_MAP: Record<string, string> = { right: 'logicalStructure', left: 'logicalStructureLeft', mind: 'mindMap', org: 'organizationStructure', radial: 'fishbone', fish2: 'fishbone2', timeline: 'timeline' };
 const LAYOUT_REV: Record<string, string> = { mindMap: 'free', logicalStructure: 'right', logicalStructureLeft: 'left', organizationStructure: 'org', fishbone: 'radial' };
 const SHAPES: Record<string, string> = { auto: '自动', rect: '矩形', round: '圆角', ellipse: '椭圆', diamond: '菱形', parallelogram: '平行四边形', octagon: '八角', outerTri: '外三角', innerTri: '内三角' };
 const SHAPE_MAP: Record<string, string> = {
@@ -679,7 +678,7 @@ async function openMap(id: string) {
     mapId.value = id;
     mapTitle.value = data.title;
     view.value = 'editor';
-    layoutKey.value = (['free', 'right', 'left', 'mind', 'org', 'radial', 'fish2', 'timeline'].includes(data.layout) ? data.layout : 'right');
+    layoutKey.value = (['right', 'left', 'mind', 'org', 'radial', 'fish2', 'timeline'].includes(data.layout) ? data.layout : 'right');
     themeKey.value = (THEMES[data.theme] ? data.theme : 'nexa-light');
     activeNode.value = null;
     outlineTree.value = []; outlineActiveUid.value = '';
@@ -693,6 +692,8 @@ async function openMap(id: string) {
       themeConfig: themeCfgFor(themeKey.value),
       enableFreeDrag: true,
       mousewheelAction: 'zoom',
+      // 左键拖拽空白处 = 框选多选（右键仍可拖动画布）；默认是右键框选，不符合直觉
+      useLeftKeySelectionRightKeyDrag: true,
       // 鱼骨（放射）布局角度：默认 45° 会让上下分支横向间距过大，调大后更紧凑（配合主题 second.marginX 缩减）
       fishboneDeg: 72,
       // 分支节点展开/折叠按钮：光标悬停时显示（不常驻）
@@ -1047,15 +1048,17 @@ function setTheme(k: string) {
   markDirty();
 }
 // 主题配置：系统深色时画布背景自动切为该主题的深色背景（跟随系统主题）
+// 间距机制（SMM 源码 layouts/Base.js getMarginX/getMarginY）：第二层兄弟读 themeConfig.second.marginX/Y，
+// 更深层读 themeConfig.node.marginX/Y——纵向贴死（教育心理学导图实测）就是 second.marginY 未设所致
 function themeCfgFor(k: string): Record<string, any> {
   const t = THEMES[k] || THEMES['nexa-light'];
   const isDark = document.documentElement.classList.contains('dark');
   const cfg = { ...t.cfg };
-  // 放射（鱼骨）布局：收紧二级节点横向间距（second.marginX=6），配合 fishboneDeg 72 进一步压缩横向距离；
-  // 官方 second.marginX 默认 100 会造成"短文本节点+大空白"，此处压到正常留白
-  if (layoutKey.value === 'radial') {
-    cfg.second = { ...(cfg.second || {}), marginX: 6 };
-  }
+  // 第二层节点：放射（鱼骨）横向留白 30（官方 100 过大、上轮 6 过窄），其余布局保留 SMM 默认；
+  // 第二层纵向留白 18（mindMap/逻辑/组织等上下展开布局不再贴死）
+  cfg.second = { ...(cfg.second || {}), ...(layoutKey.value === 'radial' ? { marginX: 30 } : {}), marginY: 18 };
+  // 更深层节点纵向留白（默认 node.marginY=0 导致第三层起贴死）
+  cfg.node = { ...(cfg.node || {}), marginY: 24 };
   // SMM 重渲染（切布局等）会用 themeConfig.backgroundColor 覆盖容器背景，必须同时替换该字段
   return isDark ? { ...cfg, backgroundColor: t.darkBg, background: t.darkBg } : cfg;
 }
@@ -1407,7 +1410,8 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 .mm-side-left { width: 170px; }
 .mm-side-drag { width: 2px; flex: none; cursor: col-resize; background: var(--el-border-color); opacity: .5; }
 .mm-side-drag:hover { opacity: 1; background: var(--kh-brand, #409eff); }
-.ms-tabs { display: flex; gap: 2px; margin-bottom: 8px; border-bottom: 1px solid var(--el-border-color); }
+/* 设置/大纲 tab 条冻结在面板顶部（面板滚动时始终可见） */
+.ms-tabs { position: sticky; top: -10px; z-index: 5; display: flex; gap: 2px; margin-bottom: 8px; border-bottom: 1px solid var(--el-border-color); background: var(--el-bg-color, #fff); padding-top: 2px; }
 .ms-tab { padding: 4px 12px; font-size: 13px; cursor: pointer; color: var(--el-text-color-regular); border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .ms-tab.on { color: var(--kh-brand, #409eff); border-bottom-color: var(--kh-brand, #409eff); font-weight: 600; }
 .ms-title { font-weight: 600; font-size: 13px; margin-bottom: 10px; color: var(--el-text-color-primary); }

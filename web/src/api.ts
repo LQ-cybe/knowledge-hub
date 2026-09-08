@@ -108,6 +108,17 @@ export interface GraphData {
 export const getGraph = (dimension: string) =>
   http.get('/graph', { params: { dimension } }).then(r => r.data.data as GraphData);
 
+/** 文件夹层级树（含每级文件数与总字节），供矩形树图/旭日图/打包图使用 */
+export interface HierarchyNode {
+  id: string;
+  name: string;
+  value: number;
+  size: number;
+  children: HierarchyNode[];
+}
+export const getGraphHierarchy = () =>
+  http.get('/graph/hierarchy').then(r => r.data.data as HierarchyNode[]);
+
 /** 时间线：按创建时间倒序的资源流（type/tag 可筛选） */
 export const getTimeline = (type = '', tag = '') =>
   http.get('/timeline', { params: { type, tag } }).then(r => r.data.data as Resource[]);

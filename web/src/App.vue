@@ -8,9 +8,22 @@ import BrowserView from './BrowserView.vue';
 import TimelineView from './TimelineView.vue';
 import ReportView from './ReportView.vue';
 import MindmapView from './MindmapView.vue';
+import FileEditorView from './FileEditorView.vue';
 
 const activeTab = ref('browse');
 const browserRef = ref<InstanceType<typeof BrowserView>>();
+
+/** 独立文件编辑器状态（非空 = 全屏编辑器页，替代弹窗） */
+const editor = ref<{ id: string; title: string; ext: string; path: string; isImage: boolean } | null>(null);
+function openEditor(e: { id: string; title: string; ext: string; path: string; isImage: boolean }) {
+  editor.value = { ...e };
+}
+function closeEditor() {
+  editor.value = null;
+  // 回到编辑器前的页面（浏览页），并刷新列表
+  activeTab.value = 'browse';
+  browserRef.value?.reload?.();
+}
 
 const stats = ref<{ total: number; byType: { type: string; n: number }[] }>({ total: 0, byType: [] });
 
@@ -52,7 +65,18 @@ async function openResource(parentId: string | null) {
 </script>
 
 <template>
-  <div class="page">
+  <!-- 独立文件编辑器：打开时整页切换（跳转到编辑器页面） -->
+  <FileEditorView
+    v-if="editor"
+    :id="editor.id"
+    :title="editor.title"
+    :ext="editor.ext"
+    :path="editor.path"
+    :is-image="editor.isImage"
+    @close="closeEditor"
+  />
+
+  <div v-else class="page">
     <header class="topbar">
       <h1>Knowledge Hub <span class="sub">本地知识库</span></h1>
       <div class="stats">
@@ -86,7 +110,7 @@ async function openResource(parentId: string | null) {
         <HomeView @open-folder="openFolder" @open-tag="openTag" />
       </el-tab-pane>
       <el-tab-pane label="📚 浏览" name="browse">
-        <BrowserView ref="browserRef" />
+        <BrowserView ref="browserRef" @open-editor="openEditor" />
       </el-tab-pane>
       <el-tab-pane label="🕸️ 图谱" name="graph">
         <GraphView />

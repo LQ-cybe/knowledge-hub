@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { onMounted, ref, nextTick, watch } from 'vue';
+import { onMounted, ref, nextTick, watch, onBeforeUnmount } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   getTree, getResourcesPage, getTags, createTag, updateTag, deleteTag, setResourceTags,
-  search as apiSearch, fileUrl, rescan, saveFile, readFileText, moveResource, setPending,
+  search as apiSearch, fileUrl, rescan, moveResource, setPending,
   type Resource, type TagItem, type TreeNode,
 } from './api';
+
+/** 独立编辑器事件：文本/图片预览 → 整页切换（App.vue 全屏渲染 FileEditorView） */
+const emit = defineEmits<{ (e: 'open-editor', p: { id: string; title: string; ext: string; path: string; isImage: boolean }): void }>();
 
 // ---------- 左侧：文件结构树 ----------
 const treeData = ref<TreeNode[]>([]);
@@ -133,6 +136,107 @@ const selection = ref<Resource[]>([]);
 const viewMode = ref<'table' | 'grid'>('table');
 const searchMode = ref(false);
 const searchKeyword = ref('');
+/** 待整理筛选（pending=1）；工具栏「待整理」按钮切换 */
+const pendingOnly = ref(false);
+/** 卡片视图选中 id 集合（表格用 el-table 原生勾选；卡片自维护，框选两种视图共用） */
+const gridSelected = ref<Set<string>>(new Set());
+const tableRef = ref();
+
+// ---------- 框选（表格/卡片通用）：空白或任意处按下左键拖拽出选区，松开后与行/卡相交即选中 ----------
+const boxSel = ref({ active: false, x1: 0, y1: 0, x2: 0, y2: 0 });
+const boxOrigin = ref({ x: 0, y: 0, ctrl: false });
+const boxDragging = ref(false);
+
+function onBoxMouseDown(e: MouseEvent) {
+  // 不拦截：按钮 / 输入框 / 标签 / 复选框 / 树 / 分页等控件上的按下
+  const t = e.target as HTMLElement;
+  if (t.closest('button, input, textarea, .el-checkbox, .el-select, .el-pagination, .el-radio, .add-tag-btn, .el-dropdown, .el-tree, .el-dialog, .cell-tag')) return;
+  if (e.button !== 0) return;
+  boxDragging.value = false;
+  boxOrigin.value = { x: e.clientX, y: e.clientY, ctrl: e.ctrlKey || e.metaKey };
+  boxSel.value = { active: true, x1: e.clientX, y1: e.clientY, x2: e.clientX, y2: e.clientY };
+  document.body.style.userSelect = 'none';
+}
+function onBoxMouseMove(e: MouseEvent) {
+  if (!boxSel.value.active) return;
+  boxSel.value.x2 = e.clientX;
+  boxSel.value.y2 = e.clientY;
+  const dx = Math.abs(e.clientX - boxOrigin.value.x);
+  const dy = Math.abs(e.clientY - boxOrigin.value.y);
+  if (!boxDragging.value && Math.max(dx, dy) > 6) boxDragging.value = true;
+}
+function onBoxMouseUp() {
+  if (!boxSel.value.active) return;
+  boxSel.value.active = false;
+  document.body.style.userSelect = '';
+  if (!boxDragging.value) { boxSel.value = { active: false, x1: 0, y1: 0, x2: 0, y2: 0 }; return; }
+  boxDragging.value = false;
+  // 计算与各行/卡的矩形相交 → 选中；按下时若未按 Ctrl，先清空原选择
+  if (!boxOrigin.value.ctrl) {
+    if (viewMode.value === 'table') tableRef.value?.clearSelection();
+    gridSelected.value.clear();
+    selection.value = [];
+  }
+  const rect = {
+    minX: Math.min(boxSel.value.x1, boxSel.value.x2),
+    maxX: Math.max(boxSel.value.x1, boxSel.value.x2),
+    minY: Math.min(boxSel.value.y1, boxSel.value.y2),
+    maxY: Math.max(boxSel.value.y1, boxSel.value.y2),
+  };
+  const isHit = (el: Element) => {
+    const r = el.getBoundingClientRect();
+    return !(r.right < rect.minX || r.left > rect.maxX || r.bottom < rect.minY || r.top > rect.maxY);
+  };
+  if (viewMode.value === 'table') {
+    // .browse-row 渲染顺序 = 当前页 list 顺序（分页后 el-table 只渲染当前页行）
+    const rows = Array.from(document.querySelectorAll('.browse-row'));
+    rows.forEach((rowEl, idx) => {
+      const row = list.value[idx];
+      if (row && isHit(rowEl)) tableRef.value?.toggleRowSelection(row, true);
+    });
+  } else {
+    const cards = Array.from(document.querySelectorAll('.card[data-id]'));
+    cards.forEach(cardEl => {
+      const id = cardEl.getAttribute('data-id')!;
+      if (isHit(cardEl)) {
+        gridSelected.value.add(id);
+        const r = list.value.find(x => x.id === id);
+        if (r && !selection.value.some(s => s.id === id)) selection.value.push(r);
+      }
+    });
+  }
+  boxSel.value = { active: false, x1: 0, y1: 0, x2: 0, y2: 0 };
+  // 抑制随后触发的行单击（防止框选后误打开文件）
+  suppressNextOpen.value = true;
+  setTimeout(() => { suppressNextOpen.value = false; }, 260);
+}
+
+/** 卡片视图勾选切换（点击卡片左上角复选框） */
+function toggleGridSelect(r: Resource) {
+  if (gridSelected.value.has(r.id)) {
+    gridSelected.value.delete(r.id);
+    selection.value = selection.value.filter(s => s.id !== r.id);
+  } else {
+    gridSelected.value.add(r.id);
+    selection.value.push(r);
+  }
+}
+
+/** 待整理入口：切换筛选 */
+function onPendingToggle() {
+  pendingOnly.value = !pendingOnly.value;
+  page.value = 1;
+  loadResources();
+}
+
+onMounted(() => {
+  document.addEventListener('mousemove', onBoxMouseMove);
+  document.addEventListener('mouseup', onBoxMouseUp);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener('mousemove', onBoxMouseMove);
+  document.removeEventListener('mouseup', onBoxMouseUp);
+});
 
 const typeOptions = [
   { value: '', label: '全部类型' },
@@ -169,6 +273,8 @@ async function loadResources() {
       orderDir: orderDir.value,
       status: 'active',
     };
+    // 待整理筛选
+    if (pendingOnly.value) params.pending = '1';
     if (currentFolderId.value) params.parentId = currentFolderId.value;
     const res = await getResourcesPage(params);
     list.value = res.list;
@@ -239,18 +345,15 @@ async function onRefresh() {
   }
 }
 
-// ---------- 单击打开：文件夹进目录，文本/图片预览，其他提示 ----------
+// ---------- 单击打开：文件夹进目录，文本/图片整页编辑器，其他提示 ----------
 const TEXT_PREVIEW_EXT = /\.(txt|md|bas|cls|frm|vba|json|xml|html|htm|csv|js|ts|py|sql|ini|cfg|log|bat|ps1|vbs|sh|yaml|yml)$/i;
-const preview = ref({
-  visible: false, id: '', title: '', path: '', ext: '', isText: false, isImage: false,
-  content: '', loading: false,
-});
-const previewRef = ref();
 
 function isTextPreview(r: Resource) {
   return r.type === 'file' && TEXT_PREVIEW_EXT.test(r.title);
 }
 async function onRowClick(row: Resource) {
+  // 框选拖拽后抬起时禁止触发打开（由 boxSelect 内部在拖拽结束后抑制一次 click）
+  if (suppressNextOpen.value) { suppressNextOpen.value = false; return; }
   if (row.type === 'folder') {
     // 文件夹：进入目录
     currentFolderId.value = row.id;
@@ -261,60 +364,16 @@ async function onRowClick(row: Resource) {
     return;
   }
   if (row.type !== 'file') { ElMessage.info('该类型暂不支持预览'); return; }
-  if (isImage(row)) {
-    preview.value = { visible: true, id: row.id, title: row.title, path: row.path || '', ext: '', isText: false, isImage: true, content: '', loading: false };
-    return;
-  }
-  if (isTextPreview(row)) {
-    preview.value = { ...preview.value, visible: true, id: row.id, title: row.title, path: row.path || '', ext: (row.title.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1]) || '', isText: true, isImage: false, content: '', loading: true };
-    try {
-      preview.value.content = await readFileText(row.id);
-    } catch (e: any) {
-      ElMessage.error('读取失败：' + (e?.message || '服务异常'));
-    } finally {
-      preview.value.loading = false;
-    }
-    await nextTick();
-    // md 渲染预览
-    if (preview.value.ext === 'md') renderMdPreview();
+  if (isImage(row) || isTextPreview(row)) {
+    const ext = (row.title.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1]) || '';
+    emit('open-editor', { id: row.id, title: row.title, ext, path: row.path || '', isImage: isImage(row) });
     return;
   }
   ElMessage.info('该文件类型暂不支持预览');
 }
 
-// ---------- MD 渲染预览（右侧只读渲染） ----------
-const mdHtml = ref('');
-function renderMdPreview() {
-  const src = preview.value.content || '';
-  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  // 极简 MD 渲染：标题/列表/代码块/行内代码/链接/粗体/分割线（够用即可，不引入重依赖）
-  let html = esc(src)
-    .replace(/```([\s\S]*?)```/g, (_m, c: string) => `<pre><code>${c}</code></pre>`)
-    .replace(/`([^`]+)`/g, (_m, c: string) => `<code>${c}</code>`)
-    .replace(/^### (.*)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.*)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.*)$/gm, '<h1>$1</h1>')
-    .replace(/^- (.*)$/gm, '<li>$1</li>')
-    .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-    .replace(/^---$/gm, '<hr/>')
-    .replace(/\n/g, '<br/>');
-  mdHtml.value = html;
-}
-
-/** 保存文本文件（写回磁盘 + 提示） */
-async function savePreview() {
-  if (!preview.value.id) return;
-  try {
-    await saveFile(preview.value.id, preview.value.content);
-    ElMessage.success('已保存');
-    if (preview.value.ext === 'md') renderMdPreview();
-    loadResources();
-  } catch (e: any) {
-    ElMessage.error('保存失败：' + (e?.response?.data?.msg || e?.message || '服务异常'));
-  }
-}
+/** 框选拖拽结束后抑制随后的行单击（避免框选完误打开文件） */
+const suppressNextOpen = ref(false);
 
 // ---------- 批量操作：移动位置 / 加入待整理 ----------
 const batchMenu = ref({ visible: false });
@@ -360,6 +419,7 @@ function onBatchCmd(cmd: string) {
   if (cmd === 'tag') openBatchDialog();
   else if (cmd === 'move') openMoveDialog();
   else if (cmd === 'pending') markPending(true);
+  else if (cmd === 'unpending') markPending(false);
 }
 
 // ---------- 打标对话框（行内 / 批量共用，可直接新建标签；文件夹可选递归） ----------
@@ -484,7 +544,12 @@ async function openTag(tagId: string) {
   page.value = 1;
   await loadResources();
 }
-defineExpose({ openFolder, openTag });
+/** 供编辑器关闭后刷新列表（App.closeEditor 调用） */
+async function reload() {
+  await loadResources();
+  await loadTree();
+}
+defineExpose({ openFolder, openTag, reload });
 </script>
 
 <template>
@@ -578,21 +643,27 @@ defineExpose({ openFolder, openTag });
               <el-dropdown-item command="tag">批量打标</el-dropdown-item>
               <el-dropdown-item command="move">移动位置</el-dropdown-item>
               <el-dropdown-item command="pending">加入待整理</el-dropdown-item>
+              <el-dropdown-item command="unpending">移出待整理</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
+        <el-button :type="pendingOnly ? 'warning' : 'default'" @click="onPendingToggle" :title="pendingOnly ? '退出待整理筛选' : '只显示已标记待整理的资源'">
+          {{ pendingOnly ? '待整理 ✕' : '待整理' }}
+        </el-button>
         <el-button :loading="refreshing" @click="onRefresh" title="重新扫描磁盘（新增文件/文件夹入库）">刷新</el-button>
         <span class="total">共 {{ total }} 项</span>
       </div>
 
-      <!-- 表格视图 -->
-      <div v-if="viewMode === 'table'" class="table-wrap" v-loading="loading">
-        <el-table :data="list" size="small" height="100%" stripe highlight-current-row @selection-change="(rows: Resource[]) => selection = rows" @row-click="onRowClick" :row-class-name="() => 'browse-row'">
+      <!-- 表格视图（支持框选：在空白/行上按住左键拖出选区） -->
+      <div v-if="viewMode === 'table'" class="table-wrap" v-loading="loading" @mousedown="onBoxMouseDown">
+        <el-table ref="tableRef" :data="list" size="small" height="100%" stripe highlight-current-row
+          @selection-change="(rows: Resource[]) => { selection = rows; gridSelected.value = new Set(rows.map(r => r.id)); }"
+          @row-click="onRowClick" :row-class-name="() => 'browse-row'">
           <el-table-column type="selection" width="38" @click.stop />
           <el-table-column label="名称" min-width="200">
             <template #default="{ row }">
               <span class="name-cell">
-                <span class="name-ico" :title="typeLabels[row.type] || row.type">{{ typeIcons[row.type] || '📄' }}</span>
+                <span class="name-ico" :title="typeLabels[row.type] || row.type">{{ row.type === 'file' ? fileIcon(row.title) : typeIcons[row.type] || '📄' }}</span>
                 <span class="name-text" :title="row.title">{{ row.title }}</span>
               </span>
             </template>
@@ -619,13 +690,17 @@ defineExpose({ openFolder, openTag });
         </el-table>
       </div>
 
-      <!-- 卡片视图 -->
-      <div v-else class="grid" v-loading="loading">
+      <!-- 卡片视图（支持框选；卡片左上角复选框可单选） -->
+      <div v-else class="grid" v-loading="loading" @mousedown="onBoxMouseDown">
         <div v-if="list.length === 0" class="empty" style="grid-column: 1 / -1;">无结果</div>
-        <div v-for="r in list" :key="r.id" class="card" @click="onRowClick(r)">
+        <div v-for="r in list" :key="r.id" class="card" :data-id="r.id"
+          :class="{ 'card-sel': gridSelected.has(r.id) }" @click="onRowClick(r)">
+          <span class="card-check" :class="{ on: gridSelected.has(r.id) }" @click.stop="toggleGridSelect(r)">
+            <svg v-if="gridSelected.has(r.id)" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8.5L6.5 12L13 4.5"/></svg>
+          </span>
           <div class="thumb" :class="{ 'thumb-img': isImage(r) }">
             <img v-if="isImage(r)" :src="fileUrl(r.id)" loading="lazy" :alt="r.title" />
-            <span v-else class="thumb-icon">{{ typeIcons[r.type] || '📄' }}</span>
+            <span v-else class="thumb-icon">{{ r.type === 'file' ? fileIcon(r.title) : typeIcons[r.type] || '📄' }}</span>
           </div>
           <div class="card-title" :title="r.title">{{ r.title }}</div>
           <div class="card-meta">{{ r.type === 'file' ? r.path : typeLabels[r.type] }}</div>
@@ -635,6 +710,15 @@ defineExpose({ openFolder, openTag });
           </div>
         </div>
       </div>
+
+      <!-- 框选层（拖拽中显示半透明选区） -->
+      <div v-if="boxSel.active && boxDragging" class="box-select"
+        :style="{
+          left: Math.min(boxSel.x1, boxSel.x2) + 'px',
+          top: Math.min(boxSel.y1, boxSel.y2) + 'px',
+          width: Math.abs(boxSel.x2 - boxSel.x1) + 'px',
+          height: Math.abs(boxSel.y2 - boxSel.y1) + 'px',
+        }"></div>
 
       <div class="footer">
         <el-pagination
@@ -679,54 +763,6 @@ defineExpose({ openFolder, openTag });
       <template #footer>
         <el-button @click="tagDialog.visible = false">取消</el-button>
         <el-button type="primary" @click="saveTagDialog">保存</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 文件预览 / 文本编辑（md 左右布局：左编辑右预览） -->
-    <el-dialog
-      v-model="preview.visible"
-      :title="preview.title"
-      width="76%"
-      top="4vh"
-      class="preview-dialog"
-      destroy-on-close
-    >
-      <div v-if="preview.isImage" class="pv-img-wrap">
-        <img :src="fileUrl(preview.id)" :alt="preview.title" style="max-width: 100%;" />
-      </div>
-      <div v-else-if="preview.isText" class="pv-text">
-        <div v-if="preview.ext === 'md'" class="pv-md">
-          <div class="pv-pane">
-            <div class="pv-pane-title">编辑</div>
-            <el-input
-              ref="previewRef"
-              v-model="preview.content"
-              type="textarea"
-              :rows="22"
-              class="pv-editor"
-              spellcheck="false"
-            />
-          </div>
-          <div class="pv-pane">
-            <div class="pv-pane-title">预览</div>
-            <div class="pv-md-render" v-html="mdHtml"></div>
-          </div>
-        </div>
-        <el-input
-          v-else
-          ref="previewRef"
-          v-model="preview.content"
-          type="textarea"
-          :rows="22"
-          class="pv-editor-full"
-          spellcheck="false"
-        />
-      </div>
-      <div v-else-if="preview.loading" class="pv-loading">加载中…</div>
-      <template #footer>
-        <span class="pv-path">{{ preview.path }}</span>
-        <el-button @click="preview.visible = false">关闭</el-button>
-        <el-button v-if="preview.isText" type="primary" @click="savePreview">保存</el-button>
       </template>
     </el-dialog>
 
@@ -876,4 +912,25 @@ html.dark .tree-wrap::-webkit-scrollbar-thumb:hover, html.dark .grid::-webkit-sc
 .move-tree { max-height: 320px; overflow: auto; border: 1px solid var(--el-border-color, #e5e7eb); border-radius: 6px; padding: 6px; }
 .move-tree .tn { display: flex; align-items: center; gap: 5px; min-width: 0; }
 .move-tree .tn-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+
+/* ---------- 框选层 ---------- */
+.box-select {
+  position: fixed; z-index: 3000; pointer-events: none;
+  background: rgba(64, 158, 255, 0.14); border: 1px solid var(--kh-brand, #409eff);
+}
+/* 表格行框选悬停视觉（行本身高亮由 el-table highlight-current-row 承担） */
+.browse-row { cursor: default; }
+
+/* ---------- 卡片：勾选复选框（左上角） ---------- */
+.card { position: relative; }
+.card-check {
+  position: absolute; top: 6px; left: 6px; z-index: 2;
+  width: 18px; height: 18px; border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.75); background: rgba(0, 0, 0, 0.25);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  color: #fff; opacity: 0.55; transition: opacity 0.15s;
+}
+.card:hover .card-check { opacity: 1; }
+.card-check.on { background: var(--kh-brand, #409eff); border-color: var(--kh-brand, #409eff); opacity: 1; }
+.card-sel { outline: 2px solid var(--kh-brand, #409eff); outline-offset: -2px; }
 </style>

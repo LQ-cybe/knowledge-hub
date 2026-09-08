@@ -104,11 +104,7 @@ onMounted(async () => {
     </div>
 
     <div class="rp-main">
-      <div class="rp-editor">
-        <div class="rp-pane-title">报表内容（可直接编辑）</div>
-        <textarea v-model="content" class="rp-text" spellcheck="false"
-          placeholder="选择报表类型并点击「生成」，内容将自动汇总；可在此修改后再导出/保存。"></textarea>
-      </div>
+      <!-- 已保存报表列表在左（窄），报表内容在右（宽） -->
       <div class="rp-side">
         <div class="rp-pane-title">已保存报表（{{ saved.length }}）</div>
         <div v-if="saved.length === 0" class="rp-none">暂无已保存报表</div>
@@ -116,6 +112,11 @@ onMounted(async () => {
           <div class="rp-item-title">{{ s.title }}</div>
           <div class="rp-item-time">{{ s.created_at }}</div>
         </div>
+      </div>
+      <div class="rp-editor">
+        <div class="rp-pane-title">报表内容（可直接编辑）</div>
+        <textarea v-model="content" class="rp-text" spellcheck="false"
+          placeholder="选择报表类型并点击「生成」，内容将自动汇总；可在此修改后再导出/保存。"></textarea>
       </div>
     </div>
   </div>

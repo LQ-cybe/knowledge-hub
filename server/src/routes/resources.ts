@@ -381,6 +381,49 @@ router.get('/graph', (req, res) => {
   res.json({ code: 0, data: { nodes: [], links } });
 });
 
+/** GET /api/graph/hierarchy —— 文件夹层级树（含每级文件数与总字节），供矩形树图/旭日图/打包图等层级图表 */
+router.get('/graph/hierarchy', (_req, res) => {
+  const db = getDb();
+  const folders = db.prepare(
+    `SELECT id, title, parent_id FROM resources WHERE type='folder' AND status='active'`
+  ).all() as { id: string; title: string; parent_id: string | null }[];
+  const files = db.prepare(
+    `SELECT parent_id, size FROM resources WHERE type='file' AND status='active'`
+  ).all() as { parent_id: string | null; size: number | null }[];
+  const fileCount = new Map<string, number>();
+  const fileBytes = new Map<string, number>();
+  for (const f of files) {
+    if (!f.parent_id) continue;
+    fileCount.set(f.parent_id, (fileCount.get(f.parent_id) || 0) + 1);
+    fileBytes.set(f.parent_id, (fileBytes.get(f.parent_id) || 0) + (f.size || 0));
+  }
+  // 每个文件夹 = { id, title, value(含子树文件数), size(含子树字节), children }
+  const nodeMap = new Map<string, any>();
+  for (const f of folders) nodeMap.set(f.id, { id: f.id, name: f.title, value: 0, size: 0, children: [] as any[] });
+  const roots: any[] = [];
+  for (const f of folders) {
+    const n = nodeMap.get(f.id);
+    const parent = f.parent_id ? nodeMap.get(f.parent_id) : null;
+    if (parent) parent.children.push(n);
+    else roots.push(n);
+  }
+  // 自底向上累加文件数与字节
+  const acc = (n: any): { files: number; bytes: number } => {
+    let files = fileCount.get(n.id) || 0;
+    let bytes = fileBytes.get(n.id) || 0;
+    for (const c of n.children) {
+      const r = acc(c);
+      files += r.files;
+      bytes += r.bytes;
+    }
+    n.value = files;
+    n.size = bytes;
+    return { files, bytes };
+  };
+  roots.forEach(acc);
+  res.json({ code: 0, data: roots });
+});
+
 /** GET /api/tags —— 标签列表（含各标签资源数；数据库视图标签筛选/标签维度图谱用） */
 router.get('/tags', (_req, res) => {
   const db = getDb();
