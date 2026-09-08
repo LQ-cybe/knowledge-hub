@@ -148,6 +148,10 @@ function migrate(db: Database.Database): void {
     // 节点描述（幕布式：标题下方自动换行的说明文字，独立于标题存储）
     db.exec(`ALTER TABLE mindmap_nodes ADD COLUMN desc TEXT NOT NULL DEFAULT ''`);
   }
+  if (!ncols.some(c => c.name === 'expand')) {
+    // 分支节点折叠状态：1=展开（默认），0=折叠；用于跨会话恢复导图折叠布局
+    db.exec(`ALTER TABLE mindmap_nodes ADD COLUMN expand INTEGER NOT NULL DEFAULT 1`);
+  }
 }
 
 /** 获取全局数据库连接（单例，初始化建表） */

@@ -113,8 +113,9 @@
           <span>{{ Math.round(scale * 100) }}%</span>
           <el-button size="small" text @click="zoomIn">＋</el-button>
         </div>
+        <el-button size="small" class="mm-save-btn" :type="dirty ? 'primary' : 'default'" :disabled="!dirty" @click="saveNow">保存</el-button>
         <span class="mm-saved" :class="{ err: savedState === 'save-fail' }">
-          {{ { idle: '未修改', saving: '保存中…', saved: '已保存', 'save-fail': '保存失败' }[savedState] }}
+          {{ { idle: '未修改', saving: '未保存', saved: '已保存', 'save-fail': '保存失败' }[savedState] }}
         </span>
       </div>
 
@@ -127,12 +128,12 @@
           </div>
           <template v-if="sideTab === 'layout'">
             <div class="ms-title">布局</div>
-            <el-radio-group v-model="layoutKey" class="ms-layout" @change="onLayoutChange">
-              <el-radio value="free">自由编辑</el-radio>
-              <el-radio value="right">向右</el-radio>
-              <el-radio value="left">向左</el-radio>
-              <el-radio value="org">组织图</el-radio>
-              <el-radio value="radial">放射</el-radio>
+            <el-radio-group v-model="layoutKey" class="ms-layout-btns" @change="onLayoutChange">
+              <el-radio-button value="free">自由</el-radio-button>
+              <el-radio-button value="right">向右</el-radio-button>
+              <el-radio-button value="left">向左</el-radio-button>
+              <el-radio-button value="org">组织</el-radio-button>
+              <el-radio-button value="radial">放射</el-radio-button>
             </el-radio-group>
             <div class="ms-title" style="margin-top: 14px;">主题</div>
             <div class="ms-themes">
@@ -140,6 +141,21 @@
                 <span class="mt-swatch" :style="{ background: `linear-gradient(135deg, ${t.rootFill} 0%, ${t.rootFill}88 100%)` }"></span>{{ t.name }}
               </div>
             </div>
+            <template v-if="activeNode">
+              <div class="ms-title" style="margin-top: 14px;">节点样式</div>
+              <div class="ms-label">节点颜色</div>
+              <div class="ms-colors">
+                <span v-for="c in nodeColors" :key="c" class="ms-color" :class="{ on: curColor === c }" :style="{ background: c }"
+                  @click="setNodeColor(c)"></span>
+              </div>
+              <div class="ms-label" style="margin-top: 10px;">节点形状</div>
+              <div class="ms-shapes">
+                <span v-for="(s, k) in SHAPES" :key="k" class="ms-shape" :class="{ on: curShape === k }" @click="setNodeShape(k)">{{ s }}</span>
+              </div>
+              <div class="ms-label" style="margin-top: 10px;">描述</div>
+              <el-input v-model="nodeDescText" type="textarea" :rows="3" class="ms-desc-input" placeholder="节点描述，自动换行" @change="saveNodeDesc" />
+            </template>
+            <div v-else class="ms-tip" style="margin-top: 14px;">单击画布中的节点后，可在此设置颜色、形状与描述</div>
           </template>
           <template v-else>
             <div class="ms-title">大纲 <span class="ms-outline-count">{{ outlineCount }}</span></div>
@@ -157,27 +173,6 @@
 
         <!-- 画布 -->
         <div class="mm-canvas"><div ref="mmEl" class="mm-host"></div></div>
-
-        <!-- 右侧：节点属性（颜色 / 形状 / 描述） -->
-        <div class="mm-side mm-side-right">
-          <div class="ms-title">设置</div>
-          <div class="ms-group" v-if="activeNode">
-            <div class="ms-label">节点颜色</div>
-            <div class="ms-colors">
-              <span v-for="c in nodeColors" :key="c" class="ms-color" :class="{ on: curColor === c }" :style="{ background: c }"
-                @click="setNodeColor(c)"></span>
-            </div>
-            <div class="ms-label" style="margin-top: 10px;">节点形状</div>
-            <div class="ms-shapes">
-              <span v-for="(s, k) in SHAPES" :key="k" class="ms-shape" :class="{ on: curShape === k }" @click="setNodeShape(k)">{{ s }}</span>
-            </div>
-            <div class="ms-label" style="margin-top: 10px;">描述</div>
-            <el-input v-model="nodeDescText" type="textarea" :rows="3" class="ms-desc-input" placeholder="节点描述，自动换行" @change="saveNodeDesc" />
-          </div>
-          <div class="ms-group" v-else>
-            <div class="ms-tip">单击画布中的节点后可设置颜色、形状与描述</div>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -319,7 +314,6 @@ const nodeColors = ['#3b82f6', '#52c41a', '#f4a261', '#e74c3c', '#9b59b6', '#16a
 
 const mmEl = ref<HTMLElement>();
 let mm: any = null;
-let saveTimer: any = null;
 let dirty = false;
 let loading = false;
 // 当前选中的有效节点数（驱动概要/边界/关系按钮的可用状态：单选禁用，多选 2 个及以上可用）
@@ -493,7 +487,7 @@ function dbToSmm(nodes: MindmapNode[], links: MindmapLink[], members: MindmapMem
   }));
   const build = (n: MindmapNode): any => {
     const { title, desc } = nodeTitleDesc(n);
-    const d: any = { data: { text: title, uid: n.id, expand: true }, children: (kids.get(n.id) || []).filter(c => c.kind === 'node').map(build) };
+    const d: any = { data: { text: title, uid: n.id, expand: n.expand !== 0 }, children: (kids.get(n.id) || []).filter(c => c.kind === 'node').map(build) };
     if (desc) d.data.desc = desc;
     if (n.color) { d.data.fillColor = n.color; d.data.color = '#ffffff'; }
     if (n.shape && n.shape !== 'auto') d.data.shape = SHAPE_MAP[n.shape] || 'rectangle';
@@ -528,6 +522,7 @@ function smmToDb(root: any) {
         x: 0, y: 0,
         color: data.fillColor || null,
         shape: SHAPE_REV[data.shape] || 'auto',
+        expand: data.expand === false ? 0 : 1,
         sort: nSort++,
       });
     }
@@ -552,6 +547,13 @@ function smmToDb(root: any) {
 // ---------- 编辑器 ----------
 async function openMap(id: string) {
   try {
+    // 编辑器内切换（如导入到新文件后）：若当前导图有未保存修改，先询问是否保存
+    if (view.value === 'editor' && dirty) {
+      const ok = await ElMessageBox.confirm('当前导图有未保存的修改，先保存再继续？', '未保存', {
+        confirmButtonText: '保存', cancelButtonText: '放弃修改', type: 'warning',
+      }).then(() => true).catch(() => false);
+      if (ok) await flushSave(); else dirty = false;
+    }
     // 从编辑器内重开（如导入到新文件后）：先销毁旧画布实例，避免新旧画布叠加
     destroyMindMap();
     const data = await getMindmap(id);
@@ -572,8 +574,10 @@ async function openMap(id: string) {
       themeConfig: themeCfgFor(themeKey.value),
       enableFreeDrag: true,
       mousewheelAction: 'zoom',
-      // 分支节点常显展开/折叠按钮（有子节点的节点始终可见，点击折叠后显示隐藏子节点数）
-      alwaysShowExpandBtn: true,
+      // 鱼骨（放射）布局角度：默认 45° 会让上下分支横向间距过大，调大后更紧凑
+      fishboneDeg: 58,
+      // 分支节点展开/折叠按钮：光标悬停时显示（不常驻）
+      alwaysShowExpandBtn: false,
       // 关系线激活时不显示两端拖拽调节锚点（用户不需要调节曲线控制点）
       enableAdjustAssociativeLinePoints: false,
       // 关联线渲染在节点下层，避免遮挡节点内容（默认 true 会盖住节点）
@@ -586,7 +590,6 @@ async function openMap(id: string) {
       if (!fitted) { fitted = true; setTimeout(() => { try { mm.view.fit(); } catch {} }, 30); }
       scheduleRenderBounds();
       refreshOutline();
-      renderCollapsePreviews();
       renderNodeDescs();
     });
     bindEvents();
@@ -597,8 +600,14 @@ async function openMap(id: string) {
   } catch (e: any) { ElMessage.error('打开导图失败：' + (e?.message || e)); }
 }
 function nextTickRender() { return new Promise(r => setTimeout(r, 50)); }
-function backToLib() {
-  flushSave();
+async function backToLib() {
+  // 有未保存修改时询问（不自动保存）
+  if (dirty) {
+    const ok = await ElMessageBox.confirm('当前导图有未保存的修改，先保存再返回？', '未保存', {
+      confirmButtonText: '保存并返回', cancelButtonText: '放弃修改', type: 'warning',
+    }).then(() => true).catch(() => false);
+    if (ok) await flushSave(); else dirty = false;
+  }
   destroyMindMap();
   view.value = 'library';
   showRecycle.value = false;
@@ -606,10 +615,8 @@ function backToLib() {
   loadMaps();
 }
 function destroyMindMap() {
-  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-  if (foldPreviewTimer) { clearTimeout(foldPreviewTimer); foldPreviewTimer = null; }
   if (descRenderTimer) { clearTimeout(descRenderTimer); descRenderTimer = null; }
-  document.querySelectorAll('.kh-fold-preview, .kh-node-desc-ov').forEach((el: any) => el.remove());
+  document.querySelectorAll('.kh-node-desc-ov').forEach((el: any) => el.remove());
   if (mm) {
     try {
       mm.off('node_active');
@@ -649,9 +656,9 @@ function bindEvents() {
     selCount.value = selNodes().length;
     outlineActiveUid.value = nd.uid;
   });
-  mm.on('node_tree_render_end', () => { scale.value = mm.view.scale || 1; renderCollapsePreviews(); renderNodeDescs(); });
-  mm.on('data_change', () => { markDirty(); refreshOutline(); scheduleFoldPreview(); scheduleNodeDescs(); });
-  mm.on('view_data_change', () => { markDirty(); refreshOutline(); scheduleFoldPreview(); scheduleNodeDescs(); });
+  mm.on('node_tree_render_end', () => { scale.value = mm.view.scale || 1; renderNodeDescs(); });
+  mm.on('data_change', () => { markDirty(); refreshOutline(); scheduleNodeDescs(); });
+  mm.on('view_data_change', () => { markDirty(); refreshOutline(); scheduleNodeDescs(); });
   mm.on('scale', () => scheduleRenderBounds());
   mm.on('draw_click', () => {
     // 点击画布空白处：取消边界选中
@@ -660,15 +667,13 @@ function bindEvents() {
     selCount.value = selNodes().length;
   });
 }
+// 标记有未保存的修改（不再自动保存：由工具栏「保存」按钮手动触发 flushSave）
 function markDirty() {
   if (!mapId.value || view.value !== 'editor') return;
   dirty = true;
   savedState.value = 'saving';
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(flushSave, 600);
 }
 async function flushSave() {
-  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   if (!dirty || !mm || !mapId.value) return;
   dirty = false;
   try {
@@ -681,7 +686,12 @@ async function flushSave() {
       saveMindmapMembers(mapId.value, members),
     ]);
     savedState.value = 'saved';
-  } catch (e) { savedState.value = 'save-fail'; console.error(e); }
+  } catch (e) { dirty = true; savedState.value = 'save-fail'; console.error(e); ElMessage.error('保存失败：' + (e?.message || e)); }
+}
+// 工具栏「保存」按钮：手动保存当前导图
+async function saveNow() {
+  if (!dirty) return;
+  await flushSave();
 }
 
 // ---------- 工具栏 ----------
@@ -755,47 +765,6 @@ function renderNodeDescs() {
   } catch {}
 }
 
-// ---------- 折叠预览：折叠的分支节点下方显示子节点名（便于快速了解折叠内容） ----------
-let foldPreviewTimer: any = null;
-function scheduleFoldPreview() {
-  if (foldPreviewTimer) clearTimeout(foldPreviewTimer);
-  foldPreviewTimer = setTimeout(renderCollapsePreviews, 350);
-}
-function renderCollapsePreviews() {
-  if (!mm?.renderer?.root) return;
-  try {
-    document.querySelectorAll('.kh-fold-preview').forEach((el: any) => el.remove());
-    const walk = (n: any) => {
-      if (!n || !n.group) { (n?.children || []).forEach(walk); return; }
-      const nd = n.nodeData?.data;
-      const kids = n.nodeData?.children || [];
-      if (nd && nd.expand === false && kids.length) {
-        const g = n.group.node as SVGGElement;
-        let bbox: DOMRect | null = null;
-        try { bbox = (g as any).getBBox ? (g as any).getBBox() : null; } catch {}
-        if (!bbox || !bbox.height) { (n.children || []).forEach(walk); return; }
-        const names = kids.slice(0, 5).map((c: any) => {
-          const t = splitNodeText(c?.data?.text).title;
-          return (t || '（空）').slice(0, 14);
-        });
-        const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-        fo.setAttribute('class', 'kh-fold-preview');
-        const div = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
-        div.className = 'kh-fold-preview-box';
-        div.textContent = names.join(' ／ ');
-        fo.appendChild(div);
-        const w = Math.max(bbox.width, 80);
-        fo.setAttribute('x', String(bbox.x));
-        fo.setAttribute('y', String(bbox.y + bbox.height + 5));
-        fo.setAttribute('width', String(w));
-        fo.setAttribute('height', '22');
-        g.appendChild(fo);
-      }
-      (n.children || []).forEach(walk);
-    };
-    walk(mm.renderer.root);
-  } catch {}
-}
 // ---------- 工具栏 ----------
 function active() {
   if (activeNode.value) return activeNode.value;
@@ -1267,7 +1236,7 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 .ml-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
 .ml-card { position: relative; border: 1px solid var(--el-border-color); border-radius: 10px; padding: 14px; cursor: pointer; background: var(--el-bg-color); transition: box-shadow .15s; }
 .ml-card:hover { box-shadow: 0 3px 12px var(--el-box-shadow-light); }
-.ml-card-pin { position: absolute; top: 8px; left: 10px; font-size: 14px; }
+.ml-card-pin { position: absolute; top: 8px; right: 10px; left: auto; font-size: 14px; }
 .ml-title { font-weight: 600; margin-bottom: 6px; color: var(--el-text-color-primary); }
 .ml-meta { font-size: 12px; color: var(--el-text-color-secondary); }
 .ml-tags { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
@@ -1287,7 +1256,7 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 .ml-recycle-list { display: flex; flex-direction: column; border: 1px solid var(--el-border-color); border-radius: 10px; overflow: hidden; }
 .ml-recycle-list .ml-row-title { max-width: none; }
 /* 右键菜单 */
-.ml-ctx { position: absolute; z-index: 99; background: var(--el-bg-color); border: 1px solid var(--el-border-color); border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, .12); padding: 4px; min-width: 150px; }
+.ml-ctx { position: fixed; z-index: 200; background: var(--el-bg-color); border: 1px solid var(--el-border-color); border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, .12); padding: 4px; min-width: 150px; }
 .ml-ctx-item { padding: 6px 12px; font-size: 13px; border-radius: 5px; cursor: pointer; color: var(--el-text-color-primary); }
 .ml-ctx-item:hover { background: rgba(64, 158, 255, .1); }
 .ml-ctx-item.danger { color: #e74c3c; }
@@ -1305,7 +1274,6 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 .mm-body { flex: 1; display: flex; min-height: 0; }
 .mm-side { width: 170px; flex: none; overflow: auto; padding: 10px 12px; border-right: 1px solid var(--el-border-color); box-sizing: border-box; }
 .mm-side-left { width: 170px; }
-.mm-side-right { border-right: none; border-left: 1px solid var(--el-border-color); width: 190px; }
 .mm-side-drag { width: 2px; flex: none; cursor: col-resize; background: var(--el-border-color); opacity: .5; }
 .mm-side-drag:hover { opacity: 1; background: var(--kh-brand, #409eff); }
 .ms-tabs { display: flex; gap: 2px; margin-bottom: 8px; border-bottom: 1px solid var(--el-border-color); }
@@ -1313,13 +1281,17 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 .ms-tab.on { color: var(--kh-brand, #409eff); border-bottom-color: var(--kh-brand, #409eff); font-weight: 600; }
 .ms-title { font-weight: 600; font-size: 13px; margin-bottom: 10px; color: var(--el-text-color-primary); }
 .ms-outline-count { font-weight: 400; color: var(--el-text-color-secondary); font-size: 12px; margin-left: 4px; }
-.ms-layout { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
-.ms-layout :deep(.el-radio) { margin-right: 0; height: 26px; width: 100%; }
-.ms-layout :deep(.el-radio__label) { text-align: left; }
+/* 布局切换按钮组（左侧面板，紧凑按钮，正常文字高度） */
+.ms-layout-btns { display: flex; flex-wrap: wrap; gap: 2px; width: 100%; }
+.ms-layout-btns :deep(.el-radio-button) { flex: 1 1 48%; }
+.ms-layout-btns :deep(.el-radio-button__inner) { font-size: 12px; padding: 3px 0; width: 100%; }
+.mm-save-btn { margin-left: 8px; }
 .ms-outline { display: flex; flex-direction: column; font-size: 13px; }
 .ms-o-row { display: flex; align-items: center; gap: 4px; padding: 3px 6px; border-radius: 5px; cursor: pointer; color: var(--el-text-color-primary); line-height: 1.4; }
 .ms-o-row:hover { background: rgba(64, 158, 255, .08); }
-.ms-o-row.on { background: rgba(64, 158, 255, .16); }
+/* 大纲高亮行：使用全局标签底色（--kh-brand），白字增强对比度 */
+.ms-o-row.on { background: var(--kh-brand, #409eff); color: #fff; }
+.ms-o-row.on .ms-o-text { color: #fff; }
 .ms-o-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ms-themes { display: flex; flex-direction: column; gap: 6px; }
 .ms-theme { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; border: 1px solid transparent; color: var(--el-text-color-regular); }
@@ -1399,16 +1371,6 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 
 <style>
 /* 全局样式：SMM 动态注入的 SVG/foreignObject 元素不受 scoped 作用 */
-.kh-fold-preview-box {
-  font-size: 11px;
-  color: var(--el-text-color-secondary, #8a8f98);
-  line-height: 1.3;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  user-select: none;
-  pointer-events: none;
-}
 /* 节点描述渲染层：标题下方多行自动换行（幕布式） */
 .kh-node-desc-box {
   font-size: 11px;
