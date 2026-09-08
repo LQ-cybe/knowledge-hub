@@ -3,7 +3,7 @@ import { onMounted, ref, nextTick, watch, onBeforeUnmount } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   getTree, getResourcesPage, getTags, createTag, updateTag, deleteTag, setResourceTags,
-  search as apiSearch, fileUrl, rescan, moveResource, setPending,
+  search as apiSearch, fileUrl, rescan, moveResource, setPending, setPin,
   type Resource, type TagItem, type TreeNode,
 } from './api';
 
@@ -136,6 +136,8 @@ const selection = ref<Resource[]>([]);
 const viewMode = ref<'table' | 'grid'>('table');
 const searchMode = ref(false);
 const searchKeyword = ref('');
+/** 搜索范围：name=按文件名（当前目录内 title/path 匹配）；content=按内容（FTS 全库） */
+const searchScope = ref<'name' | 'content'>('name');
 /** 待整理筛选（pending=1）；工具栏「待整理」按钮切换 */
 const pendingOnly = ref(false);
 /** 卡片视图选中 id 集合（表格用 el-table 原生勾选；卡片自维护，框选两种视图共用） */
@@ -284,26 +286,72 @@ async function loadResources() {
   }
 }
 
-/** 全文搜索（跨全库，非当前目录） */
+/** 合并搜索：按文件名（当前目录内 title/path 筛选）或按内容（FTS 全库） */
 async function onSearch() {
   const q = searchKeyword.value.trim();
-  if (!q) { searchMode.value = false; return; }
-  try {
-    loading.value = true;
-    const rows = await apiSearch(q);
-    list.value = rows;
-    total.value = rows.length;
-    searchMode.value = true;
-  } catch (e) {
-    ElMessage.error('搜索失败：' + ((e as Error).message || '服务异常'));
-  } finally {
-    loading.value = false;
+  if (!q) { exitSearch(); return; }
+  if (searchScope.value === 'name') {
+    // 按文件名：复用资源列表 q（当前目录内），不做跨库跳转
+    searchMode.value = false;
+    filters.value.q = q;
+    page.value = 1;
+    await loadResources();
+  } else {
+    // 按内容：FTS 全库检索
+    try {
+      loading.value = true;
+      const rows = await apiSearch(q);
+      list.value = rows;
+      total.value = rows.length;
+      searchMode.value = true;
+    } catch (e) {
+      ElMessage.error('搜索失败：' + ((e as Error).message || '服务异常'));
+    } finally {
+      loading.value = false;
+    }
   }
 }
 function exitSearch() {
   searchMode.value = false;
   searchKeyword.value = '';
+  filters.value.q = '';
   loadResources();
+}
+
+/** 返回上一级（当前目录非根目录时可用） */
+function currentFolderNode(): TreeNode | null {
+  const find = (nodes: TreeNode[], id: string): TreeNode | null => {
+    for (const n of nodes) {
+      if (n.id === id) return n;
+      const r = find(n.children, id);
+      if (r) return r;
+    }
+    return null;
+  };
+  return find(treeData.value, currentFolderId.value || '');
+}
+async function goParent() {
+  if (!currentFolderId.value || currentFolderId.value === rootId.value) return;
+  const cur = currentFolderNode();
+  const pid = cur?.parent_id || rootId.value;
+  currentFolderId.value = pid;
+  searchMode.value = false;
+  filters.value.q = '';
+  searchKeyword.value = '';
+  page.value = 1;
+  await loadResources();
+}
+
+/** 置顶/取消置顶（列表图标前 + 卡片右上角图标单击切换；置顶资源排序优先） */
+async function togglePin(r: Resource) {
+  const pinned = !r.pinned;
+  try {
+    await setPin(r.id, pinned);
+    r.pinned = pinned ? 1 : 0;
+    await loadResources(); // 排序变化，刷新保持顺序一致
+  } catch (e) {
+    ElMessage.error('置顶失败：' + ((e as Error).message || '服务异常'));
+  }
 }
 
 async function refreshTags() {
@@ -605,14 +653,24 @@ defineExpose({ openFolder, openTag, reload });
     <!-- 右：内容区 -->
     <main class="main">
       <div class="toolbar">
+        <el-button v-if="currentFolderId && currentFolderId !== rootId" size="default" @click="goParent" title="返回上一级目录">← 返回</el-button>
         <el-input
-          v-model="filters.q"
-          placeholder="当前目录内按标题/路径筛选"
+          v-model="searchKeyword"
+          placeholder="按文件名或内容搜索"
           clearable
-          style="width: 200px;"
-          @keyup.enter="onFilterChange"
-          @clear="onFilterChange"
-        />
+          style="width: 260px;"
+          @keyup.enter="onSearch"
+          @clear="exitSearch"
+        >
+          <template #prepend>
+            <el-select v-model="searchScope" style="width: 86px;">
+              <el-option value="name" label="文件名" />
+              <el-option value="content" label="内容" />
+            </el-select>
+          </template>
+          <template #append><el-button @click="onSearch">搜索</el-button></template>
+        </el-input>
+        <el-button v-if="searchMode || filters.q" @click="exitSearch">清除</el-button>
         <el-select v-model="filters.type" style="width: 120px;" @change="onFilterChange">
           <el-option v-for="t in typeOptions" :key="t.value" :label="t.label" :value="t.value" />
         </el-select>
@@ -627,17 +685,6 @@ defineExpose({ openFolder, openTag, reload });
           <el-radio-button value="asc">↑</el-radio-button>
         </el-radio-group>
         <div class="tb-sep"></div>
-        <el-input
-          v-model="searchKeyword"
-          placeholder="全文搜索（FTS5）"
-          clearable
-          style="width: 200px;"
-          @keyup.enter="onSearch"
-          @clear="exitSearch"
-        >
-          <template #append><el-button @click="onSearch">搜索</el-button></template>
-        </el-input>
-        <el-button v-if="searchMode" @click="exitSearch">退出搜索</el-button>
         <el-radio-group v-model="viewMode" size="default">
           <el-radio-button value="table">表格</el-radio-button>
           <el-radio-button value="grid">卡片</el-radio-button>
@@ -671,6 +718,12 @@ defineExpose({ openFolder, openTag, reload });
           <el-table-column label="名称" min-width="200">
             <template #default="{ row }">
               <span class="name-cell">
+                <span v-if="row.pinned" class="pin-ico on" title="置顶中" @click.stop="togglePin(row)">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M16 3l5 5-2.1 2.1-2.2-.5-3.8 3.8.5 2.2L11.3 18 6 12.7l-.6 3.9 1.9 1.9L6 21l-3-3 2.5-1.3 1.9 1.9 3.9-.6L9 11l2.2-.5 3.8-3.8-.5-2.2L16 3z"/></svg>
+                </span>
+                <span v-else class="pin-ico" title="置顶（单击置顶到最前）" @click.stop="togglePin(row)">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M16 3l5 5-2.1 2.1-2.2-.5-3.8 3.8.5 2.2L11.3 18 6 12.7l-.6 3.9 1.9 1.9L6 21l-3-3 2.5-1.3 1.9 1.9 3.9-.6L9 11l2.2-.5 3.8-3.8-.5-2.2L16 3z"/></svg>
+                </span>
                 <span class="name-ico" :title="typeLabels[row.type] || row.type">{{ row.type === 'file' ? fileIcon(row.title) : typeIcons[row.type] || '📄' }}</span>
                 <span class="name-text" :title="row.title">{{ row.title }}</span>
               </span>
@@ -705,6 +758,9 @@ defineExpose({ openFolder, openTag, reload });
           :class="{ 'card-sel': gridSelected.has(r.id) }" @click="onRowClick(r)">
           <span class="card-check" :class="{ on: gridSelected.has(r.id) }" @click.stop="toggleGridSelect(r)">
             <svg v-if="gridSelected.has(r.id)" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8.5L6.5 12L13 4.5"/></svg>
+          </span>
+          <span class="card-pin" :class="{ on: r.pinned }" :title="r.pinned ? '置顶中（单击取消）' : '置顶（单击置顶到最前）'" @click.stop="togglePin(r)">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M16 3l5 5-2.1 2.1-2.2-.5-3.8 3.8.5 2.2L11.3 18 6 12.7l-.6 3.9 1.9 1.9L6 21l-3-3 2.5-1.3 1.9 1.9 3.9-.6L9 11l2.2-.5 3.8-3.8-.5-2.2L16 3z"/></svg>
           </span>
           <div class="thumb" :class="{ 'thumb-img': isImage(r) }">
             <img v-if="isImage(r)" :src="fileUrl(r.id)" loading="lazy" :alt="r.title" />
@@ -941,4 +997,23 @@ html.dark .tree-wrap::-webkit-scrollbar-thumb:hover, html.dark .grid::-webkit-sc
 .card:hover .card-check { opacity: 1; }
 .card-check.on { background: var(--kh-brand, #409eff); border-color: var(--kh-brand, #409eff); opacity: 1; }
 .card-sel { outline: 2px solid var(--kh-brand, #409eff); outline-offset: -2px; }
+
+/* ---------- 置顶图标：列表（图标前）+ 卡片（右上角）单色浅色 ---------- */
+.pin-ico {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 4px; cursor: pointer;
+  color: var(--el-text-color-placeholder, #b6c2d1); transition: color 0.15s, background 0.15s;
+}
+.pin-ico:hover { color: var(--kh-brand, #409eff); background: rgba(64, 158, 255, 0.1); }
+.pin-ico.on { color: var(--kh-brand, #409eff); }
+.card-pin {
+  position: absolute; top: 6px; right: 6px; z-index: 2;
+  width: 20px; height: 20px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  color: rgba(255, 255, 255, 0.85); background: rgba(0, 0, 0, 0.18);
+  opacity: 0.5; transition: opacity 0.15s;
+}
+.card:hover .card-pin { opacity: 1; }
+.card-pin:hover { color: #fff; background: rgba(0, 0, 0, 0.35); }
+.card-pin.on { color: var(--kh-brand, #409eff); opacity: 1; background: rgba(255, 255, 255, 0.9); }
 </style>

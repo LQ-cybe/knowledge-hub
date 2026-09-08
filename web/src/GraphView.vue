@@ -18,6 +18,9 @@ const collapseMode = ref<'all' | 'root' | 'depth'>('all');
 const collapseDepth = ref(2);
 const maxDepth = ref(1);
 
+/** 全局标签显示开关（默认不显示；控制所有视图的节点标签） */
+const showLabels = ref(false);
+
 /** 层级图下钻栈：点击某个组节点后，只显示该组及其子节点；点空白/返回按钮逐级返回 */
 const drillStack = ref<HierarchyNode[]>([]);
 /** 打包图滚轮缩放系数（1=原始大小） */
@@ -132,7 +135,7 @@ function render() {
           emphasis: { scale: 1.15, label: { show: true } },
           data: nodes.map(n => ({
             id: n.id, name: n.name, symbolSize: n.symbolSize, category: n.category,
-            label: { show: true, formatter: fmt, fontSize: 11, color: labelColor() },
+            label: { show: showLabels.value, formatter: fmt, fontSize: 11, color: labelColor() },
           })),
           links: links.map(l => ({ source: l.source, target: l.target })),
           categories: [
@@ -165,7 +168,7 @@ function render() {
           type: 'sankey',
           data: sNodes,
           links: sLinks,
-          label: { formatter: fmt, fontSize: 11, color: labelColor() },
+          label: { show: showLabels.value, formatter: fmt, fontSize: 11, color: labelColor() },
           lineStyle: { color: 'gradient', opacity: 0.5 },
           nodeAlign: 'left',
           emphasis: { focus: 'adjacency' },
@@ -265,7 +268,7 @@ function renderHierarchy() {
         roam: true,
         nodeClick: 'zoomToNode',
         breadcrumb: { show: true, bottom: 0, itemStyle: { color: '#8BC8EA' }, textStyle: { color: '#fff', fontSize: 11 } },
-        label: { show: true, formatter: (p: any) => p.name, fontSize: 11, color: '#fff' },
+        label: { show: showLabels.value, formatter: (p: any) => p.name, fontSize: 11, color: '#fff' },
         upperLabel: { show: true, height: 20, formatter: (p: any) => `${p.name}（${p.value}）`, fontSize: 11, color: labelColor() },
         itemStyle: { borderColor: isDark() ? '#1f2937' : '#fff', borderWidth: 1, gapWidth: 1 },
         levels: [
@@ -284,7 +287,7 @@ function renderHierarchy() {
         center: ['50%', '50%'],
         sort: 'desc',
         emphasis: { focus: 'ancestor' },
-        label: { fontSize: 11, color: '#fff', rotate: 'radial' },
+        label: { show: showLabels.value, fontSize: 11, color: '#fff', rotate: 'radial' },
         levels: [
           {},
           { r0: '18%', r: '44%', label: { rotate: 'tangential' } },
@@ -353,10 +356,11 @@ function renderPack(tree: HierarchyNode[]) {
         // 滚轮缩放：以画布中心为基准放大/缩小（custom 系列无坐标系，坐标即像素）
         const children = [
           { type: 'circle', shape: { cx: xy[0], cy: xy[1], r: it.r * z },
-            style: { fill: color, fillOpacity: 0.12 + (it.depth === 1 ? 0.25 : 0.08), stroke: color, lineWidth: it.depth === 1 ? 1.6 : 0.9 } },
+            // 父圆近透明仅描边（容器感）、子圆填充略实：嵌套关系清晰，子节点不与父节点"糊"在一起
+            style: { fill: color, fillOpacity: it.depth === 1 ? 0.05 : 0.16, stroke: color, lineWidth: it.depth === 1 ? 1.4 : 0.8 } },
         ];
-        // 顶层/大圆显示名称（r 足够大才画文字，避免标签堆叠）
-        if (it.r * z >= 16) {
+        // 顶层/大圆显示名称（r 足够大才画文字，避免标签堆叠）；受全局标签显示开关控制
+        if (showLabels.value && it.r * z >= 16) {
           children.push({
             type: 'text', style: {
               x: xy[0], y: xy[1],
@@ -434,6 +438,9 @@ function renderChord() {
   }));
   chart?.dispose();
   chart = echarts.init(chartEl.value);
+  // 源节点 → 颜色映射：每条连线按源节点独立配色（不再整体一个颜色）
+  const colorById = new Map<string, string>();
+  sNodes.forEach((n, i) => colorById.set(n.name, packPalette[i % packPalette.length]));
   chart.setOption({
     tooltip: {
       trigger: 'item', confine: true, hideDelay: 60,
@@ -449,10 +456,12 @@ function renderChord() {
       roam: true, // 滚轮缩放、拖拽平移
       draggable: false,
       animation: false,
-      data: sNodes.map(n => ({ ...n, label: { show: true, formatter: n.name, fontSize: 11, color: labelColor() } })),
-      links: chordLinks.map(l => ({ source: l.source, target: l.target, value: l.value, lineStyle: { width: Math.min(8, 1 + l.value * 1.2) } })),
+      data: sNodes.map(n => ({ ...n, label: { show: showLabels.value, formatter: n.name, fontSize: 11, color: labelColor() } })),
+      links: chordLinks.map(l => ({
+        source: l.source, target: l.target, value: l.value,
+        lineStyle: { color: colorById.get(l.source) || '#909399', width: Math.min(8, 1 + l.value * 1.2), opacity: 0.6, curveness: 0.08 },
+      })),
       categories: [],
-      lineStyle: { color: 'source', curveness: 0.08, opacity: 0.55 },
       emphasis: { focus: 'adjacency', scale: 1.15 },
     }],
   }, true);
@@ -523,10 +532,11 @@ function renderTree() {
       layout: 'orthogonal',
       orient: 'LR',
       top: 12, left: 10, right: 70, bottom: 12,
+      roam: true, // 滚轮缩放、拖拽平移（树图此前无法缩放）
       symbolSize: 9,
       initialTreeDepth: -1,
-      label: { formatter: (p: any) => labelMap.get(p.name) || p.name, fontSize: 11, color: labelColor(), position: 'right' },
-      lineStyle: { color: lineColor(), width: 1 },
+      label: { show: showLabels.value, formatter: (p: any) => labelMap.get(p.name) || p.name, fontSize: 11, color: labelColor(), position: 'right' },
+      lineStyle: { color: lineColor(), width: 1.8 }, // 线条加粗（原 1 过细）
       expandAndCollapse: true,
     }],
   }, true);
@@ -596,6 +606,7 @@ function onThemeChange() { render(); }
 let ro: ResizeObserver | null = null;
 
 watch([dimension, view], load);
+watch(showLabels, render); // 标签显示开关变化 → 立即重渲染当前视图
 
 onMounted(() => {
   load();
@@ -619,13 +630,17 @@ onBeforeUnmount(() => {
   <div class="graph-view">
     <div class="graph-toolbar">
       <span class="label">维度</span>
-      <el-radio-group v-model="dimension">
+      <!-- 矩形树图/旭日图/打包图基于文件夹层级，与维度无关：禁用维度切换避免"点了没反应" -->
+      <el-radio-group v-model="dimension" :disabled="isHierarchyView()">
         <el-radio-button v-for="(d, k) in dimensionLabels" :key="k" :value="k">{{ d }}</el-radio-button>
       </el-radio-group>
       <span class="label" style="margin-left: 16px;">视图</span>
       <el-radio-group v-model="view">
         <el-radio-button v-for="(v, k) in viewLabels" :key="k" :value="k">{{ v }}</el-radio-button>
       </el-radio-group>
+
+      <!-- 标签显示开关：控制所有视图的节点标签（默认不显示） -->
+      <el-checkbox v-model="showLabels" style="margin-left: 12px; white-space: nowrap;">显示标签</el-checkbox>
 
       <!-- 层级控制：所有视图可用（关系图/桑基图按层过滤，树图折叠节点，层级图剪枝） -->
       <el-button-group>

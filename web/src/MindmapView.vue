@@ -142,8 +142,7 @@
               <el-radio-button value="left"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.left"></span>向左</el-radio-button>
               <el-radio-button value="mind"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.mind"></span>导图</el-radio-button>
               <el-radio-button value="org"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.org"></span>组织</el-radio-button>
-              <el-radio-button value="radial"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.radial"></span>放射</el-radio-button>
-              <el-radio-button value="fish2"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.fish2"></span>双鱼骨</el-radio-button>
+              <el-radio-button value="radial"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.radial"></span>鱼骨图</el-radio-button>
               <el-radio-button value="timeline"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.timeline"></span>时间轴</el-radio-button>
             </el-radio-group>
             <div class="ms-title" style="margin-top: 14px;">主题</div>
@@ -260,8 +259,10 @@ import 'simple-mind-map/full.js';
 import { getMindmaps, createMindmap, deleteMindmap, deleteMindmapPermanent, restoreMindmap, getMindmap, updateMindmap, saveMindmapNodes, saveMindmapLinks, saveMindmapMembers, getRecycleMindmaps, getRecycleInfo, getTags, createTag, deleteTag, type MindmapNode, type MindmapLink, type MindmapMember, type MindmapMeta, type RecycleInfo } from './api';
 
 const VIRT_ROOT = '__VR__';
-const LAYOUT_MAP: Record<string, string> = { right: 'logicalStructure', left: 'logicalStructureLeft', mind: 'mindMap', org: 'organizationStructure', radial: 'fishbone', fish2: 'fishbone2', timeline: 'timeline' };
+const LAYOUT_MAP: Record<string, string> = { right: 'logicalStructure', left: 'logicalStructureLeft', mind: 'mindMap', org: 'organizationStructure', radial: 'fishbone', timeline: 'timeline' };
 const LAYOUT_REV: Record<string, string> = { mindMap: 'free', logicalStructure: 'right', logicalStructureLeft: 'left', organizationStructure: 'org', fishbone: 'radial' };
+/** 布局中文名（下拉/提示用） */
+const LAYOUT_NAMES: Record<string, string> = { right: '向右', left: '向左', mind: '导图', org: '组织', radial: '鱼骨图', timeline: '时间轴' };
 const SHAPES: Record<string, string> = { auto: '自动', rect: '矩形', round: '圆角', ellipse: '椭圆', diamond: '菱形', parallelogram: '平行四边形', octagon: '八角', outerTri: '外三角', innerTri: '内三角' };
 const SHAPE_MAP: Record<string, string> = {
   auto: 'rectangle', rect: 'rectangle', round: 'roundedRectangle', ellipse: 'ellipse',
@@ -384,7 +385,6 @@ const LAYOUT_ICONS: Record<string, string> = {
   mind: '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="3" cy="8" r="1.8" fill="currentColor"/><circle cx="8" cy="3" r="1.5" fill="currentColor"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="8" cy="13" r="1.5" fill="currentColor"/><circle cx="13" cy="6" r="1.5" fill="currentColor"/><circle cx="13" cy="11" r="1.5" fill="currentColor"/><path d="M4.6 7.6h2M8 4.4v2.2M8 9.4v2.2M9.4 8h2.4M9.4 6h2.4M9.4 11h2.4" stroke="currentColor" stroke-width="1"/></svg>',
   org: '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="8" cy="2.5" r="1.8" fill="currentColor"/><circle cx="4" cy="8.5" r="1.5" fill="currentColor"/><circle cx="8" cy="8.5" r="1.5" fill="currentColor"/><circle cx="12" cy="8.5" r="1.5" fill="currentColor"/><circle cx="6" cy="13.5" r="1.4" fill="currentColor"/><circle cx="10" cy="13.5" r="1.4" fill="currentColor"/><path d="M7.6 4.2l-2.5 3M8.4 4.2l-.2 2.8M8.4 4.2l2.5 3M5 10v1.8M11 10v1.8M8 10v1.8" stroke="currentColor" stroke-width="1"/></svg>',
   radial: '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="3" cy="8" r="1.8" fill="currentColor"/><path d="M4.6 8h10M7 5.4c1.6-.7 3.2-.7 4.8-.2M7 10.6c1.6.7 3.2.7 4.8.2" stroke="currentColor" stroke-width="1" fill="none"/></svg>',
-  fish2: '<svg viewBox="0 0 16 16" width="14" height="14"><path d="M2 8h12M4.5 3.5c1.5-1 3-1.5 4.5-1.5M4.5 12.5c1.5 1 3 1.5 4.5 1.5M11.5 4.5c-1-1.2-1.8-2.4-2.3-3.6M11.5 11.5c-1 1.2-1.8 2.4-2.3 3.6" stroke="currentColor" stroke-width="1" fill="none"/><circle cx="2" cy="8" r="1.6" fill="currentColor"/></svg>',
   timeline: '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="2.5" cy="8" r="1.4" fill="currentColor"/><path d="M4 8h10.5M6.5 5l4.5-2M6.5 11l4.5 2" stroke="currentColor" stroke-width="1" fill="none"/><circle cx="7" cy="8" r="1.2" fill="currentColor"/><circle cx="12" cy="8" r="1.2" fill="currentColor"/></svg>',
 };
 
@@ -678,7 +678,7 @@ async function openMap(id: string) {
     mapId.value = id;
     mapTitle.value = data.title;
     view.value = 'editor';
-    layoutKey.value = (['right', 'left', 'mind', 'org', 'radial', 'fish2', 'timeline'].includes(data.layout) ? data.layout : 'right');
+    layoutKey.value = (['right', 'left', 'mind', 'org', 'radial', 'timeline'].includes(data.layout) ? data.layout : 'right');
     themeKey.value = (THEMES[data.theme] ? data.theme : 'nexa-light');
     activeNode.value = null;
     outlineTree.value = []; outlineActiveUid.value = '';
@@ -1058,9 +1058,9 @@ function themeCfgFor(k: string): Record<string, any> {
   const t = THEMES[k] || THEMES['nexa-light'];
   const isDark = document.documentElement.classList.contains('dark');
   const cfg = { ...t.cfg };
-  // 第二层节点：放射（鱼骨）横向留白 30（官方 100 过大、上轮 6 过窄），其余布局保留 SMM 默认；
-  // 第二层纵向留白 18（mindMap/逻辑/组织等上下展开布局不再贴死）
-  cfg.second = { ...(cfg.second || {}), ...(layoutKey.value === 'radial' ? { marginX: 30 } : {}), marginY: 9 };
+  // 第二层节点：鱼骨图（放射）横向留白 20（官方 100 过大、上轮 6 过窄重叠、30 仍显浪费——本轮只调水平 X 间距），其余布局保留 SMM 默认；
+  // 第二层纵向留白 9（第 8 轮按用户要求减半，教育心理学纵向过密已修复）
+  cfg.second = { ...(cfg.second || {}), ...(layoutKey.value === 'radial' ? { marginX: 20 } : {}), marginY: 9 };
   // 更深层节点纵向留白（默认 node.marginY=0 导致第三层起贴死）——第 8 轮按用户要求减半（18/24 → 9/12）
   cfg.node = { ...(cfg.node || {}), marginY: 12 };
   // SMM 重渲染（切布局等）会用 themeConfig.backgroundColor 覆盖容器背景，必须同时替换该字段

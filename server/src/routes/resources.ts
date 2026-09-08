@@ -27,6 +27,7 @@ interface ResourceRow {
   updated_at: string;
   done: number;
   content?: string;
+  pinned?: number;
 }
 
 /** GET /api/resources —— 资源列表（可按 type/parentId/status/q/tag 过滤 + 排序 + 分页）
@@ -57,12 +58,14 @@ router.get('/resources', (req: Request, res) => {
   };
   const orderCol = orderCols[orderBy] || 'r.updated_at';
   const orderDirSql = orderDir.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
-  const orderSql = `ORDER BY CASE r.type WHEN 'folder' THEN 0 ELSE 1 END, ${orderCol} ${orderDirSql}`;
+  // 置顶优先：文件夹先、置顶次之、再按所选排序字段（置顶资源不受排序方向影响）
+  const orderSql = `ORDER BY CASE r.type WHEN 'folder' THEN 0 ELSE 1 END, json_extract(r.meta, '$.pinned') DESC, ${orderCol} ${orderDirSql}`;
 
   // 标签聚合（数据库视图显示用；子查询走 resource_tags 主键索引，仅对返回行执行）
   const tagNamesSub = `(SELECT GROUP_CONCAT(t.name, '|') FROM resource_tags rt JOIN tags t ON t.id = rt.tag_id WHERE rt.resource_id = r.id)`;
   const tagIdsSub = `(SELECT GROUP_CONCAT(t.id, '|') FROM resource_tags rt JOIN tags t ON t.id = rt.tag_id WHERE rt.resource_id = r.id)`;
   const cols = `r.id, r.type, r.title, r.path, r.parent_id, r.done, r.size, r.created_at, r.updated_at,
+                json_extract(r.meta, '$.pinned') AS pinned,
                 ${tagNamesSub} AS tag_names, ${tagIdsSub} AS tag_ids`;
 
   if (page == null) {
@@ -530,6 +533,18 @@ router.post('/resources/pending', (req, res) => {
   });
   const count = tx();
   res.json({ code: 0, data: { ok: true, count, skipped, pending: !!pending } });
+});
+
+/** POST /api/resources/:id/pin —— 置顶/取消置顶（meta.pinned；浏览页列表/卡片图标单击切换，置顶资源排序优先） */
+router.post('/resources/:id/pin', (req, res) => {
+  const db = getDb();
+  const pinned = req.body?.pinned ? 1 : 0;
+  const row = db.prepare(`SELECT id FROM resources WHERE id = ? AND status='active'`).get(req.params.id);
+  if (!row) { res.status(404).json({ code: 1, msg: '资源不存在' }); return; }
+  db.prepare(
+    `UPDATE resources SET meta = json_set(CASE WHEN json_valid(meta) THEN meta ELSE '{}' END, '$.pinned', ?), updated_at = ? WHERE id = ?`
+  ).run(pinned, new Date().toISOString(), req.params.id);
+  res.json({ code: 0, data: { ok: true, pinned: !!pinned } });
 });
 
 /** PUT /api/resources/:id/tags —— 设置资源标签（全量替换；recursive=true 且为文件夹时，子树全部资源合并追加这些标签） */

@@ -15,6 +15,7 @@ export interface Resource {
   highlight?: string;
   tag_names?: string;
   tag_ids?: string;
+  pinned?: number;
 }
 
 export interface FolderNode {
@@ -88,6 +89,9 @@ export const moveResource = (id: string, targetParentId: string | null) =>
 /** 批量标记/取消"待整理" */
 export const setPending = (ids: string[], pending: boolean) =>
   http.post('/resources/pending', { ids, pending }).then(r => r.data.data);
+/** 置顶/取消置顶（浏览页列表/卡片图标单击切换） */
+export const setPin = (id: string, pinned: boolean) =>
+  http.post(`/resources/${id}/pin`, { pinned }).then(r => r.data.data);
 
 export interface GraphNode {
   id: string;

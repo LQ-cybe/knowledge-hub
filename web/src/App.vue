@@ -148,6 +148,8 @@ body {
 
 .main-tabs { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .main-tabs > .el-tabs__header { margin-bottom: 0; background: var(--el-bg-color, #fff); border-bottom: 1px solid var(--el-border-color, #e5e7eb); padding: 0 8px; }
+/* 页面切换标签（工作台/浏览/图谱…）收紧间距，避免留白过多 */
+.main-tabs > .el-tabs__header .el-tabs__item { padding: 0 10px; }
 .main-tabs > .el-tabs__content { flex: 1; min-height: 0; }
 .main-tabs > .el-tabs__content > .el-tab-pane { height: 100%; }
 
