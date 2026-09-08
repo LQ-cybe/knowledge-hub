@@ -99,7 +99,7 @@ export const getTimeline = (type = '', tag = '') =>
 
 // ---------- 思维导图 ----------
 export interface MindmapMeta { id: string; title: string; layout: string; theme: string; pinned: number; tags: string; deleted_at: string | null; updated_at: string; node_count: number }
-export interface MindmapNode { id: string; parent_id: string | null; title: string; kind: string; x: number; y: number; color: string | null; shape: string; sort: number }
+export interface MindmapNode { id: string; parent_id: string | null; title: string; desc?: string; kind: string; x: number; y: number; color: string | null; shape: string; sort: number }
 export interface MindmapLink { id: string; source_id: string; target_id: string; label: string }
 export interface MindmapMember { group_id: string; node_id: string }
 export interface RecycleInfo { count: number; clear_at: string | null; days: number }

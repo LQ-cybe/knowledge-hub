@@ -143,6 +143,11 @@ function migrate(db: Database.Database): void {
     // 回收站软删除：NULL=正常；有值=已移入回收站（记录删除时间，超期自动清理）
     db.exec(`ALTER TABLE mindmaps ADD COLUMN deleted_at TEXT`);
   }
+  const ncols = db.prepare(`PRAGMA table_info(mindmap_nodes)`).all() as { name: string }[];
+  if (!ncols.some(c => c.name === 'desc')) {
+    // 节点描述（幕布式：标题下方自动换行的说明文字，独立于标题存储）
+    db.exec(`ALTER TABLE mindmap_nodes ADD COLUMN desc TEXT NOT NULL DEFAULT ''`);
+  }
 }
 
 /** 获取全局数据库连接（单例，初始化建表） */

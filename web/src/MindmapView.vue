@@ -95,7 +95,18 @@
               </el-dropdown-menu>
             </template>
           </el-dropdown>
-          <el-button size="small" title="导入导图：支持 Freemind(.mm) / CSV / TXT / Markdown / JSON" @click="importFile">导入</el-button>
+          <el-dropdown trigger="click" @command="onImportCmd" class="mm-export">
+            <el-button size="small" title="导入导图到新文件">导入 ▾</el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="mm">Freemind（.mm）</el-dropdown-item>
+                <el-dropdown-item command="csv">CSV 表格</el-dropdown-item>
+                <el-dropdown-item command="md">Markdown</el-dropdown-item>
+                <el-dropdown-item command="txt">文本（缩进）</el-dropdown-item>
+                <el-dropdown-item command="json">JSON 数据</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
         <div class="mm-zoom">
           <el-button size="small" text @click="zoomOut">－</el-button>
@@ -123,18 +134,19 @@
               <el-radio value="org">组织图</el-radio>
               <el-radio value="radial">放射</el-radio>
             </el-radio-group>
+            <div class="ms-title" style="margin-top: 14px;">主题</div>
+            <div class="ms-themes">
+              <div v-for="(t, k) in THEMES" :key="k" class="ms-theme" :class="{ on: themeKey === k }" @click="setTheme(k)">
+                <span class="mt-swatch" :style="{ background: `linear-gradient(135deg, ${t.rootFill} 0%, ${t.rootFill}88 100%)` }"></span>{{ t.name }}
+              </div>
+            </div>
           </template>
           <template v-else>
             <div class="ms-title">大纲 <span class="ms-outline-count">{{ outlineCount }}</span></div>
             <div class="ms-outline" v-if="outlineTree.length">
               <div v-for="o in flatOutline" :key="o.uid" class="ms-o-row" :class="{ on: o.uid === outlineActiveUid }"
                 :style="{ paddingLeft: 8 + o.depth * 14 + 'px' }"
-                @click="outlineSelect(o.uid)" @dblclick="outlineRename(o)">
-                <span class="ms-o-btns">
-                  <span class="ms-o-btn" title="添加子主题" @click.stop="outlineAddChild(o)">＋</span>
-                  <span class="ms-o-btn" title="添加同级" @click.stop="outlineAddSibling(o)">⇥</span>
-                  <span class="ms-o-btn" title="删除节点" @click.stop="outlineRemove(o)">✕</span>
-                </span>
+                @click="outlineSelect(o.uid)" @dblclick="outlineRename(o)" @contextmenu.prevent="outlineCtx($event, o)">
                 <span class="ms-o-text">{{ o.text || '（空）' }}</span>
               </div>
             </div>
@@ -146,35 +158,9 @@
         <!-- 画布 -->
         <div class="mm-canvas"><div ref="mmEl" class="mm-host"></div></div>
 
-        <!-- 右侧：设置 + 节点属性 -->
+        <!-- 右侧：节点属性（颜色 / 形状 / 描述） -->
         <div class="mm-side mm-side-right">
           <div class="ms-title">设置</div>
-          <div class="ms-group">
-            <div class="ms-label">布局</div>
-            <el-radio-group v-model="layoutKey" class="ms-layout-row" @change="onLayoutChange">
-              <el-radio-button value="free">自由</el-radio-button>
-              <el-radio-button value="right">向右</el-radio-button>
-              <el-radio-button value="left">向左</el-radio-button>
-              <el-radio-button value="org">组织</el-radio-button>
-              <el-radio-button value="radial">放射</el-radio-button>
-            </el-radio-group>
-          </div>
-          <div class="ms-group">
-            <div class="ms-label">文档字号</div>
-            <el-select v-model="docSize" size="small" class="ms-font-size" @change="onDocSizeChange">
-              <el-option label="小" :value="12" />
-              <el-option label="标准" :value="14" />
-              <el-option label="大" :value="16" />
-            </el-select>
-          </div>
-          <div class="ms-group">
-            <div class="ms-label">文档主题</div>
-            <div class="ms-themes">
-              <div v-for="(t, k) in THEMES" :key="k" class="ms-theme" :class="{ on: themeKey === k }" @click="setTheme(k)">
-                <span class="mt-swatch" :style="{ background: `linear-gradient(135deg, ${t.rootFill} 0%, ${t.rootFill}88 100%)` }"></span>{{ t.name }}
-              </div>
-            </div>
-          </div>
           <div class="ms-group" v-if="activeNode">
             <div class="ms-label">节点颜色</div>
             <div class="ms-colors">
@@ -185,9 +171,11 @@
             <div class="ms-shapes">
               <span v-for="(s, k) in SHAPES" :key="k" class="ms-shape" :class="{ on: curShape === k }" @click="setNodeShape(k)">{{ s }}</span>
             </div>
+            <div class="ms-label" style="margin-top: 10px;">描述</div>
+            <el-input v-model="nodeDescText" type="textarea" :rows="3" class="ms-desc-input" placeholder="节点描述，自动换行" @change="saveNodeDesc" />
           </div>
           <div class="ms-group" v-else>
-            <div class="ms-tip">单击画布中的节点后可设置颜色与形状</div>
+            <div class="ms-tip">单击画布中的节点后可设置颜色、形状与描述</div>
           </div>
         </div>
       </div>
@@ -228,7 +216,16 @@
       </template>
     </el-dialog>
 
-    <input ref="importInput" type="file" accept=".mm,.csv,.txt,.md,.markdown,.json" class="mm-import-input" @change="onImportFile" />
+    <input ref="importInput" type="file" class="mm-import-input" @change="onImportFile" />
+
+    <!-- 大纲行右键菜单 -->
+    <div v-if="outlineCtxMenu" class="ml-ctx" :style="{ left: outlineCtxMenu.x + 'px', top: outlineCtxMenu.y + 'px' }" @contextmenu.prevent @click.stop>
+      <div class="ml-ctx-item" @click="ocAddChild">添加子主题</div>
+      <div class="ml-ctx-item" @click="ocAddSibling">添加同级</div>
+      <div class="ml-ctx-item" @click="ocRename">重命名</div>
+      <div class="ml-ctx-item danger" @click="ocRemove">删除节点</div>
+    </div>
+    <div v-if="outlineCtxMenu" class="ml-ctx-mask" @click="outlineCtxMenu = null" @contextmenu.prevent="outlineCtxMenu = null"></div>
   </div>
 </template>
 
@@ -359,8 +356,14 @@ const flatOutline = ref<{ uid: string; text: string; depth: number }[]>([]);
 const nodeEditDialog = ref(false);
 const nodeEditText = ref('');
 const nodeEditUid = ref('');
-const docSize = ref(Number(localStorage.getItem('kh-mm-fontsize') || 14));
 const importInput = ref<HTMLInputElement>();
+// 大纲行右键菜单
+const outlineCtxMenu = ref<{ x: number; y: number; uid: string; text: string } | null>(null);
+// 导入（下拉选择格式 → 打开文件选择，导入到新导图文件）
+const importType = ref('mm');
+const IMPORT_ACCEPT: Record<string, string> = { mm: '.mm', csv: '.csv', md: '.md,.markdown', txt: '.txt', json: '.json' };
+// 节点描述（幕布式，独立于标题，自动换行）
+const nodeDescText = ref('');
 
 const fmtTime = (s: string) => (s ? s.slice(5, 16).replace('T', ' ') : '');
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'n' + Date.now() + Math.random().toString(16).slice(2, 8));
@@ -441,6 +444,39 @@ async function delMap(id: string) {
 }
 
 // ---------- 数据映射：DB → simple-mind-map ----------
+// 节点描述（幕布式）：独立字段，不写入 SMM 富文本 text（避免 SMM 富文本序列化转义/污染标题），
+// 渲染时在节点下方自绘 foreignObject 显示（自动换行），编辑走右侧描述框
+const escHtml = (s: string) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+// 兼容：历史版本可能把"标题+描述"HTML 存进了 title，加载时拆回
+function splitNodeText(text: any): { title: string; desc: string } {
+  const s = String(text || '');
+  if (!s.includes('kh-node-desc')) return { title: plain(s), desc: '' };
+  try {
+    const doc = new DOMParser().parseFromString('<body>' + s + '</body>', 'text/html');
+    let title = '', desc = '';
+    doc.body.childNodes.forEach((el: any) => {
+      if (el.nodeType === 3) { title += (title && title.trim() ? '\n' : '') + el.textContent; return; }
+      const isDesc = el.classList && el.classList.contains('kh-node-desc');
+      const txt = (el.textContent || '').trim();
+      if (!txt) return;
+      if (isDesc) desc += (desc ? '\n' : '') + txt;
+      else title += (title ? '\n' : '') + txt;
+    });
+    return { title: title.trim(), desc };
+  } catch { return { title: plain(s), desc: '' }; }
+}
+// 读取节点的标题与描述（兼容历史 HTML title）
+function nodeTitleDesc(n: any): { title: string; desc: string } {
+  let title = plain(n.title);
+  let desc = (n as any).desc || '';
+  const raw = String(n.title || '');
+  if (raw.includes('<')) {
+    const sp = splitNodeText(raw);
+    if (!desc && sp.desc) desc = sp.desc;
+    if (sp.title) title = sp.title;
+  }
+  return { title, desc };
+}
 function dbToSmm(nodes: MindmapNode[], links: MindmapLink[], members: MindmapMember[]) {
   const byId = new Map(nodes.map(n => [n.id, n]));
   const kids = new Map<string, MindmapNode[]>();
@@ -456,7 +492,9 @@ function dbToSmm(nodes: MindmapNode[], links: MindmapLink[], members: MindmapMem
     nodeIds: memByGroup.get(b.id) || [],
   }));
   const build = (n: MindmapNode): any => {
-    const d: any = { data: { text: plain(n.title), uid: n.id, expand: true }, children: (kids.get(n.id) || []).filter(c => c.kind === 'node').map(build) };
+    const { title, desc } = nodeTitleDesc(n);
+    const d: any = { data: { text: title, uid: n.id, expand: true }, children: (kids.get(n.id) || []).filter(c => c.kind === 'node').map(build) };
+    if (desc) d.data.desc = desc;
     if (n.color) { d.data.fillColor = n.color; d.data.color = '#ffffff'; }
     if (n.shape && n.shape !== 'auto') d.data.shape = SHAPE_MAP[n.shape] || 'rectangle';
     // 概要（每行包成独立 <p>：SMM 富文本转换 removeRichTextStyes 会保留多个 <p> 为独立段落，
@@ -486,7 +524,7 @@ function smmToDb(root: any) {
     const id = data.uid;
     if (id !== VIRT_ROOT) {
       nodes.push({
-        id, parent_id: parentId, title: plain(data.text), kind: 'node',
+        id, parent_id: parentId, title: plain(data.text), desc: data.desc || '', kind: 'node',
         x: 0, y: 0,
         color: data.fillColor || null,
         shape: SHAPE_REV[data.shape] || 'auto',
@@ -514,6 +552,8 @@ function smmToDb(root: any) {
 // ---------- 编辑器 ----------
 async function openMap(id: string) {
   try {
+    // 从编辑器内重开（如导入到新文件后）：先销毁旧画布实例，避免新旧画布叠加
+    destroyMindMap();
     const data = await getMindmap(id);
     mapId.value = id;
     mapTitle.value = data.title;
@@ -532,6 +572,8 @@ async function openMap(id: string) {
       themeConfig: themeCfgFor(themeKey.value),
       enableFreeDrag: true,
       mousewheelAction: 'zoom',
+      // 分支节点常显展开/折叠按钮（有子节点的节点始终可见，点击折叠后显示隐藏子节点数）
+      alwaysShowExpandBtn: true,
       // 关系线激活时不显示两端拖拽调节锚点（用户不需要调节曲线控制点）
       enableAdjustAssociativeLinePoints: false,
       // 关联线渲染在节点下层，避免遮挡节点内容（默认 true 会盖住节点）
@@ -544,6 +586,8 @@ async function openMap(id: string) {
       if (!fitted) { fitted = true; setTimeout(() => { try { mm.view.fit(); } catch {} }, 30); }
       scheduleRenderBounds();
       refreshOutline();
+      renderCollapsePreviews();
+      renderNodeDescs();
     });
     bindEvents();
     window.addEventListener('keydown', onEditorKeydown);
@@ -563,6 +607,9 @@ function backToLib() {
 }
 function destroyMindMap() {
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+  if (foldPreviewTimer) { clearTimeout(foldPreviewTimer); foldPreviewTimer = null; }
+  if (descRenderTimer) { clearTimeout(descRenderTimer); descRenderTimer = null; }
+  document.querySelectorAll('.kh-fold-preview, .kh-node-desc-ov').forEach((el: any) => el.remove());
   if (mm) {
     try {
       mm.off('node_active');
@@ -598,12 +645,13 @@ function bindEvents() {
     activeNode.value = node;
     curColor.value = nd.fillColor || THEMES[themeKey.value].rootFill;
     curShape.value = SHAPE_REV[nd.shape] || 'auto';
+    nodeDescText.value = nd.desc || '';
     selCount.value = selNodes().length;
     outlineActiveUid.value = nd.uid;
   });
-  mm.on('node_tree_render_end', () => { scale.value = mm.view.scale || 1; });
-  mm.on('data_change', () => { markDirty(); refreshOutline(); });
-  mm.on('view_data_change', () => { markDirty(); refreshOutline(); });
+  mm.on('node_tree_render_end', () => { scale.value = mm.view.scale || 1; renderCollapsePreviews(); renderNodeDescs(); });
+  mm.on('data_change', () => { markDirty(); refreshOutline(); scheduleFoldPreview(); scheduleNodeDescs(); });
+  mm.on('view_data_change', () => { markDirty(); refreshOutline(); scheduleFoldPreview(); scheduleNodeDescs(); });
   mm.on('scale', () => scheduleRenderBounds());
   mm.on('draw_click', () => {
     // 点击画布空白处：取消边界选中
@@ -649,6 +697,104 @@ function setNodeShape(s: string) {
   curShape.value = s;
   mm.execCommand('SET_NODE_SHAPE', activeNode.value, SHAPE_MAP[s] || 'rectangle');
   markDirty();
+}
+// 保存节点描述（幕布式，自动换行）：写入独立 data.desc 字段并重绘描述层（不触碰标题文本）
+function saveNodeDesc() {
+  const node = activeNode.value;
+  if (!node) return;
+  try {
+    node.setData({ desc: nodeDescText.value });
+    mm.render();
+    markDirty();
+    setTimeout(() => { renderNodeDescs(); refreshOutline(); }, 100);
+  } catch (e: any) { ElMessage.error('保存描述失败：' + (e?.message || e)); }
+}
+
+// ---------- 节点描述渲染层：在节点下方自绘多行自动换行描述（独立于 SMM 文本体系） ----------
+let descRenderTimer: any = null;
+function scheduleNodeDescs() {
+  if (descRenderTimer) clearTimeout(descRenderTimer);
+  descRenderTimer = setTimeout(renderNodeDescs, 300);
+}
+function renderNodeDescs() {
+  if (!mm?.renderer?.root) return;
+  try {
+    document.querySelectorAll('.kh-node-desc-ov').forEach((el: any) => el.remove());
+    const walk = (n: any) => {
+      if (!n || !n.group) { (n?.children || []).forEach(walk); return; }
+      const nd = n.nodeData?.data;
+      if (nd && nd.desc && String(nd.desc).trim()) {
+        const g = n.group.node as SVGGElement;
+        let bbox: DOMRect | null = null;
+        try { bbox = (g as any).getBBox ? (g as any).getBBox() : null; } catch {}
+        if (!bbox || !bbox.height) { (n.children || []).forEach(walk); return; }
+        const lines = String(nd.desc).split('\n');
+        const maxLine = lines.reduce((m, l) => Math.max(m, l.length), 0);
+        const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+        fo.setAttribute('class', 'kh-node-desc-ov');
+        const div = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
+        div.className = 'kh-node-desc-box';
+        lines.forEach((l, i) => {
+          const p = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
+          p.className = 'kh-node-desc-line';
+          p.textContent = l;
+          div.appendChild(p);
+        });
+        fo.appendChild(div);
+        const w = Math.max(bbox.width, Math.min(maxLine * 11 + 12, 320));
+        const h = lines.length * 16 + 6;
+        fo.setAttribute('x', String(bbox.x));
+        fo.setAttribute('y', String(bbox.y + bbox.height + 4));
+        fo.setAttribute('width', String(w));
+        fo.setAttribute('height', String(h));
+        g.appendChild(fo);
+      }
+      (n.children || []).forEach(walk);
+    };
+    walk(mm.renderer.root);
+  } catch {}
+}
+
+// ---------- 折叠预览：折叠的分支节点下方显示子节点名（便于快速了解折叠内容） ----------
+let foldPreviewTimer: any = null;
+function scheduleFoldPreview() {
+  if (foldPreviewTimer) clearTimeout(foldPreviewTimer);
+  foldPreviewTimer = setTimeout(renderCollapsePreviews, 350);
+}
+function renderCollapsePreviews() {
+  if (!mm?.renderer?.root) return;
+  try {
+    document.querySelectorAll('.kh-fold-preview').forEach((el: any) => el.remove());
+    const walk = (n: any) => {
+      if (!n || !n.group) { (n?.children || []).forEach(walk); return; }
+      const nd = n.nodeData?.data;
+      const kids = n.nodeData?.children || [];
+      if (nd && nd.expand === false && kids.length) {
+        const g = n.group.node as SVGGElement;
+        let bbox: DOMRect | null = null;
+        try { bbox = (g as any).getBBox ? (g as any).getBBox() : null; } catch {}
+        if (!bbox || !bbox.height) { (n.children || []).forEach(walk); return; }
+        const names = kids.slice(0, 5).map((c: any) => {
+          const t = splitNodeText(c?.data?.text).title;
+          return (t || '（空）').slice(0, 14);
+        });
+        const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+        fo.setAttribute('class', 'kh-fold-preview');
+        const div = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
+        div.className = 'kh-fold-preview-box';
+        div.textContent = names.join(' ／ ');
+        fo.appendChild(div);
+        const w = Math.max(bbox.width, 80);
+        fo.setAttribute('x', String(bbox.x));
+        fo.setAttribute('y', String(bbox.y + bbox.height + 5));
+        fo.setAttribute('width', String(w));
+        fo.setAttribute('height', '22');
+        g.appendChild(fo);
+      }
+      (n.children || []).forEach(walk);
+    };
+    walk(mm.renderer.root);
+  } catch {}
 }
 // ---------- 工具栏 ----------
 function active() {
@@ -808,27 +954,12 @@ function setTheme(k: string) {
   applyCanvasBg();
   markDirty();
 }
-// 主题配置：系统深色时画布背景自动切为该主题的深色背景（跟随系统主题）；文档字号覆盖各层级节点字号
+// 主题配置：系统深色时画布背景自动切为该主题的深色背景（跟随系统主题）
 function themeCfgFor(k: string): Record<string, any> {
   const t = THEMES[k] || THEMES['nexa-light'];
   const isDark = document.documentElement.classList.contains('dark');
   // SMM 重渲染（切布局等）会用 themeConfig.backgroundColor 覆盖容器背景，必须同时替换该字段
-  const base = isDark ? { ...t.cfg, backgroundColor: t.darkBg, background: t.darkBg } : t.cfg;
-  const fs = docSize.value;
-  return {
-    ...base,
-    root: { ...(base.root || {}), fontSize: fs + 2 },
-    second: { ...(base.second || {}), fontSize: fs },
-    node: { ...(base.node || {}), fontSize: fs - 1 },
-    generalization: { ...(base.generalization || {}), fontSize: fs - 1 },
-  };
-}
-function onDocSizeChange(v: any) {
-  docSize.value = Number(v);
-  localStorage.setItem('kh-mm-fontsize', String(docSize.value));
-  if (mm) { try { mm.setThemeConfig(themeCfgFor(themeKey.value)); } catch {} }
-  applyCanvasBg();
-  markDirty();
+  return isDark ? { ...t.cfg, backgroundColor: t.darkBg, background: t.darkBg } : t.cfg;
 }
 // SMM 用内联样式设置容器背景，需手动应用（themeConfig.background 不会自动同步到容器）
 function applyCanvasBg() {
@@ -920,6 +1051,14 @@ function outlineRename(o: { uid: string; text: string }) {
   nodeEditText.value = o.text;
   nodeEditDialog.value = true;
 }
+// 大纲行右键菜单（行内 hover 按钮已移除，操作统一收进右键菜单，避免遮挡内容）
+function outlineCtx(e: MouseEvent, o: { uid: string; text: string }) {
+  outlineCtxMenu.value = { x: e.clientX, y: e.clientY, uid: o.uid, text: o.text };
+}
+function ocAddChild() { const m = outlineCtxMenu.value; if (!m) return; outlineCtxMenu.value = null; outlineAddChild({ uid: m.uid }); }
+function ocAddSibling() { const m = outlineCtxMenu.value; if (!m) return; outlineCtxMenu.value = null; outlineAddSibling({ uid: m.uid }); }
+function ocRename() { const m = outlineCtxMenu.value; if (!m) return; outlineCtxMenu.value = null; outlineRename({ uid: m.uid, text: m.text }); }
+function ocRemove() { const m = outlineCtxMenu.value; if (!m) return; outlineCtxMenu.value = null; outlineRemove({ uid: m.uid }); }
 function confirmNodeEdit() {
   const node = uidToNode(nodeEditUid.value);
   if (!node) { nodeEditDialog.value = false; return; }
@@ -963,6 +1102,12 @@ async function exportMap(type: string) {
   } catch (e: any) { ElMessage.error('导出失败：' + (e?.message || e)); }
 }
 function importFile() { importInput.value?.click(); }
+// 导入下拉：选择格式后打开对应文件选择器
+function onImportCmd(type: string) {
+  importType.value = type;
+  if (importInput.value) { importInput.value.accept = IMPORT_ACCEPT[type] || '.mm'; importInput.value.click(); }
+}
+// 导入到新导图文件（不覆盖当前画布内容）：解析 → 创建导图 → 保存节点 → 打开新导图
 function onImportFile(e: Event) {
   const input = e.target as HTMLInputElement;
   const file = input.files?.[0];
@@ -971,24 +1116,41 @@ function onImportFile(e: Event) {
   const reader = new FileReader();
   reader.onload = async () => {
     const text = String(reader.result || '');
-    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    const ext = importType.value;
     try {
       let data: any = null;
       if (ext === 'json') { data = JSON.parse(text); }
       else if (ext === 'mm') { data = parseFreemind(text); }
       else if (ext === 'csv') { data = parseCsv(text); }
-      else if (ext === 'md' || ext === 'markdown') { data = parseMarkdown(text); }
+      else if (ext === 'md') { data = parseMarkdown(text); }
       else if (ext === 'txt') { data = parseIndented(text); }
-      else { ElMessage.warning('不支持的格式：' + ext); return; }
+      else { ElMessage.warning('不支持的格式'); return; }
       if (!data || !data.data) { ElMessage.error('导入内容为空或格式无法识别'); return; }
-      if (!data.data.uid) data.data.uid = uid();
-      await ElMessageBox.confirm('导入将覆盖当前导图内容，确定导入？', '导入导图', { confirmButtonText: '导入', cancelButtonText: '取消', type: 'warning' });
-      mm.setData(data);
-      markDirty();
-      flushSave();
-      ElMessage.success('导入成功');
+      const base = (file.name.replace(/\.[^.]+$/, '') || '导入导图').trim() || '导入导图';
+      const created = await createMindmap(base);
+      const stamp = Date.now();
+      let nSort = 0;
+      const arr: any[] = [];
+      const toNodes = (d: any, parentId: string | null) => {
+        const uid2 = d.data.uid || ('imp_' + stamp + '_' + nSort);
+        d.data.uid = uid2;
+        // 跳过解析器生成的虚拟容器根（_virtual 标记），其子节点直接作为一级节点
+        if (uid2 !== VIRT_ROOT && !d.data._virtual) {
+          arr.push({ id: uid2, parent_id: parentId, title: plain(d.data.text), desc: '', kind: 'node', x: 0, y: 0, color: null, shape: 'auto', sort: nSort++ });
+        }
+        const eff = uid2 === VIRT_ROOT || d.data._virtual ? parentId : uid2;
+        (d.children || []).forEach((c: any) => toNodes(c, eff));
+      };
+      toNodes(data, null);
+      await Promise.all([
+        saveMindmapNodes(created.id, arr),
+        saveMindmapLinks(created.id, []),
+        saveMindmapMembers(created.id, []),
+      ]);
+      ElMessage.success('已导入到新导图：「' + base + '」');
+      await loadMaps();
+      openMap(created.id);
     } catch (err: any) {
-      if (err === 0) return;
       ElMessage.error('导入失败：' + (err?.message || err));
     }
   };
@@ -1007,9 +1169,9 @@ function parseFreemind(xml: string): any {
   };
   const mapEl = rootEl.parentElement;
   const topLevel = mapEl ? Array.from(mapEl.children).filter(c => c.tagName === 'node') : [];
-  // 多个一级节点 → 包一层虚拟根（与 DB 多根处理一致）
+  // 多个一级节点 → 包一层虚拟根（与 DB 多根处理一致；_virtual 标记导入时跳过）
   if (topLevel.length > 1) {
-    return { data: { text: '导入导图', uid: uid(), expand: true }, children: topLevel.map(walk) };
+    return { data: { text: '导入导图', uid: uid(), expand: true, _virtual: true }, children: topLevel.map(walk) };
   }
   return walk(rootEl);
 }
@@ -1018,7 +1180,7 @@ function parseCsv(text: string): any {
   const rows = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   const children: any[] = [];
   const byPath = new Map<string, any>();
-  const root = { data: { text: '导入导图', uid: uid(), expand: true }, children };
+  const root = { data: { text: '导入导图', uid: uid(), expand: true, _virtual: true }, children };
   for (const row of rows) {
     const segs = row.split(',');
     const path = segs[0].trim().replace(/\\/g, '/');
@@ -1043,7 +1205,7 @@ function parseCsv(text: string): any {
 // Markdown：标题（#）与列表（- * 1.）混合，按层级构建
 function parseMarkdown(text: string): any {
   const lines = text.split(/\r?\n/);
-  const root = { data: { text: '导入导图', uid: uid(), expand: true }, children: [] as any[] };
+  const root = { data: { text: '导入导图', uid: uid(), expand: true, _virtual: true }, children: [] as any[] };
   const stack: { depth: number; node: any }[] = [{ depth: 0, node: root }];
   for (const raw of lines) {
     const line = raw.replace(/\t/g, '  ').replace(/\s+$/, '');
@@ -1074,7 +1236,7 @@ function parseMarkdown(text: string): any {
 // 缩进文本（空格缩进）→ SMM data
 function parseIndented(text: string): any {
   const lines = text.split(/\r?\n/).map(l => l.replace(/\t/g, '  ')).filter(l => l.trim());
-  const root = { data: { text: '导入导图', uid: uid(), expand: true }, children: [] as any[] };
+  const root = { data: { text: '导入导图', uid: uid(), expand: true, _virtual: true }, children: [] as any[] };
   const stack: { depth: number; node: any }[] = [{ depth: -1, node: root }];
   for (const line of lines) {
     const indent = (line.match(/^(\s*)/) || ['', ''])[1].length;
@@ -1158,10 +1320,6 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 .ms-o-row { display: flex; align-items: center; gap: 4px; padding: 3px 6px; border-radius: 5px; cursor: pointer; color: var(--el-text-color-primary); line-height: 1.4; }
 .ms-o-row:hover { background: rgba(64, 158, 255, .08); }
 .ms-o-row.on { background: rgba(64, 158, 255, .16); }
-.ms-o-btns { display: none; gap: 1px; flex: none; }
-.ms-o-row:hover .ms-o-btns { display: inline-flex; }
-.ms-o-btn { width: 18px; height: 18px; line-height: 16px; text-align: center; border-radius: 4px; font-size: 11px; color: var(--el-text-color-secondary); border: 1px solid var(--el-border-color); cursor: pointer; background: var(--el-bg-color); }
-.ms-o-btn:hover { color: var(--kh-brand, #409eff); border-color: var(--kh-brand, #409eff); }
 .ms-o-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ms-themes { display: flex; flex-direction: column; gap: 6px; }
 .ms-theme { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; border: 1px solid transparent; color: var(--el-text-color-regular); }
@@ -1235,4 +1393,34 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 .mm-host :deep(.smm-node[class*="generalization_"] .smm-richtext-node-wrap) { white-space: pre-line; }
 .mm-host :deep(.smm-outer-frame-text) { font-size: 12px; }
 .mm-host :deep(.smm-associative-line-text) { font-size: 11px; }
+.ms-desc-input { width: 100%; }
+.ms-desc-input :deep(.el-textarea__inner) { font-size: 12px; line-height: 1.5; }
+</style>
+
+<style>
+/* 全局样式：SMM 动态注入的 SVG/foreignObject 元素不受 scoped 作用 */
+.kh-fold-preview-box {
+  font-size: 11px;
+  color: var(--el-text-color-secondary, #8a8f98);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+  pointer-events: none;
+}
+/* 节点描述渲染层：标题下方多行自动换行（幕布式） */
+.kh-node-desc-box {
+  font-size: 11px;
+  color: var(--el-text-color-secondary, #8a8f98);
+  line-height: 1.4;
+  user-select: none;
+  pointer-events: none;
+  overflow: hidden;
+}
+.kh-node-desc-line {
+  white-space: normal;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
 </style>

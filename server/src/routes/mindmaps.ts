@@ -94,13 +94,13 @@ mindmapsRouter.put('/mindmaps/:id', (req, res) => {
 /** PUT /api/mindmaps/:id/nodes —— 全量批量保存节点（客户端为权威状态） */
 mindmapsRouter.put('/mindmaps/:id/nodes', (req, res) => {
   const db = getDb();
-  const nodes = (req.body?.nodes || []) as { id: string; parent_id: string | null; title: string; kind: string; x: number; y: number; color: string | null; shape: string; sort: number }[];
+  const nodes = (req.body?.nodes || []) as { id: string; parent_id: string | null; title: string; desc?: string; kind: string; x: number; y: number; color: string | null; shape: string; sort: number }[];
   if (!Array.isArray(nodes)) { res.status(400).json({ code: 1, msg: 'nodes 必须是数组' }); return; }
   const tx = db.transaction(() => {
     db.prepare(`DELETE FROM mindmap_nodes WHERE map_id = ?`).run(req.params.id);
-    const ins = db.prepare(`INSERT INTO mindmap_nodes (id, map_id, parent_id, title, kind, x, y, color, shape, sort, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    const ins = db.prepare(`INSERT INTO mindmap_nodes (id, map_id, parent_id, title, desc, kind, x, y, color, shape, sort, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
     for (const n of nodes) {
-      ins.run(n.id, req.params.id, n.parent_id, n.title || '', n.kind || 'node', n.x || 0, n.y || 0, n.color || null, n.shape || 'auto', n.sort || 0, fmt(new Date()));
+      ins.run(n.id, req.params.id, n.parent_id, n.title || '', n.desc || '', n.kind || 'node', n.x || 0, n.y || 0, n.color || null, n.shape || 'auto', n.sort || 0, fmt(new Date()));
     }
   });
   tx();
