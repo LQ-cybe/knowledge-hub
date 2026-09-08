@@ -474,6 +474,7 @@ async function markPending(pending: boolean) {
       ElMessage.success('已取消待整理标记');
     }
     loadResources();
+    loadStats(); // 待整理计数变化 → 刷新「待整理」入口显隐
   } catch (e: any) {
     ElMessage.error('操作失败：' + (e?.message || '服务异常'));
   }
@@ -682,7 +683,7 @@ defineExpose({ openFolder, openTag, reload });
         <el-select v-model="filters.type" style="width: 120px;" @change="onFilterChange">
           <el-option v-for="t in typeOptions" :key="t.value" :label="t.label" :value="t.value" />
         </el-select>
-        <el-select v-model="filters.tag" placeholder="按标签筛选" clearable style="width: 150px;" @change="onFilterChange">
+        <el-select v-model="filters.tag" placeholder="按标签筛选" clearable filterable style="width: 170px;" @change="onFilterChange">
           <el-option v-for="t in tags" :key="t.id" :label="`${t.name}（${t.count}）`" :value="t.id" />
         </el-select>
         <el-select v-model="orderBy" style="width: 120px;" @change="onSortChange">
@@ -704,9 +705,9 @@ defineExpose({ openFolder, openTag, reload });
             <el-dropdown-menu>
               <el-dropdown-item command="tag">批量打标</el-dropdown-item>
               <el-dropdown-item command="move">移动位置</el-dropdown-item>
-              <!-- 待整理筛选下的资源均已标记待整理，无需再"加入"；移出后自动离开列表 -->
+              <!-- 按待整理状态显示：非筛选态只有「加入待整理」（此时移出无意义）；待整理筛选态只有「移出待整理」（已全是待整理） -->
               <el-dropdown-item v-if="!pendingOnly" command="pending">加入待整理</el-dropdown-item>
-              <el-dropdown-item command="unpending">移出待整理</el-dropdown-item>
+              <el-dropdown-item v-if="pendingOnly" command="unpending">移出待整理</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>

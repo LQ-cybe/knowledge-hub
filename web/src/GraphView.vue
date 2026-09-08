@@ -287,6 +287,11 @@ function renderHierarchy() {
       }],
     }, true);
   } else if (view.value === 'sunburst') {
+    // 旭日图剥离无意义的根（Code）：初始视图直接从顶级文件夹开始（分色也从这层开始，再继承到子类）
+    let sunData = tree;
+    if (drillStack.value.length === 0 && sunData.length === 1 && sunData[0].children?.length) {
+      sunData = sunData[0].children;
+    }
     // 动态生成层半径（18%→94% 均分），覆盖数据最大深度，避免深层节点渲染到浅层半径造成重叠/错位
     const levels: any[] = [{}];
     const maxD = Math.max(1, maxDepth.value);
@@ -301,14 +306,14 @@ function renderHierarchy() {
       tooltip: { trigger: 'item', confine: true, hideDelay: 60, formatter: itemTip },
       series: [{
         type: 'sunburst',
-        data: colorize(tree, 0, null),
+        data: colorize(sunData, 0, null),
         radius: [18, '94%'],
         center: ['50%', '50%'],
         sort: 'desc',
         emphasis: { focus: 'ancestor' },
         label: { show: showLabels.value, fontSize: 11, color: '#fff', rotate: 'radial' },
         levels,
-        itemStyle: { borderColor: isDark() ? '#1f2937' : '#fff', borderWidth: 1.5 },
+        itemStyle: { borderColor: isDark() ? '#1f2937' : '#fff', borderWidth: 1 },
       }],
     }, true);
   } else if (view.value === 'pack') {
