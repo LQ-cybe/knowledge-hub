@@ -3,7 +3,7 @@ import { onMounted, ref, nextTick, watch, onBeforeUnmount } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   getTree, getResourcesPage, getTags, createTag, updateTag, deleteTag, setResourceTags,
-  search as apiSearch, fileUrl, rescan, moveResource, setPending, setPin,
+  search as apiSearch, fileUrl, rescan, moveResource, setPending, setPin, getStats,
   type Resource, type TagItem, type TreeNode,
 } from './api';
 
@@ -140,6 +140,12 @@ const searchKeyword = ref('');
 const searchScope = ref<'name' | 'content'>('name');
 /** 待整理筛选（pending=1）；工具栏「待整理」按钮切换 */
 const pendingOnly = ref(false);
+/** 全局待整理项数量：无待整理数据时正常浏览状态不显示「待整理」入口按钮 */
+const pendingCount = ref(0);
+/** 拉取全局统计（含待整理计数），控制「待整理」入口显隐 */
+async function loadStats() {
+  try { pendingCount.value = (await getStats()).pending || 0; } catch { /* 忽略：接口失败不阻塞浏览 */ }
+}
 /** 卡片视图选中 id 集合（表格用 el-table 原生勾选；卡片自维护，框选两种视图共用） */
 const gridSelected = ref<Set<string>>(new Set());
 const tableRef = ref();
@@ -234,6 +240,7 @@ function onPendingToggle() {
 onMounted(() => {
   document.addEventListener('mousemove', onBoxMouseMove);
   document.addEventListener('mouseup', onBoxMouseUp);
+  loadStats();
 });
 onBeforeUnmount(() => {
   document.removeEventListener('mousemove', onBoxMouseMove);
@@ -386,6 +393,7 @@ async function onRefresh() {
     ElMessage.success(`扫描完成：新增 ${r.added}，移除 ${r.removed}，文件 ${r.files}`);
     await refreshTags();
     await loadTree();
+    loadStats();
   } catch (e: any) {
     ElMessage.error('扫描失败：' + (e?.response?.data?.msg || e?.message || '服务异常'));
   } finally {
@@ -702,8 +710,8 @@ defineExpose({ openFolder, openTag, reload });
             </el-dropdown-menu>
           </template>
         </el-dropdown>
-        <el-button :type="pendingOnly ? 'warning' : 'default'" @click="onPendingToggle" :title="pendingOnly ? '退出待整理筛选' : '只显示已标记待整理的资源'">
-          {{ pendingOnly ? '待整理 ✕' : '待整理' }}
+        <el-button v-if="pendingCount > 0 || pendingOnly" :type="pendingOnly ? 'warning' : 'default'" @click="onPendingToggle" :title="pendingOnly ? '退出待整理筛选' : '只显示已标记待整理的资源'">
+          {{ pendingOnly ? '待整理 ✕' : `待整理（${pendingCount}）` }}
         </el-button>
         <el-button :loading="refreshing" @click="onRefresh" title="重新扫描磁盘（新增文件/文件夹入库）">刷新</el-button>
         <span class="total">共 {{ total }} 项</span>

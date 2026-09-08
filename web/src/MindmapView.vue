@@ -1058,9 +1058,9 @@ function themeCfgFor(k: string): Record<string, any> {
   const t = THEMES[k] || THEMES['nexa-light'];
   const isDark = document.documentElement.classList.contains('dark');
   const cfg = { ...t.cfg };
-  // 第二层节点：鱼骨图（放射）横向留白 20（官方 100 过大、上轮 6 过窄重叠、30 仍显浪费——本轮只调水平 X 间距），其余布局保留 SMM 默认；
+  // 第二层节点：鱼骨图（放射）横向留白恢复 30（用户实测 20 仍有重叠 → 按之前第 8 轮验收版 30 显示，不再调整）；
   // 第二层纵向留白 9（第 8 轮按用户要求减半，教育心理学纵向过密已修复）
-  cfg.second = { ...(cfg.second || {}), ...(layoutKey.value === 'radial' ? { marginX: 20 } : {}), marginY: 9 };
+  cfg.second = { ...(cfg.second || {}), ...(layoutKey.value === 'radial' ? { marginX: 30 } : {}), marginY: 9 };
   // 更深层节点纵向留白（默认 node.marginY=0 导致第三层起贴死）——第 8 轮按用户要求减半（18/24 → 9/12）
   cfg.node = { ...(cfg.node || {}), marginY: 12 };
   // SMM 重渲染（切布局等）会用 themeConfig.backgroundColor 覆盖容器背景，必须同时替换该字段

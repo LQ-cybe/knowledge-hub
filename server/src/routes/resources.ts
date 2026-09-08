@@ -140,14 +140,17 @@ router.get('/tree', (_req, res) => {
   res.json({ code: 0, data: roots });
 });
 
-/** GET /api/stats —— 全局统计（工作台数据源） */
+/** GET /api/stats —— 全局统计（工作台数据源 + 待整理计数） */
 router.get('/stats', (_req, res) => {
   const db = getDb();
   const total = db.prepare(`SELECT COUNT(*) AS n FROM resources WHERE status = 'active'`).get() as { n: number };
+  const pending = db.prepare(
+    `SELECT COUNT(*) AS n FROM resources WHERE status = 'active' AND json_extract(meta, '$.pending') = 1`
+  ).get() as { n: number };
   const byType = db.prepare(
     `SELECT type, COUNT(*) AS n FROM resources WHERE status = 'active' GROUP BY type`
   ).all();
-  res.json({ code: 0, data: { total: total.n, byType } });
+  res.json({ code: 0, data: { total: total.n, pending: pending.n, byType } });
 });
 
 /** GET /api/dashboard —— 工作台聚合数据（顶层目录统计 + 最近更新 + 类型分布） */

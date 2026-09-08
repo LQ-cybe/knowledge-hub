@@ -190,17 +190,26 @@ function render() {
   }
 }
 
-/** ---------- 矩形树图 / 旭日图 / 打包图：文件夹层级 → 文件数（含子树） ---------- */
-/** 旭日图多彩配色：同层按索引错开色相、跨层色相/明度递进（避免整体一个颜色） */
+/** 旭日图配色：同级分组错开色相；子分组/子对象继承父色相并逐层减淡（提高明度、降低饱和），同组渐进有层次 */
 const hueStep = 47;
-function colorize(ns: HierarchyNode[], depth: number, seed: number): any[] {
+function colorize(ns: HierarchyNode[], depth: number, parent: { hue: number; light: number; sat: number } | null): any[] {
   return ns.map((n, i) => {
-    const hue = (210 + depth * 55 + (seed + i) * hueStep) % 360;
-    const light = 45 + (depth % 4) * 9;
+    let hue: number, light: number, sat: number;
+    if (!parent || depth === 0) {
+      // 顶层（根下第一层分组）：同级错色相
+      hue = (210 + i * hueStep) % 360;
+      light = 42; sat = 66;
+    } else {
+      // 深层：继承父分组色相，逐层减淡
+      hue = parent.hue;
+      light = Math.min(78, parent.light + 9);
+      sat = Math.max(26, parent.sat - 10);
+    }
+    const hasChildren = !!n.children && n.children.length > 0;
     return {
       ...n,
-      itemStyle: { color: `hsl(${hue}, 62%, ${light}%)` },
-      children: colorize(n.children, depth + 1, seed + i * 7),
+      itemStyle: { color: `hsl(${hue}, ${sat}%, ${light}%)` },
+      children: hasChildren ? colorize(n.children, depth + 1, { hue, light, sat }) : undefined,
     };
   });
 }
@@ -278,22 +287,27 @@ function renderHierarchy() {
       }],
     }, true);
   } else if (view.value === 'sunburst') {
+    // 动态生成层半径（18%→94% 均分），覆盖数据最大深度，避免深层节点渲染到浅层半径造成重叠/错位
+    const levels: any[] = [{}];
+    const maxD = Math.max(1, maxDepth.value);
+    for (let i = 1; i <= maxD; i++) {
+      levels.push({
+        r0: `${18 + ((i - 1) * 76) / maxD}%`,
+        r: `${18 + (i * 76) / maxD}%`,
+        label: { rotate: 'tangential' },
+      });
+    }
     chart.setOption({
       tooltip: { trigger: 'item', confine: true, hideDelay: 60, formatter: itemTip },
       series: [{
         type: 'sunburst',
-        data: colorize(tree, 0, 0),
+        data: colorize(tree, 0, null),
         radius: [18, '94%'],
         center: ['50%', '50%'],
         sort: 'desc',
         emphasis: { focus: 'ancestor' },
         label: { show: showLabels.value, fontSize: 11, color: '#fff', rotate: 'radial' },
-        levels: [
-          {},
-          { r0: '18%', r: '44%', label: { rotate: 'tangential' } },
-          { r0: '44%', r: '70%', label: { rotate: 'tangential' } },
-          { r0: '70%', r: '94%', label: { rotate: 'tangential' } },
-        ],
+        levels,
         itemStyle: { borderColor: isDark() ? '#1f2937' : '#fff', borderWidth: 1.5 },
       }],
     }, true);
@@ -606,7 +620,15 @@ function onThemeChange() { render(); }
 let ro: ResizeObserver | null = null;
 
 watch([dimension, view], load);
-watch(showLabels, render); // 标签显示开关变化 → 立即重渲染当前视图
+// 标签显示开关：只局部更新 label 显示（不重建图表 → 关系图 force 布局不重排、树图不闪烁）
+// pack 为 custom 系列（文字在 renderItem 内）、chord 标签在 data 项上，这两类局部更新无效 → 重渲染
+watch(showLabels, () => {
+  if (!chart || !chartEl.value) return;
+  if (view.value === 'pack' || view.value === 'chord') { render(); return; }
+  const patch: any = { series: [{ label: { show: showLabels.value } }] };
+  if (view.value === 'treemap') patch.series[0].upperLabel = { show: showLabels.value };
+  chart.setOption(patch, { lazyUpdate: true });
+});
 
 onMounted(() => {
   load();
@@ -652,11 +674,10 @@ onBeforeUnmount(() => {
         <el-option v-for="d in maxDepth" :key="d" :value="d" :label="`第${d}层`" />
       </el-select>
 
-      <!-- 层级图下钻 / 缩放：点击组节点只显示该组及其子节点，点空白返回上级 -->
+      <!-- 层级图下钻 / 缩放：点击组节点只显示该组及其子节点，点空白返回上级（返回上级=点击空白区域，无需独立按钮） -->
       <template v-if="isHierarchyView()">
-        <el-button size="small" :disabled="drillStack.length === 0" @click="goBack">返回上级</el-button>
         <el-button size="small" :disabled="drillStack.length === 0 && zoomFactor === 1" @click="resetView">重置视图</el-button>
-        <span class="hint">{{ view === 'treemap' ? '滚轮/拖动缩放，点击组节点下钻' : view === 'pack' ? '滚轮缩放，点击组节点下钻' : '点击组节点下钻（放大），点空白返回' }}</span>
+        <span class="hint">{{ view === 'treemap' ? '滚轮/拖动缩放，点击组节点下钻，点空白返回' : view === 'pack' ? '滚轮缩放，点击组节点下钻，点空白返回' : '点击组节点下钻（放大），点空白返回' }}</span>
       </template>
 
       <span class="count" v-loading="loading">
