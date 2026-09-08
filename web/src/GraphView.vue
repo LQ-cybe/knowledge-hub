@@ -25,10 +25,38 @@ const showLabels = ref(false);
 const drillStack = ref<HierarchyNode[]>([]);
 /** 打包图滚轮缩放系数（1=原始大小） */
 const zoomFactor = ref(1);
+/** 旭日图滚轮缩放系数（1..6，radius 缩放，levels 环带跟随） */
+const sunZoom = ref(1);
+/** 桑基图滚轮缩放系数（1..4，容器 CSS transform，ECharts sankey 官方不支持 roam） */
+const cssZoom = ref(1);
 
 let chart: echarts.ECharts | null = null;
 let data: GraphData = { nodes: [], links: [] };
 let hierarchy: HierarchyNode[] = [];
+
+/** 统一初始化图表 + 在 zrender 层绑定滚轮缩放（ECharts 在 canvas 层拦截 wheel，DOM @wheel 收不到真实滚轮；
+ *  pack/sunburst/sankey 无原生 roam → 自实现缩放：pack 重渲染 / sunburst radius / sankey 容器 CSS transform） */
+function initChart(): echarts.ECharts {
+  const el = chartEl.value || (document.querySelector('.chart-box .chart') as HTMLElement | null);
+  if (!el) throw new Error('chart element not found');
+  chart = echarts.init(el);
+  chart.getZr().off('wheel');
+  chart.getZr().on('wheel', (e: any) => {
+    const dz = e?.event?.deltaY ?? 0;
+    if (view.value === 'pack') {
+      zoomFactor.value = Math.min(3, Math.max(0.4, zoomFactor.value * (dz > 0 ? 0.9 : 1.1)));
+      renderHierarchy();
+    } else if (view.value === 'sunburst') {
+      sunZoom.value = Math.min(6, Math.max(1, sunZoom.value * (dz > 0 ? 0.92 : 1.08)));
+      chart?.setOption({ series: [{ radius: [`${18 / sunZoom.value}%`, `${94 / sunZoom.value}%`] }] }, { lazyUpdate: true });
+    } else if (view.value === 'sankey') {
+      cssZoom.value = Math.min(4, Math.max(1, cssZoom.value * (dz > 0 ? 0.9 : 1.1)));
+      const c = chartEl.value || (document.querySelector('.chart-box .chart') as HTMLElement | null);
+      if (c) { c.style.transformOrigin = 'center center'; c.style.transform = cssZoom.value === 1 ? '' : `scale(${cssZoom.value})`; }
+    }
+  });
+  return chart;
+}
 
 const dimensionLabels: Record<string, string> = { folder: '文件夹', tag: '标签', link: '引用' };
 const viewLabels: Record<string, string> = {
@@ -109,7 +137,7 @@ function render() {
   }
   try {
     if (!chart) {
-      chart = echarts.init(chartEl.value);
+      chart = initChart();
     }
     const labelMap = nameToLabel();
     const fmt = (p: any) => labelMap.get(p.name) || p.name;
@@ -134,10 +162,10 @@ function render() {
           animation: false, // 关系图动画彻底关闭（初始布局与拖动重排直接呈现）
           emphasis: { scale: 1.15, label: { show: true } },
           data: nodes.map(n => ({
-            id: n.id, name: n.name, symbolSize: n.symbolSize, category: n.category,
-            label: { show: showLabels.value, formatter: fmt, fontSize: 11, color: labelColor() },
+            id: n.id, name: n.name, symbolSize: (n.symbolSize || 12) * 0.7, category: n.category,
           })),
           links: links.map(l => ({ source: l.source, target: l.target })),
+          label: { show: showLabels.value, formatter: fmt, fontSize: 12, color: labelColor() },
           categories: [
             { name: 'folder', itemStyle: { color: '#8BC8EA' } },
             { name: 'file', itemStyle: { color: '#B0BEC5' } },
@@ -168,7 +196,7 @@ function render() {
           type: 'sankey',
           data: sNodes,
           links: sLinks,
-          label: { show: showLabels.value, formatter: fmt, fontSize: 11, color: labelColor() },
+          label: { show: showLabels.value, formatter: fmt, fontSize: 12, color: labelColor() },
           lineStyle: { color: 'gradient', opacity: 0.5 },
           nodeAlign: 'left',
           emphasis: { focus: 'adjacency' },
@@ -208,6 +236,8 @@ function colorize(ns: HierarchyNode[], depth: number, parent: { hue: number; lig
     const hasChildren = !!n.children && n.children.length > 0;
     return {
       ...n,
+      // name 兜底：偶发节点缺 name 时回退 data.title，避免中心层显示 undefined
+      name: n.name || (n.data as any)?.title || '未命名',
       itemStyle: { color: `hsl(${hue}, ${sat}%, ${light}%)` },
       children: hasChildren ? colorize(n.children, depth + 1, { hue, light, sat }) : undefined,
     };
@@ -220,18 +250,37 @@ function goBack() {
   drillStack.value.pop();
   renderHierarchy();
 }
-/** 重置视图：清空下钻 + 打包图缩放还原 */
+/** 重置视图：清空下钻 + 打包图/旭日图/桑基图缩放还原 */
 function resetView() {
   drillStack.value = [];
   zoomFactor.value = 1;
+  sunZoom.value = 1;
+  cssZoom.value = 1;
+  const el = chartEl.value || (document.querySelector('.chart-box .chart') as HTMLElement | null);
+  if (el) el.style.transform = '';
   renderHierarchy();
 }
-/** 打包图滚轮缩放（旭日图以下钻放大为主，树图/矩形树图自带 roam） */
+/** 滚轮缩放（DOM 层兜底）：pack 重渲染 / sunburst radius / sankey 容器 CSS 缩放；
+ *  真实滚轮在 canvas 被 ECharts 拦截，主路径走 initChart() 的 zrender 监听 */
 function onWheel(e: WheelEvent) {
-  if (view.value !== 'pack') return;
-  e.preventDefault();
-  zoomFactor.value = Math.min(3, Math.max(0.4, zoomFactor.value * (e.deltaY > 0 ? 0.9 : 1.1)));
-  renderHierarchy();
+  const dz = e.deltaY;
+  if (view.value === 'pack') {
+    e.preventDefault();
+    zoomFactor.value = Math.min(3, Math.max(0.4, zoomFactor.value * (dz > 0 ? 0.9 : 1.1)));
+    renderHierarchy();
+  } else if (view.value === 'sunburst') {
+    e.preventDefault();
+    sunZoom.value = Math.min(6, Math.max(1, sunZoom.value * (dz > 0 ? 0.92 : 1.08)));
+    chart?.setOption({ series: [{ radius: [`${18 / sunZoom.value}%`, `${94 / sunZoom.value}%`] }] }, { lazyUpdate: true });
+  } else if (view.value === 'sankey') {
+    e.preventDefault();
+    cssZoom.value = Math.min(4, Math.max(1, cssZoom.value * (dz > 0 ? 0.9 : 1.1)));
+    const el = chartEl.value || (document.querySelector('.chart-box .chart') as HTMLElement | null);
+    if (el) {
+      el.style.transformOrigin = 'center center';
+      el.style.transform = cssZoom.value === 1 ? '' : `scale(${cssZoom.value})`;
+    }
+  }
 }
 
 function renderHierarchy() {
@@ -246,7 +295,8 @@ function renderHierarchy() {
   } else if (collapseMode.value === 'depth') {
     tree = pruneHierarchy(tree, collapseDepth.value + 1);
   }
-  maxDepth.value = hierarchyDepth(hierarchy);
+  // 最大可见层级 = 树层级（含 Code 根）减 1（Code 根不显示，最内层是顶级文件夹）；下拉选项 1..maxDepth，第 maxDepth 层=全量
+  maxDepth.value = Math.max(1, hierarchyDepth(hierarchy) - 1);
 
   const itemTip = (p: any) => {
     const n = p.data;
@@ -254,7 +304,7 @@ function renderHierarchy() {
     return `<b>${n.name}</b> · 文件 ${n.value} 个${size}`;
   };
   chart?.dispose();
-  chart = echarts.init(chartEl.value);
+  chart = initChart();
   // 点击组节点 → 下钻到该组（只显示它和它的子节点）；点击空白 → 返回上一级
   chart.on('click', (p: any) => {
     if (view.value !== 'sunburst' && view.value !== 'pack') return;
@@ -277,8 +327,8 @@ function renderHierarchy() {
         roam: true,
         nodeClick: 'zoomToNode',
         breadcrumb: { show: true, bottom: 0, itemStyle: { color: '#8BC8EA' }, textStyle: { color: '#fff', fontSize: 11 } },
-        label: { show: showLabels.value, formatter: (p: any) => p.name, fontSize: 11, color: '#fff' },
-        upperLabel: { show: true, height: 20, formatter: (p: any) => `${p.name}（${p.value}）`, fontSize: 11, color: labelColor() },
+        label: { show: showLabels.value, formatter: (p: any) => p.name, fontSize: 12, color: '#fff' },
+        upperLabel: { show: true, height: 20, formatter: (p: any) => `${p.name}（${p.value}）`, fontSize: 12, color: labelColor() },
         itemStyle: { borderColor: isDark() ? '#1f2937' : '#fff', borderWidth: 1, gapWidth: 1 },
         levels: [
           { itemStyle: { borderColor: isDark() ? '#1f2937' : '#fff', borderWidth: 2, gapWidth: 2 } },
@@ -293,12 +343,13 @@ function renderHierarchy() {
       sunData = sunData[0].children;
     }
     // 动态生成层半径（18%→94% 均分），覆盖数据最大深度，避免深层节点渲染到浅层半径造成重叠/错位
+    // maxD 按剥离根后的 sunData 实际深度计算（Code 根不算一层）
+    const sunMaxD = (() => { let m = 1; const w = (ns: HierarchyNode[], d: number) => { for (const n of ns) { m = Math.max(m, d); if (n.children?.length) w(n.children, d + 1); } }; w(sunData, 1); return Math.max(1, m); })();
     const levels: any[] = [{}];
-    const maxD = Math.max(1, maxDepth.value);
-    for (let i = 1; i <= maxD; i++) {
+    for (let i = 1; i <= sunMaxD; i++) {
       levels.push({
-        r0: `${18 + ((i - 1) * 76) / maxD}%`,
-        r: `${18 + (i * 76) / maxD}%`,
+        r0: `${18 + ((i - 1) * 76) / sunMaxD}%`,
+        r: `${18 + (i * 76) / sunMaxD}%`,
         label: { rotate: 'tangential' },
       });
     }
@@ -307,11 +358,11 @@ function renderHierarchy() {
       series: [{
         type: 'sunburst',
         data: colorize(sunData, 0, null),
-        radius: [18, '94%'],
+        radius: [`${18 / sunZoom.value}%`, `${94 / sunZoom.value}%`], // 滚轮缩放（sunZoom 1..6，levels 跟随 radius）
         center: ['50%', '50%'],
         sort: 'desc',
         emphasis: { focus: 'ancestor' },
-        label: { show: showLabels.value, fontSize: 11, color: '#fff', rotate: 'radial' },
+        label: { show: showLabels.value, fontSize: 12, color: '#fff', rotate: 'radial' },
         levels,
         itemStyle: { borderColor: isDark() ? '#1f2937' : '#fff', borderWidth: 1 },
       }],
@@ -456,7 +507,7 @@ function renderChord() {
     itemStyle: { color: packPalette[i % packPalette.length] },
   }));
   chart?.dispose();
-  chart = echarts.init(chartEl.value);
+  chart = initChart();
   // 源节点 → 颜色映射：每条连线按源节点独立配色（不再整体一个颜色）
   const colorById = new Map<string, string>();
   sNodes.forEach((n, i) => colorById.set(n.name, packPalette[i % packPalette.length]));
@@ -475,10 +526,10 @@ function renderChord() {
       roam: true, // 滚轮缩放、拖拽平移
       draggable: false,
       animation: false,
-      data: sNodes.map(n => ({ ...n, label: { show: showLabels.value, formatter: n.name, fontSize: 11, color: labelColor() } })),
+      data: sNodes.map(n => ({ ...n, label: { show: showLabels.value, formatter: n.name, fontSize: 12, color: labelColor() } })),
       links: chordLinks.map(l => ({
         source: l.source, target: l.target, value: l.value,
-        lineStyle: { color: colorById.get(l.source) || '#909399', width: Math.min(8, 1 + l.value * 1.2), opacity: 0.6, curveness: 0.08 },
+        lineStyle: { color: colorById.get(l.source) || '#909399', width: Math.min(4, 0.5 + l.value * 0.6), opacity: 0.6, curveness: 0.08 }, // 连线宽度减半（用户：太粗，一半就够）
       })),
       categories: [],
       emphasis: { focus: 'adjacency', scale: 1.15 },
@@ -539,7 +590,7 @@ function renderTree() {
 
   const labelMap = nameToLabel();
   chart?.dispose();
-  chart = echarts.init(chartEl.value);
+  chart = initChart();
   chart.setOption({
     tooltip: {
       trigger: 'item', confine: true, hideDelay: 60,
@@ -552,9 +603,9 @@ function renderTree() {
       orient: 'LR',
       top: 12, left: 10, right: 70, bottom: 12,
       roam: true, // 滚轮缩放、拖拽平移（树图此前无法缩放）
-      symbolSize: 9,
+      symbolSize: 7, // 节点缩小（原 9）
       initialTreeDepth: -1,
-      label: { show: showLabels.value, formatter: (p: any) => labelMap.get(p.name) || p.name, fontSize: 11, color: labelColor(), position: 'right' },
+      label: { show: showLabels.value, formatter: (p: any) => labelMap.get(p.name) || p.name, fontSize: 12, color: labelColor(), position: 'right' },
       lineStyle: { color: lineColor(), width: 1.8 }, // 线条加粗（原 1 过细）
       expandAndCollapse: true,
     }],
@@ -591,6 +642,10 @@ async function load() {
   // 视图/维度切换后清除下钻与缩放状态
   drillStack.value = [];
   zoomFactor.value = 1;
+  sunZoom.value = 1;
+  cssZoom.value = 1;
+  const resetEl = chartEl.value || (document.querySelector('.chart-box .chart') as HTMLElement | null);
+  if (resetEl) resetEl.style.transform = '';
   // 立即清空旧图，给用户"正在切换"的明确反馈（维度/视图数据量大时渲染较慢）
   if (chart) { chart.clear(); }
   if (isHierarchyView()) {
@@ -599,7 +654,8 @@ async function load() {
     // value 已在后端自底向上累加为"子树文件数"，顶层求和即总文件数（不得递归重复累加）
     nodeCount.value = hierarchy.reduce((s, n) => s + n.value, 0);
     linkCount.value = 0;
-    maxDepth.value = hierarchyDepth(hierarchy);
+    // 最大可见层级 = 树层级（含 Code 根）减 1（Code 根不显示，最内层是顶级文件夹）；下拉选项 1..maxDepth，第 maxDepth 层=全量
+  maxDepth.value = Math.max(1, hierarchyDepth(hierarchy) - 1);
     if (collapseDepth.value > maxDepth.value) collapseDepth.value = maxDepth.value;
   } else {
     // 弦图需要"标签→资源"连线反推共现，强制走 tag 维度；其余按所选维度

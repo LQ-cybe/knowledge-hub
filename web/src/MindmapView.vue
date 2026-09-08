@@ -694,8 +694,8 @@ async function openMap(id: string) {
       mousewheelAction: 'zoom',
       // 左键拖拽空白处 = 框选多选（右键仍可拖动画布）；默认是右键框选，不符合直觉
       useLeftKeySelectionRightKeyDrag: true,
-      // 鱼骨（放射）布局角度：默认 45° 会让上下分支横向间距过大，调大后更紧凑（配合主题 second.marginX 缩减）
-      fishboneDeg: 72,
+      // 鱼骨（放射）布局角度：完全官方默认 45°（用户要求"恢复到最开始的版本，完全不改"）
+      // fishboneDeg: 72,
       // 分支节点展开/折叠按钮：光标悬停时显示（不常驻）
       alwaysShowExpandBtn: false,
       // 关闭节点位置过渡动画：打开/切换布局/展开折叠直接到位，
@@ -1058,11 +1058,13 @@ function themeCfgFor(k: string): Record<string, any> {
   const t = THEMES[k] || THEMES['nexa-light'];
   const isDark = document.documentElement.classList.contains('dark');
   const cfg = { ...t.cfg };
-  // 第二层节点：鱼骨图（放射）横向留白还原为第 6 轮「最初正确版本」marginX 6（官方 100 过大；30/20 用户均实测仍有重叠）；
-  // 第二层纵向留白 9（第 8 轮按用户要求减半，教育心理学纵向过密已修复）
-  cfg.second = { ...(cfg.second || {}), ...(layoutKey.value === 'radial' ? { marginX: 6 } : {}), marginY: 9 };
-  // 更深层节点纵向留白（默认 node.marginY=0 导致第三层起贴死）——第 8 轮按用户要求减半（18/24 → 9/12）
-  cfg.node = { ...(cfg.node || {}), marginY: 12 };
+  // 间距：鱼骨图（radial）完全官方默认（用户第 12 轮要求"恢复到最开始的版本，完全不改"——
+  // 不做 marginX/marginY/fishboneDeg 任何覆盖，Fishbone.js 也已恢复官方原版）；
+  // 其他布局保留第 8 轮纵向修复（second.marginY 9 / node.marginY 12，教育心理学纵向过密）
+  if (layoutKey.value !== 'radial') {
+    cfg.second = { ...(cfg.second || {}), marginY: 9 };
+    cfg.node = { ...(cfg.node || {}), marginY: 12 };
+  }
   // SMM 重渲染（切布局等）会用 themeConfig.backgroundColor 覆盖容器背景，必须同时替换该字段
   return isDark ? { ...cfg, backgroundColor: t.darkBg, background: t.darkBg } : cfg;
 }
