@@ -482,7 +482,8 @@ router.get('/resources/:id/tags', (req, res) => {
   res.json({ code: 0, data: rows });
 });
 
-/** POST /api/resources/pending —— 批量标记/取消"待整理"（meta.pending；工作台/浏览页可筛选） */
+/** POST /api/resources/pending —— 批量标记/取消"待整理"（meta.pending；工作台/浏览页可筛选）
+ *  加入方向：已标记待整理的资源自动跳过（不重复加入）；文件夹递归其下全部子文件夹与文件 */
 router.post('/resources/pending', (req, res) => {
   const db = getDb();
   const { ids, pending } = req.body as { ids?: unknown; pending?: unknown };
@@ -490,14 +491,45 @@ router.post('/resources/pending', (req, res) => {
   if (idList.length === 0) { res.status(400).json({ code: 1, msg: '未选择资源' }); return; }
   const p = pending ? 1 : 0;
   const now = new Date().toISOString();
+  const getRow = db.prepare(`SELECT id, type FROM resources WHERE id = ? AND status='active'`);
+  const getKids = db.prepare(`SELECT id, type FROM resources WHERE parent_id = ? AND status='active'`);
+  // 已标记待整理的集合（加入方向用于跳过）
+  const pendingSet = new Set<string>(
+    (db.prepare(`SELECT id FROM resources WHERE json_extract(meta, '$.pending') = 1`).all() as { id: string }[]).map(r => r.id)
+  );
+  let skipped = 0;
   const tx = db.transaction(() => {
     const upd = db.prepare(
       `UPDATE resources SET meta = json_set(CASE WHEN json_valid(meta) THEN meta ELSE '{}' END, '$.pending', ?), updated_at = ? WHERE id = ?`
     );
-    for (const id of idList) upd.run(p, now, id);
+    const seen = new Set<string>();
+    const targets: string[] = [];
+    for (const id of idList) {
+      const row = getRow.get(id) as { id: string; type: string } | undefined;
+      if (!row) continue;
+      const queue: { id: string; type: string }[] = [row];
+      while (queue.length) {
+        const cur = queue.pop()!;
+        if (seen.has(cur.id)) continue;
+        seen.add(cur.id);
+        if (p === 1 && pendingSet.has(cur.id)) { // 已待整理不重复加入：跳过自身，但文件夹仍继续递归子项（子项可能未标记）
+          skipped++;
+          if (cur.type === 'folder') {
+            queue.push(...(getKids.all(cur.id) as { id: string; type: string }[]));
+          }
+          continue;
+        }
+        targets.push(cur.id);
+        if (cur.type === 'folder') { // 文件夹递归子文件夹与文件
+          queue.push(...(getKids.all(cur.id) as { id: string; type: string }[]));
+        }
+      }
+    }
+    for (const id of targets) upd.run(p, now, id);
+    return targets.length;
   });
-  tx();
-  res.json({ code: 0, data: { ok: true, count: idList.length, pending: !!pending } });
+  const count = tx();
+  res.json({ code: 0, data: { ok: true, count, skipped, pending: !!pending } });
 });
 
 /** PUT /api/resources/:id/tags —— 设置资源标签（全量替换；recursive=true 且为文件夹时，子树全部资源合并追加这些标签） */

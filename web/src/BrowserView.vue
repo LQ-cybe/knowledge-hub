@@ -408,8 +408,15 @@ async function doMove() {
 async function markPending(pending: boolean) {
   if (selection.value.length === 0) { ElMessage.warning('请先勾选资源'); return; }
   try {
-    await setPending(selection.value.map(r => r.id), pending);
-    ElMessage.success(pending ? `已将 ${selection.value.length} 项加入待整理` : '已取消待整理标记');
+    const r: any = await setPending(selection.value.map(r => r.id), pending);
+    const d = r?.data?.data;
+    if (pending) {
+      const added = d?.count ?? selection.value.length;
+      const skipped = d?.skipped ?? 0;
+      ElMessage.success(skipped > 0 ? `已加入待整理 ${added} 项（已在待整理中的 ${skipped} 项跳过）` : `已将 ${added} 项加入待整理（文件夹含全部子项）`);
+    } else {
+      ElMessage.success('已取消待整理标记');
+    }
     loadResources();
   } catch (e: any) {
     ElMessage.error('操作失败：' + (e?.message || '服务异常'));
@@ -642,7 +649,8 @@ defineExpose({ openFolder, openTag, reload });
             <el-dropdown-menu>
               <el-dropdown-item command="tag">批量打标</el-dropdown-item>
               <el-dropdown-item command="move">移动位置</el-dropdown-item>
-              <el-dropdown-item command="pending">加入待整理</el-dropdown-item>
+              <!-- 待整理筛选下的资源均已标记待整理，无需再"加入"；移出后自动离开列表 -->
+              <el-dropdown-item v-if="!pendingOnly" command="pending">加入待整理</el-dropdown-item>
               <el-dropdown-item command="unpending">移出待整理</el-dropdown-item>
             </el-dropdown-menu>
           </template>

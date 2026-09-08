@@ -698,6 +698,10 @@ async function openMap(id: string) {
       fishboneDeg: 72,
       // 分支节点展开/折叠按钮：光标悬停时显示（不常驻）
       alwaysShowExpandBtn: false,
+      // 关闭节点位置过渡动画：打开/切换布局/展开折叠直接到位，
+      // 避免动画中间帧出现节点从中心重叠飞出、连线暂缺（"看起来重叠/孤立"）
+      transition: 0,
+      enableAnimation: false,
       // 节点文字编辑采用"就地编辑"：编辑框透明无阴影、原文本隐藏，直接在节点文字原位修改（幕布式，避免悬浮白框）
       openRealtimeRenderOnNodeTextEdit: true,
       // 关系线激活时不显示两端拖拽调节锚点（用户不需要调节曲线控制点）
@@ -1056,9 +1060,9 @@ function themeCfgFor(k: string): Record<string, any> {
   const cfg = { ...t.cfg };
   // 第二层节点：放射（鱼骨）横向留白 30（官方 100 过大、上轮 6 过窄），其余布局保留 SMM 默认；
   // 第二层纵向留白 18（mindMap/逻辑/组织等上下展开布局不再贴死）
-  cfg.second = { ...(cfg.second || {}), ...(layoutKey.value === 'radial' ? { marginX: 30 } : {}), marginY: 18 };
-  // 更深层节点纵向留白（默认 node.marginY=0 导致第三层起贴死）
-  cfg.node = { ...(cfg.node || {}), marginY: 24 };
+  cfg.second = { ...(cfg.second || {}), ...(layoutKey.value === 'radial' ? { marginX: 30 } : {}), marginY: 9 };
+  // 更深层节点纵向留白（默认 node.marginY=0 导致第三层起贴死）——第 8 轮按用户要求减半（18/24 → 9/12）
+  cfg.node = { ...(cfg.node || {}), marginY: 12 };
   // SMM 重渲染（切布局等）会用 themeConfig.backgroundColor 覆盖容器背景，必须同时替换该字段
   return isDark ? { ...cfg, backgroundColor: t.darkBg, background: t.darkBg } : cfg;
 }

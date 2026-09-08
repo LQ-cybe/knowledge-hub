@@ -22,23 +22,50 @@ const saving = ref(false);
 /** 是否为 md（左右分栏） */
 const isMd = () => props.ext === 'md';
 
-/** 极简 MD 渲染：标题/列表/代码块/行内代码/链接/粗体/分割线（与浏览页预览同款，独立页共用） */
+/** 极简 MD 渲染：标题/列表/代码块/行内代码/链接/粗体/分割线。
+ *  逐行渲染：空行不输出（消除"很多空行"）；连续普通行合为段落（行内用 <br/>）；
+ *  列表项合并为一个 <ul>；块级元素之间不加 <br/>。 */
 function renderMd() {
   const src = content.value || '';
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  let html = esc(src)
-    .replace(/```([\s\S]*?)```/g, (_m, c: string) => `<pre><code>${c}</code></pre>`)
-    .replace(/`([^`]+)`/g, (_m, c: string) => `<code>${c}</code>`)
-    .replace(/^### (.*)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.*)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.*)$/gm, '<h1>$1</h1>')
-    .replace(/^- (.*)$/gm, '<li>$1</li>')
-    .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
+  const inline = (s: string) => esc(s)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-    .replace(/^---$/gm, '<hr/>')
-    .replace(/\n/g, '<br/>');
-  mdHtml.value = html;
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  const lines = src.split('\n');
+  const out: string[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    const t = lines[i].trim();
+    if (!t) { i++; continue; } // 空行：不输出
+    if (t.startsWith('```')) { // 代码块
+      const buf: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith('```')) { buf.push(lines[i]); i++; }
+      i++;
+      out.push(`<pre><code>${esc(buf.join('\n'))}</code></pre>`);
+      continue;
+    }
+    const h = t.match(/^(#{1,3})\s+(.*)$/); // 标题
+    if (h) { out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`); i++; continue; }
+    if (t === '---') { out.push('<hr/>'); i++; continue; }
+    if (t.startsWith('- ')) { // 列表（连续项合并一个 ul）
+      const items: string[] = [];
+      while (i < lines.length && lines[i].trim().startsWith('- ')) { items.push(inline(lines[i].trim().slice(2))); i++; }
+      out.push(`<ul>${items.map(x => `<li>${x}</li>`).join('')}</ul>`);
+      continue;
+    }
+    // 普通段落：连续普通行合并，行内换行用 <br/>
+    const buf: string[] = [];
+    while (i < lines.length) {
+      const l = lines[i].trim();
+      if (!l || /^(#{1,3})\s/.test(l) || l.startsWith('- ') || l.startsWith('```') || l === '---') break;
+      buf.push(inline(lines[i]));
+      i++;
+    }
+    out.push(`<p>${buf.join('<br/>')}</p>`);
+  }
+  mdHtml.value = out.join('\n');
 }
 
 async function load() {
@@ -146,10 +173,12 @@ watch(() => props.id, () => { load(); }, { immediate: true });
   flex: 1; min-height: 0; overflow: auto; padding: 14px 18px; font-size: 14px; line-height: 1.75;
   color: var(--el-text-color-primary, #1f2937); background: var(--el-bg-color, #fff); box-sizing: border-box;
 }
-.fe-md-render :deep(h1) { font-size: 20px; border-bottom: 1px solid var(--el-border-color-lighter, #e5e7eb); padding-bottom: 6px; }
-.fe-md-render :deep(h2) { font-size: 17px; margin-top: 20px; }
-.fe-md-render :deep(h3) { font-size: 15px; }
-.fe-md-render :deep(pre) { background: var(--el-fill-color-light, #f5f7fa); padding: 10px 12px; border-radius: 6px; overflow: auto; font-size: 12px; }
+.fe-md-render :deep(h1) { font-size: 20px; border-bottom: 1px solid var(--el-border-color-lighter, #e5e7eb); padding-bottom: 6px; margin: 2px 0 8px; }
+.fe-md-render :deep(h2) { font-size: 17px; margin: 14px 0 6px; }
+.fe-md-render :deep(h3) { font-size: 15px; margin: 10px 0 4px; }
+.fe-md-render :deep(p) { margin: 6px 0; }
+.fe-md-render :deep(li) { line-height: 1.55; margin: 2px 0; }
+.fe-md-render :deep(pre) { background: var(--el-fill-color-light, #f5f7fa); padding: 10px 12px; border-radius: 6px; overflow: auto; font-size: 12px; margin: 8px 0; }
 .fe-md-render :deep(code) { background: var(--el-fill-color-light, #f5f7fa); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
 .fe-md-render :deep(pre code) { background: none; padding: 0; }
 .fe-md-render :deep(ul) { padding-left: 20px; }
