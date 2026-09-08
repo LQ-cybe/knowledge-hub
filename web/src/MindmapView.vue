@@ -51,9 +51,10 @@
         <div class="ml-list">
           <div v-for="m in maps" :key="m.id" class="ml-row" @click="openMap(m.id)" @contextmenu.prevent="showCtxMenu($event, m)">
             <span class="ml-row-pin">{{ m.pinned ? '📌' : '' }}</span>
+            <span class="ml-row-ico" v-html="MAP_ICON"></span>
             <span class="ml-row-title">{{ m.title }}</span>
-            <span class="ml-row-meta">{{ m.node_count }} 节点 · {{ fmtTime(m.updated_at) }}</span>
             <span class="ml-row-tags" v-if="m.tags">{{ m.tags }}</span>
+            <span class="ml-row-meta">{{ m.node_count }} 节点 · {{ fmtTime(m.updated_at) }}</span>
           </div>
         </div>
         <div v-if="!maps.length" class="ml-empty">暂无导图，点击右上角「＋ 新建导图」开始</div>
@@ -129,17 +130,21 @@
           <template v-if="sideTab === 'layout'">
             <div class="ms-title">布局</div>
             <el-radio-group v-model="layoutKey" class="ms-layout-btns" @change="onLayoutChange">
-              <el-radio-button value="free">自由</el-radio-button>
-              <el-radio-button value="right">向右</el-radio-button>
-              <el-radio-button value="left">向左</el-radio-button>
-              <el-radio-button value="org">组织</el-radio-button>
-              <el-radio-button value="radial">放射</el-radio-button>
+              <el-radio-button value="free"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.free"></span>自由</el-radio-button>
+              <el-radio-button value="right"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.right"></span>向右</el-radio-button>
+              <el-radio-button value="left"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.left"></span>向左</el-radio-button>
+              <el-radio-button value="org"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.org"></span>组织</el-radio-button>
+              <el-radio-button value="radial"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.radial"></span>放射</el-radio-button>
             </el-radio-group>
             <div class="ms-title" style="margin-top: 14px;">主题</div>
             <div class="ms-themes">
               <div v-for="(t, k) in THEMES" :key="k" class="ms-theme" :class="{ on: themeKey === k }" @click="setTheme(k)">
                 <span class="mt-swatch" :style="{ background: `linear-gradient(135deg, ${t.rootFill} 0%, ${t.rootFill}88 100%)` }"></span>{{ t.name }}
               </div>
+            </div>
+            <div class="ms-title" style="margin-top: 14px;">画布背景</div>
+            <div class="ms-colors">
+              <span v-for="c in CANVAS_BG" :key="c" class="ms-color" :class="{ on: canvasBg === c }" :style="{ background: c }" :title="canvasBgName(c)" @click="setCanvasBg(c)"></span>
             </div>
             <template v-if="activeNode">
               <div class="ms-title" style="margin-top: 14px;">节点样式</div>
@@ -299,6 +304,35 @@ const THEMES: Record<string, { name: string; rootFill: string; darkBg: string; c
   },
 };
 
+// 画布背景色板（幕布式：可独立于主题单独调整画布背景，再次点击同色取消恢复主题默认）
+const CANVAS_BG = ['#ffffff', '#f5f7fa', '#fff8ec', '#eef7ff', '#eefaf1', '#fdf0f6', '#1e222b', '#20242e', '#232d24', '#2a2331'];
+const canvasBg = ref<string>(localStorage.getItem('kh-mm-canvasbg') || '');
+function canvasBgName(c: string) {
+  const m: Record<string, string> = {
+    '#ffffff': '纯白', '#f5f7fa': '浅灰', '#fff8ec': '米黄', '#eef7ff': '浅蓝', '#eefaf1': '浅绿', '#fdf0f6': '浅粉',
+    '#1e222b': '深灰', '#20242e': '深蓝灰', '#232d24': '墨绿', '#2a2331': '深紫',
+  };
+  return m[c] || c;
+}
+function setCanvasBg(c: string) {
+  canvasBg.value = canvasBg.value === c ? '' : c;
+  if (canvasBg.value) localStorage.setItem('kh-mm-canvasbg', canvasBg.value);
+  else localStorage.removeItem('kh-mm-canvasbg');
+  if (mm) { try { mm.setThemeConfig(themeCfgFor(themeKey.value)); } catch {} }
+  applyCanvasBg();
+  markDirty();
+}
+// 布局按钮可视化图标（内联 SVG：节点+连线示意，16px）
+const LAYOUT_ICONS: Record<string, string> = {
+  free: '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="3" cy="3" r="1.6" fill="currentColor"/><circle cx="13" cy="4" r="1.6" fill="currentColor"/><circle cx="4" cy="13" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="M4.4 4.2l1.4 2.2M10.9 5.6l-3 1.4M5.4 11.4l2-2M9.9 10.5l.9-3" stroke="currentColor" stroke-width="1" fill="none"/></svg>',
+  right: '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="3" cy="8" r="1.8" fill="currentColor"/><circle cx="9" cy="4" r="1.5" fill="currentColor"/><circle cx="9" cy="8" r="1.5" fill="currentColor"/><circle cx="9" cy="12" r="1.5" fill="currentColor"/><path d="M4.6 7.7h2.6M9.8 4h2.8M9.8 8h2.8M9.8 12h2.8" stroke="currentColor" stroke-width="1"/></svg>',
+  left: '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="13" cy="8" r="1.8" fill="currentColor"/><circle cx="7" cy="4" r="1.5" fill="currentColor"/><circle cx="7" cy="8" r="1.5" fill="currentColor"/><circle cx="7" cy="12" r="1.5" fill="currentColor"/><path d="M11.4 7.7h-2.6M6.2 4H3.4M6.2 8H3.4M6.2 12H3.4" stroke="currentColor" stroke-width="1"/></svg>',
+  org: '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="8" cy="2.5" r="1.8" fill="currentColor"/><circle cx="4" cy="8.5" r="1.5" fill="currentColor"/><circle cx="8" cy="8.5" r="1.5" fill="currentColor"/><circle cx="12" cy="8.5" r="1.5" fill="currentColor"/><circle cx="6" cy="13.5" r="1.4" fill="currentColor"/><circle cx="10" cy="13.5" r="1.4" fill="currentColor"/><path d="M7.6 4.2l-2.5 3M8.4 4.2l-.2 2.8M8.4 4.2l2.5 3M5 10v1.8M11 10v1.8M8 10v1.8" stroke="currentColor" stroke-width="1"/></svg>',
+  radial: '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="3" cy="8" r="1.8" fill="currentColor"/><path d="M4.6 8h10M7 5.4c1.6-.7 3.2-.7 4.8-.2M7 10.6c1.6.7 3.2.7 4.8.2" stroke="currentColor" stroke-width="1" fill="none"/></svg>',
+};
+
+// 思维导图文件图标（列表视图文件名前）
+const MAP_ICON = '<svg viewBox="0 0 16 16" width="14" height="14" style="vertical-align:-2px"><circle cx="3" cy="3" r="1.8" fill="currentColor"/><circle cx="13" cy="4" r="1.5" fill="currentColor"/><circle cx="4" cy="13" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><path d="M4.4 4.2l1.4 2.2M10.9 5.6l-3 1.4M5.4 11.4l2-2M9.9 10.5l.9-3" stroke="currentColor" stroke-width="1" fill="none"/></svg>';
 const view = ref<'library' | 'editor'>('library');
 const maps = ref<MindmapMeta[]>([]);
 const mapId = ref('');
@@ -574,14 +608,44 @@ async function openMap(id: string) {
       themeConfig: themeCfgFor(themeKey.value),
       enableFreeDrag: true,
       mousewheelAction: 'zoom',
-      // 鱼骨（放射）布局角度：默认 45° 会让上下分支横向间距过大，调大后更紧凑
-      fishboneDeg: 58,
+      // 鱼骨（放射）布局角度：默认 45° 会让上下分支横向间距过大，调大后更紧凑（配合主题 second.marginX 缩减）
+      fishboneDeg: 72,
       // 分支节点展开/折叠按钮：光标悬停时显示（不常驻）
       alwaysShowExpandBtn: false,
       // 关系线激活时不显示两端拖拽调节锚点（用户不需要调节曲线控制点）
       enableAdjustAssociativeLinePoints: false,
       // 关联线渲染在节点下层，避免遮挡节点内容（默认 true 会盖住节点）
       associativeLineIsAlwaysAboveNode: false,
+      // 节点内追加内容：幕布式描述渲染在节点矩形内部底部（替代早期节点外浮层方案）
+      // create 返回 { el, width, height }：SMM 将其包成 foreignObject 追加进节点 group；
+      // handle 在渲染后回调，可精确定位（节点内底部）；getNodeRect 补丁会把节点宽高撑大以容纳描述
+      addCustomContentToNode: {
+        create(node: any) {
+          const desc = (node?.nodeData?.data?.desc || '').trim();
+          if (!desc) return null;
+          const el = document.createElement('div');
+          el.className = 'kh-node-desc-inner';
+          desc.split('\n').forEach(line => {
+            const p = document.createElement('div');
+            p.textContent = line || ' ';
+            el.appendChild(p);
+          });
+          const parentSvg = node.group?.node || null;
+          const maxW = parentSvg ? (parentSvg.getBBox?.()?.width || 180) : 180;
+          const fontSize = 11;
+          const lines = el.children.length;
+          const width = Math.min(320, Math.max(60, ...desc.split('\n').map(l => Math.ceil(l.length * fontSize * 0.95) + 12)));
+          const height = lines * (fontSize + 3) + 8;
+          return { el, width: Math.max(width, 80), height: Math.min(height, 220) };
+        },
+        handle({ element, node }: any) {
+          try {
+            const { paddingX, paddingY } = node.getPaddingVale ? node.getPaddingVale() : { paddingX: 8, paddingY: 6 };
+            const descH = node._customContentAddToNodeAdd?.height || 0;
+            element.translate(paddingX, node.height - descH - paddingY - 2);
+          } catch {}
+        },
+      },
     });
     applyCanvasBg();
     let fitted = false;
@@ -590,7 +654,6 @@ async function openMap(id: string) {
       if (!fitted) { fitted = true; setTimeout(() => { try { mm.view.fit(); } catch {} }, 30); }
       scheduleRenderBounds();
       refreshOutline();
-      renderNodeDescs();
     });
     bindEvents();
     window.addEventListener('keydown', onEditorKeydown);
@@ -615,8 +678,6 @@ async function backToLib() {
   loadMaps();
 }
 function destroyMindMap() {
-  if (descRenderTimer) { clearTimeout(descRenderTimer); descRenderTimer = null; }
-  document.querySelectorAll('.kh-node-desc-ov').forEach((el: any) => el.remove());
   if (mm) {
     try {
       mm.off('node_active');
@@ -656,9 +717,9 @@ function bindEvents() {
     selCount.value = selNodes().length;
     outlineActiveUid.value = nd.uid;
   });
-  mm.on('node_tree_render_end', () => { scale.value = mm.view.scale || 1; renderNodeDescs(); });
-  mm.on('data_change', () => { markDirty(); refreshOutline(); scheduleNodeDescs(); });
-  mm.on('view_data_change', () => { markDirty(); refreshOutline(); scheduleNodeDescs(); });
+  mm.on('node_tree_render_end', () => { scale.value = mm.view.scale || 1; });
+  mm.on('data_change', () => { markDirty(); refreshOutline(); });
+  mm.on('view_data_change', () => { markDirty(); refreshOutline(); });
   mm.on('scale', () => scheduleRenderBounds());
   mm.on('draw_click', () => {
     // 点击画布空白处：取消边界选中
@@ -708,61 +769,16 @@ function setNodeShape(s: string) {
   mm.execCommand('SET_NODE_SHAPE', activeNode.value, SHAPE_MAP[s] || 'rectangle');
   markDirty();
 }
-// 保存节点描述（幕布式，自动换行）：写入独立 data.desc 字段并重绘描述层（不触碰标题文本）
+// 保存节点描述（幕布式，自动换行）：写入独立 data.desc 字段，SMM 通过 addCustomContentToNode 钩子渲染在节点内部
 function saveNodeDesc() {
   const node = activeNode.value;
   if (!node) return;
   try {
     node.setData({ desc: nodeDescText.value });
-    mm.render();
+    node.reRender();
     markDirty();
-    setTimeout(() => { renderNodeDescs(); refreshOutline(); }, 100);
+    refreshOutline();
   } catch (e: any) { ElMessage.error('保存描述失败：' + (e?.message || e)); }
-}
-
-// ---------- 节点描述渲染层：在节点下方自绘多行自动换行描述（独立于 SMM 文本体系） ----------
-let descRenderTimer: any = null;
-function scheduleNodeDescs() {
-  if (descRenderTimer) clearTimeout(descRenderTimer);
-  descRenderTimer = setTimeout(renderNodeDescs, 300);
-}
-function renderNodeDescs() {
-  if (!mm?.renderer?.root) return;
-  try {
-    document.querySelectorAll('.kh-node-desc-ov').forEach((el: any) => el.remove());
-    const walk = (n: any) => {
-      if (!n || !n.group) { (n?.children || []).forEach(walk); return; }
-      const nd = n.nodeData?.data;
-      if (nd && nd.desc && String(nd.desc).trim()) {
-        const g = n.group.node as SVGGElement;
-        let bbox: DOMRect | null = null;
-        try { bbox = (g as any).getBBox ? (g as any).getBBox() : null; } catch {}
-        if (!bbox || !bbox.height) { (n.children || []).forEach(walk); return; }
-        const lines = String(nd.desc).split('\n');
-        const maxLine = lines.reduce((m, l) => Math.max(m, l.length), 0);
-        const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-        fo.setAttribute('class', 'kh-node-desc-ov');
-        const div = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
-        div.className = 'kh-node-desc-box';
-        lines.forEach((l, i) => {
-          const p = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
-          p.className = 'kh-node-desc-line';
-          p.textContent = l;
-          div.appendChild(p);
-        });
-        fo.appendChild(div);
-        const w = Math.max(bbox.width, Math.min(maxLine * 11 + 12, 320));
-        const h = lines.length * 16 + 6;
-        fo.setAttribute('x', String(bbox.x));
-        fo.setAttribute('y', String(bbox.y + bbox.height + 4));
-        fo.setAttribute('width', String(w));
-        fo.setAttribute('height', String(h));
-        g.appendChild(fo);
-      }
-      (n.children || []).forEach(walk);
-    };
-    walk(mm.renderer.root);
-  } catch {}
 }
 
 // ---------- 工具栏 ----------
@@ -927,8 +943,19 @@ function setTheme(k: string) {
 function themeCfgFor(k: string): Record<string, any> {
   const t = THEMES[k] || THEMES['nexa-light'];
   const isDark = document.documentElement.classList.contains('dark');
+  const cfg = { ...t.cfg };
+  // 放射（鱼骨）布局：收紧二级节点横向间距（marginX），配合 fishboneDeg 72 进一步压缩横向距离
+  if (layoutKey.value === 'radial') {
+    cfg.second = { ...(cfg.second || {}), marginX: 10 };
+  }
+  // 画布背景独立色板（幕布式）：设置了则覆盖主题背景
+  if (canvasBg.value) {
+    cfg.background = canvasBg.value;
+    cfg.backgroundColor = canvasBg.value;
+  }
   // SMM 重渲染（切布局等）会用 themeConfig.backgroundColor 覆盖容器背景，必须同时替换该字段
-  return isDark ? { ...t.cfg, backgroundColor: t.darkBg, background: t.darkBg } : t.cfg;
+  // 用户手动设置了画布背景时，不再跟随系统深色自动切换（以手动选择为准）
+  return isDark && !canvasBg.value ? { ...cfg, backgroundColor: t.darkBg, background: t.darkBg } : cfg;
 }
 // SMM 用内联样式设置容器背景，需手动应用（themeConfig.background 不会自动同步到容器）
 function applyCanvasBg() {
@@ -1241,7 +1268,7 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 .ml-meta { font-size: 12px; color: var(--el-text-color-secondary); }
 .ml-tags { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
 .ml-tags, .ml-row-tags { font-size: 11px; color: var(--kh-brand, #409eff); background: rgba(64, 158, 255, .08); border-radius: 4px; padding: 1px 6px; width: fit-content; }
-.ml-del { position: absolute; top: 8px; right: 10px; color: var(--el-text-color-placeholder); font-size: 12px; display: none; }
+.ml-del { position: absolute; bottom: 8px; right: 10px; top: auto; color: var(--el-text-color-placeholder); font-size: 12px; display: none; }
 .ml-card:hover .ml-del { display: block; }
 .ml-empty { color: var(--el-text-color-secondary); text-align: center; padding: 60px 0; }
 .ml-list { display: flex; flex-direction: column; border: 1px solid var(--el-border-color); border-radius: 10px; overflow: hidden; }
@@ -1249,9 +1276,10 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 .ml-row:last-child { border-bottom: none; }
 .ml-row:hover { background: rgba(64, 158, 255, .05); }
 .ml-row-pin { width: 18px; flex: none; text-align: center; }
+.ml-row-ico { flex: none; color: var(--kh-brand, #409eff); display: inline-flex; align-items: center; }
 .ml-row-title { font-weight: 500; color: var(--el-text-color-primary); flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ml-row-meta { font-size: 12px; color: var(--el-text-color-secondary); flex: 1; min-width: 0; }
 .ml-row-tags { flex: none; }
+.ml-row-meta { font-size: 12px; color: var(--el-text-color-secondary); flex: 1; min-width: 0; text-align: right; }
 .ml-row-ops { flex: none; display: flex; gap: 2px; }
 .ml-recycle-list { display: flex; flex-direction: column; border: 1px solid var(--el-border-color); border-radius: 10px; overflow: hidden; }
 .ml-recycle-list .ml-row-title { max-width: none; }
@@ -1282,9 +1310,10 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 .ms-title { font-weight: 600; font-size: 13px; margin-bottom: 10px; color: var(--el-text-color-primary); }
 .ms-outline-count { font-weight: 400; color: var(--el-text-color-secondary); font-size: 12px; margin-left: 4px; }
 /* 布局切换按钮组（左侧面板，紧凑按钮，正常文字高度） */
-.ms-layout-btns { display: flex; flex-wrap: wrap; gap: 2px; width: 100%; }
+.ms-layout-btns { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; }
 .ms-layout-btns :deep(.el-radio-button) { flex: 1 1 48%; }
-.ms-layout-btns :deep(.el-radio-button__inner) { font-size: 12px; padding: 3px 0; width: 100%; }
+.ms-layout-btns :deep(.el-radio-button__inner) { font-size: 12px; padding: 7px 0; width: 100%; display: flex; align-items: center; justify-content: center; gap: 4px; line-height: 1; }
+.ms-lb-icon { display: inline-flex; align-items: center; }
 .mm-save-btn { margin-left: 8px; }
 .ms-outline { display: flex; flex-direction: column; font-size: 13px; }
 .ms-o-row { display: flex; align-items: center; gap: 4px; padding: 3px 6px; border-radius: 5px; cursor: pointer; color: var(--el-text-color-primary); line-height: 1.4; }
@@ -1371,18 +1400,23 @@ onBeforeUnmount(() => { flushSave(); destroyMindMap(); });
 
 <style>
 /* 全局样式：SMM 动态注入的 SVG/foreignObject 元素不受 scoped 作用 */
-/* 节点描述渲染层：标题下方多行自动换行（幕布式） */
-.kh-node-desc-box {
+/* 节点内描述（幕布式）：渲染在节点矩形内部底部，自动换行、弱化样式 */
+.kh-node-desc-inner {
   font-size: 11px;
   color: var(--el-text-color-secondary, #8a8f98);
-  line-height: 1.4;
+  line-height: 1.45;
   user-select: none;
   pointer-events: none;
   overflow: hidden;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
-.kh-node-desc-line {
+.kh-node-desc-inner div {
   white-space: normal;
   word-break: break-all;
   overflow-wrap: anywhere;
+  width: 100%;
 }
 </style>

@@ -439,12 +439,14 @@ defineExpose({ openFolder, openTag });
       <div v-if="viewMode === 'table'" class="table-wrap" v-loading="loading">
         <el-table :data="list" size="small" height="100%" stripe @selection-change="(rows: Resource[]) => selection = rows">
           <el-table-column type="selection" width="38" />
-          <el-table-column label="类型" width="74">
+          <el-table-column label="名称" min-width="200">
             <template #default="{ row }">
-              <span :title="typeLabels[row.type] || row.type">{{ typeIcons[row.type] || '📄' }}</span>
+              <span class="name-cell">
+                <span class="name-ico" :title="typeLabels[row.type] || row.type">{{ typeIcons[row.type] || '📄' }}</span>
+                <span class="name-text" :title="row.title">{{ row.title }}</span>
+              </span>
             </template>
           </el-table-column>
-          <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
           <el-table-column prop="path" label="路径" min-width="220" show-overflow-tooltip>
             <template #default="{ row }"><span class="path">{{ row.path || '-' }}</span></template>
           </el-table-column>
@@ -567,6 +569,9 @@ html.dark .tree-wrap::-webkit-scrollbar-thumb:hover, html.dark .grid::-webkit-sc
 .file-tree :deep(.el-tree-node__content) { height: 21px; }
 .file-tree { --el-tree-node-content-height: 21px; }
 .path { color: var(--el-text-color-secondary, #9ca3af); font-size: 12px; }
+.name-cell { display: flex; align-items: center; gap: 8px; overflow: hidden; }
+.name-ico { flex: none; font-size: 16px; line-height: 1; }
+.name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tag-cell { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; overflow: hidden; }
 .tag-cell .el-button { flex: none; }
 /* 标签统一主色蓝底白字（--kh-brand 全局主色参数） */
