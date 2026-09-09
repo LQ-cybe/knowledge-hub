@@ -17,6 +17,9 @@ export interface Resource {
   tag_names?: string;
   tag_ids?: string;
   pinned?: number;
+  meta?: string;
+  /** 时间线专用：文件已在磁盘上删除或改名 */
+  missing?: boolean;
 }
 
 export interface FolderNode {
@@ -109,16 +112,22 @@ export interface ResourceDetail {
   updated_at: string;
 }
 export interface TrashInfo { count: number; clear_at: string | null; days: number }
-export const createResource = (type: 'note' | 'bookmark' | 'todo', title: string, content = '', source_url = '') =>
-  http.post('/resources', { type, title, content, source_url }).then(r => r.data.data as { id: string; type: string; title: string });
+export const createResource = (type: 'note' | 'bookmark' | 'todo', title: string, content = '', source_url = '', meta?: string) =>
+  http.post('/resources', { type, title, content, source_url, meta }).then(r => r.data.data as { id: string; type: string; title: string });
 export const getResource = (id: string) =>
   http.get(`/resources/${id}`).then(r => r.data.data as ResourceDetail);
-export const updateResource = (id: string, patch: { title?: string; content?: string; source_url?: string; done?: boolean }) =>
+export const updateResource = (id: string, patch: { title?: string; content?: string; source_url?: string; done?: boolean; meta?: string | Record<string, unknown> }) =>
   http.put(`/resources/${id}`, patch).then(r => r.data.data);
 export const deleteResource = (id: string) =>
   http.delete(`/resources/${id}`).then(r => r.data.data);
 export const getTrashInfo = () =>
   http.get('/resources/trash/info').then(r => r.data.data as TrashInfo);
+
+/** 今日新增计数（工作台"今日新增"卡片） */
+export interface TodayCount {
+  note: number; bookmark: number; file: number; todo: number; mindmap: number; total: number; date: string;
+}
+export const getToday = () => http.get('/today').then(r => r.data.data as TodayCount);
 
 export interface GraphNode {
   id: string;

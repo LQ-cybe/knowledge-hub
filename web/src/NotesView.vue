@@ -41,8 +41,14 @@ function fmtTime(s: string) {
 }
 
 // ---------- 新建笔记 ----------
-const createDialog = ref({ visible: false, title: '', content: '', saving: false });
-function openCreate() { createDialog.value = { visible: true, title: '', content: '', saving: false }; }
+const createDialog = ref({ visible: false, title: '', content: '', format: 'md', saving: false });
+function openCreate() {
+  // 保留上次的格式选择（对象整体替换会清空 format → emit 的 ext 变 undefined，编辑器误判为纯文本）
+  createDialog.value.visible = true;
+  createDialog.value.title = '';
+  createDialog.value.content = '';
+  createDialog.value.saving = false;
+}
 async function doCreate() {
   const d = createDialog.value;
   if (!d.title.trim()) { ElMessage.warning('请输入笔记标题'); return; }
@@ -52,7 +58,7 @@ async function doCreate() {
     d.visible = false;
     ElMessage.success('笔记已创建');
     await load();
-    emit('open-editor', { id: r.id, title: r.title, ext: 'md', path: '', isImage: false, mode: 'note' });
+    emit('open-editor', { id: r.id, title: r.title, ext: d.format, path: '', isImage: false, mode: 'note' });
   } catch (e: any) {
     ElMessage.error('创建失败：' + (e?.response?.data?.msg || e?.message || '服务异常'));
   } finally {
@@ -133,6 +139,13 @@ onMounted(() => document.addEventListener('click', closeCtx));
       <div class="nv-field">
         <label>标题</label>
         <el-input v-model="createDialog.title" placeholder="笔记标题" maxlength="200" @keyup.enter="doCreate" />
+      </div>
+      <div class="nv-field">
+        <label>格式</label>
+        <el-radio-group v-model="createDialog.format">
+          <el-radio-button value="md">Markdown</el-radio-button>
+          <el-radio-button value="txt">纯文本</el-radio-button>
+        </el-radio-group>
       </div>
       <div class="nv-field">
         <label>内容（Markdown）</label>

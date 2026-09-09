@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref, nextTick } from 'vue';
 import * as echarts from 'echarts';
-import { getDashboard, getRecycleInfo, type DashboardData, type RecycleInfo } from './api';
+import { getDashboard, getRecycleInfo, getToday, type DashboardData, type RecycleInfo, type TodayCount } from './api';
 
 const emit = defineEmits<{ (e: 'open-folder', id: string): void; (e: 'open-tag', id: string): void }>();
 
 const dash = ref<DashboardData | null>(null);
 const loading = ref(true);
 const recycle = ref<RecycleInfo>({ count: 0, clear_at: null, days: 30 });
+const today = ref<TodayCount>({ note: 0, bookmark: 0, file: 0, todo: 0, mindmap: 0, total: 0, date: '' });
 
 const typeIcons: Record<string, string> = {
   folder: '📂', file: '📄', note: '📝', bookmark: '🔖', todo: '✅', report: '📊',
@@ -129,6 +130,7 @@ onMounted(async () => {
   window.addEventListener('resize', onResize);
   window.addEventListener('kh-theme-change', onThemeChange);
   getRecycleInfo().then(r => recycle.value = r).catch(() => {});
+  getToday().then(t => today.value = t).catch(() => {});
 });
 onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize);
@@ -165,6 +167,19 @@ function fmtTime(s: string) {
       <div class="card">
         <div class="card-num">{{ dash?.tagCount ?? 0 }}</div>
         <div class="card-label">标签数</div>
+      </div>
+    </div>
+
+    <!-- 今日新增 -->
+    <div class="today-bar" v-if="today.total > 0 || dash">
+      <div class="today-title">🆕 今日新增</div>
+      <div class="today-chips">
+        <div class="today-chip file"><span class="tc-num">{{ today.file }}</span><span class="tc-label">📄 文件</span></div>
+        <div class="today-chip note"><span class="tc-num">{{ today.note }}</span><span class="tc-label">📝 笔记</span></div>
+        <div class="today-chip bookmark"><span class="tc-num">{{ today.bookmark }}</span><span class="tc-label">🔖 书签</span></div>
+        <div class="today-chip mindmap"><span class="tc-num">{{ today.mindmap }}</span><span class="tc-label">🧠 思维导图</span></div>
+        <div class="today-chip todo"><span class="tc-num">{{ today.todo }}</span><span class="tc-label">✅ 待办</span></div>
+        <div class="today-chip total"><span class="tc-num">{{ today.total }}</span><span class="tc-label">总计</span></div>
       </div>
     </div>
 
@@ -238,6 +253,20 @@ function fmtTime(s: string) {
 .cards { display: flex; gap: 12px; flex-wrap: wrap; }
 .recycle-banner { margin-top: 12px; font-size: 13px; color: var(--el-text-color-regular, #4b5563); background: rgba(230, 162, 60, .1); border: 1px solid rgba(230, 162, 60, .3); border-radius: 10px; padding: 10px 14px; line-height: 1.6; }
 .recycle-banner b { color: #e6a23c; }
+
+.today-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: var(--el-bg-color, #fff); border: 1px solid var(--el-border-color, #e5e7eb); border-radius: 10px; padding: 12px 16px; }
+.today-title { font-size: 14px; font-weight: 600; color: var(--el-text-color-primary, #1f2937); flex: none; }
+.today-chips { display: flex; gap: 10px; flex-wrap: wrap; }
+.today-chip { display: flex; flex-direction: column; align-items: center; min-width: 78px; padding: 8px 14px; border-radius: 10px; background: var(--el-fill-color-light, #f5f7fa); border: 1px solid var(--el-border-color-lighter, #ebeef5); }
+.today-chip .tc-num { font-size: 22px; font-weight: 700; line-height: 1.1; }
+.today-chip .tc-label { font-size: 12px; color: var(--el-text-color-secondary, #9ca3af); margin-top: 3px; }
+.today-chip.file .tc-num { color: #409EFF; }
+.today-chip.note .tc-num { color: #67C23A; }
+.today-chip.bookmark .tc-num { color: #E6A23C; }
+.today-chip.mindmap .tc-num { color: #B37FEB; }
+.today-chip.todo .tc-num { color: #F56C6C; }
+.today-chip.total { background: rgba(64,158,255,.08); border-color: rgba(64,158,255,.3); }
+.today-chip.total .tc-num { color: #409EFF; }
 .card {
   flex: 1 1 160px; min-width: 0; padding: 14px 18px;
   background: var(--el-bg-color, #fff);

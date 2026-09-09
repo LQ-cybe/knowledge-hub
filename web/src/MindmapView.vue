@@ -140,7 +140,7 @@
             <el-radio-group v-model="layoutKey" class="ms-layout-btns" @change="onLayoutChange">
               <el-radio-button value="right"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.right"></span>向右</el-radio-button>
               <el-radio-button value="left"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.left"></span>向左</el-radio-button>
-              <el-radio-button value="mind"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.mind"></span>导图</el-radio-button>
+              <el-radio-button value="mind"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.mind"></span>思维导图</el-radio-button>
               <el-radio-button value="org"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.org"></span>组织</el-radio-button>
               <el-radio-button value="radial"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.radial"></span>鱼骨图</el-radio-button>
               <el-radio-button value="timeline"><span class="ms-lb-icon" v-html="LAYOUT_ICONS.timeline"></span>时间轴</el-radio-button>
@@ -262,7 +262,7 @@ const VIRT_ROOT = '__VR__';
 const LAYOUT_MAP: Record<string, string> = { right: 'logicalStructure', left: 'logicalStructureLeft', mind: 'mindMap', org: 'organizationStructure', radial: 'fishbone', timeline: 'timeline' };
 const LAYOUT_REV: Record<string, string> = { mindMap: 'free', logicalStructure: 'right', logicalStructureLeft: 'left', organizationStructure: 'org', fishbone: 'radial' };
 /** 布局中文名（下拉/提示用） */
-const LAYOUT_NAMES: Record<string, string> = { right: '向右', left: '向左', mind: '导图', org: '组织', radial: '鱼骨图', timeline: '时间轴' };
+const LAYOUT_NAMES: Record<string, string> = { right: '向右', left: '向左', mind: '思维导图', org: '组织', radial: '鱼骨图', timeline: '时间轴' };
 const SHAPES: Record<string, string> = { auto: '自动', rect: '矩形', round: '圆角', ellipse: '椭圆', diamond: '菱形', parallelogram: '平行四边形', octagon: '八角', outerTri: '外三角', innerTri: '内三角' };
 const SHAPE_MAP: Record<string, string> = {
   auto: 'rectangle', rect: 'rectangle', round: 'roundedRectangle', ellipse: 'ellipse',
@@ -694,8 +694,9 @@ async function openMap(id: string) {
       mousewheelAction: 'zoom',
       // 左键拖拽空白处 = 框选多选（右键仍可拖动画布）；默认是右键框选，不符合直觉
       useLeftKeySelectionRightKeyDrag: true,
-      // 鱼骨（放射）布局角度：完全官方默认 45°（用户要求"恢复到最开始的版本，完全不改"）
-      // fishboneDeg: 72,
+      // 鱼骨（放射）布局夹角：原官方默认 45° 对角过陡，相邻肋子树纵向压盖重叠；
+      // 放平缓到 63° 减小每根肋的纵向展开高度，配合上方加大的 marginX/marginY 消除重叠
+      fishboneDeg: 63,
       // 分支节点展开/折叠按钮：光标悬停时显示（不常驻）
       alwaysShowExpandBtn: false,
       // 关闭节点位置过渡动画：打开/切换布局/展开折叠直接到位，
@@ -1058,10 +1059,15 @@ function themeCfgFor(k: string): Record<string, any> {
   const t = THEMES[k] || THEMES['nexa-light'];
   const isDark = document.documentElement.classList.contains('dark');
   const cfg = { ...t.cfg };
-  // 间距：鱼骨图（radial）完全官方默认（用户第 12 轮要求"恢复到最开始的版本，完全不改"——
-  // 不做 marginX/marginY/fishboneDeg 任何覆盖，Fishbone.js 也已恢复官方原版）；
+  // 间距：鱼骨图（radial）此前未设 marginX/marginY，导致 getMarginY/Y 返回 undefined+hoverRectPadding = NaN，
+  // 节点相互压盖重叠（用户第 18 轮要求消除重叠）。在上一轮基础上继续加大间距并配合更平缓的鱼骨夹角，
+  // 进一步消除相邻肋（rib）子树之间的横向/纵向压盖（Fishbone.js 中肋节点按"前兄弟宽 + marginX"绝对排布，
+  // 肋内子节点按"节点高 + marginY"沿对角列式堆叠，二者过小即重叠）。
   // 其他布局保留第 8 轮纵向修复（second.marginY 9 / node.marginY 12，教育心理学纵向过密）
-  if (layoutKey.value !== 'radial') {
+  if (layoutKey.value === 'radial') {
+    cfg.second = { ...(cfg.second || {}), marginY: 30, marginX: 64 };
+    cfg.node = { ...(cfg.node || {}), marginY: 24, marginX: 52 };
+  } else {
     cfg.second = { ...(cfg.second || {}), marginY: 9 };
     cfg.node = { ...(cfg.node || {}), marginY: 12 };
   }

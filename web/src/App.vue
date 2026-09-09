@@ -6,13 +6,13 @@ import GraphView from './GraphView.vue';
 import HomeView from './HomeView.vue';
 import BrowserView from './BrowserView.vue';
 import TimelineView from './TimelineView.vue';
-import NotesView from './NotesView.vue';
+import NotesView from './NotesBookmarksView.vue';
 import TodosView from './TodosView.vue';
 import ReportView from './ReportView.vue';
 import MindmapView from './MindmapView.vue';
 import FileEditorView from './FileEditorView.vue';
 
-const activeTab = ref('browse');
+const activeTab = ref(localStorage.getItem('kh-home-tab') || 'browse');
 const browserRef = ref<InstanceType<typeof BrowserView>>();
 const notesRef = ref<InstanceType<typeof NotesView>>();
 const todosRef = ref<InstanceType<typeof TodosView>>();
@@ -51,6 +51,25 @@ function onThemeChange(t: KhTheme) {
 
 const typeLabels: Record<string, string> = { file: '文件', folder: '文件夹', note: '笔记', bookmark: '书签', todo: '待办', report: '报表' };
 
+// 主页面设置（进入软件后默认显示的窗口），持久化到 localStorage
+const HOME_TAB_KEY = 'kh-home-tab';
+const homeTab = ref(activeTab.value);
+const homeTabOptions = [
+  { value: 'home', label: '🏠 工作台' },
+  { value: 'browse', label: '📁 文件' },
+  { value: 'graph', label: '🕸️ 图谱' },
+  { value: 'timeline', label: '🕐 历史' },
+  { value: 'notes', label: '📑 书签笔记' },
+  { value: 'todos', label: '✅ 待办' },
+  { value: 'report', label: '📊 报表' },
+  { value: 'mindmap', label: '📐 思维导图' },
+];
+function onHomeTabChange(v: string) {
+  homeTab.value = v;
+  activeTab.value = v;
+  try { localStorage.setItem(HOME_TAB_KEY, v); } catch { /* 忽略 */ }
+}
+
 onMounted(async () => {
   stats.value = await getStats();
 });
@@ -71,6 +90,14 @@ async function openTag(tagId: string) {
 async function openResource(parentId: string | null) {
   activeTab.value = 'browse';
   if (parentId) await browserRef.value?.openFolder(parentId);
+}
+
+/** 时间线单击可编辑文件 → 打开文件编辑器进入编辑模式 */
+function openFile(r: { id: string; title: string; path: string }) {
+  const e = (r.path.split('.').pop() || '').toLowerCase();
+  const imgExt = new Set(['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg', 'ico']);
+  editorFrom.value = 'browse';
+  editor.value = { mode: 'file', id: r.id, title: r.title, ext: e, path: r.path, isImage: imgExt.has(e) };
 }
 </script>
 
@@ -114,22 +141,31 @@ async function openResource(parentId: string | null) {
         </el-radio-group>
         <div class="set-hint">「跟随系统」会随 Windows 深浅色自动切换；也可固定为浅色或深色。</div>
       </div>
+      <div class="set-group">
+        <div class="set-label">进入软件后显示的窗口</div>
+        <el-radio-group v-model="homeTab" @change="onHomeTabChange">
+          <el-radio-button v-for="o in homeTabOptions" :key="o.value" :value="o.value">
+            {{ o.label }}
+          </el-radio-button>
+        </el-radio-group>
+        <div class="set-hint">选择启动后默认停留的页面；设置会保存在本地，下次打开自动生效。</div>
+      </div>
     </el-dialog>
 
     <el-tabs v-model="activeTab" class="main-tabs">
       <el-tab-pane label="🏠 工作台" name="home">
         <HomeView @open-folder="openFolder" @open-tag="openTag" />
       </el-tab-pane>
-      <el-tab-pane label="📚 浏览" name="browse">
+      <el-tab-pane label="📁 文件" name="browse">
         <BrowserView ref="browserRef" @open-editor="openEditor" />
       </el-tab-pane>
       <el-tab-pane label="🕸️ 图谱" name="graph">
         <GraphView />
       </el-tab-pane>
       <el-tab-pane label="🕐 历史" name="timeline">
-        <TimelineView @open-resource="openResource" />
+        <TimelineView @open-resource="openResource" @open-file="openFile" />
       </el-tab-pane>
-      <el-tab-pane label="📝 笔记" name="notes">
+      <el-tab-pane label="📑 书签笔记" name="notes">
         <NotesView ref="notesRef" @open-editor="openEditor" />
       </el-tab-pane>
       <el-tab-pane label="✅ 待办" name="todos">
@@ -138,7 +174,7 @@ async function openResource(parentId: string | null) {
       <el-tab-pane label="📊 报表" name="report">
         <ReportView />
       </el-tab-pane>
-      <el-tab-pane label="📐 导图" name="mindmap">
+      <el-tab-pane label="📐 思维导图" name="mindmap">
         <MindmapView />
       </el-tab-pane>
     </el-tabs>

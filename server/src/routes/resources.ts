@@ -40,7 +40,12 @@ router.get('/resources', (req: Request, res) => {
 
   const where: string[] = ['r.status = @status'];
   const params: Record<string, unknown> = { status };
-  if (type) { where.push('r.type = @type'); params.type = type; }
+  if (type) {
+    // 支持逗号分隔多类型（如 note,bookmark → 书签笔记合并页）
+    const types = String(type).split(',').map(s => s.trim()).filter(Boolean);
+    if (types.length > 1) { where.push(`r.type IN (${types.map((_, i) => `@type${i}`).join(',')})`); types.forEach((t, i) => { params[`type${i}`] = t; }); }
+    else { where.push('r.type = @type'); params.type = types[0]; }
+  }
   if (id) { where.push('r.id = @id'); params.id = id; }
   if (parentId === 'root') {
     // 主目录视图：根文件夹 + 全局自建资源（笔记/书签/待办，无文件系统归属）
@@ -63,8 +68,8 @@ router.get('/resources', (req: Request, res) => {
   };
   const orderCol = orderCols[orderBy] || 'r.updated_at';
   const orderDirSql = orderDir.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
-  // 置顶优先：文件夹先、置顶次之、再按所选排序字段（置顶资源不受排序方向影响）
-  const orderSql = `ORDER BY CASE r.type WHEN 'folder' THEN 0 ELSE 1 END, json_extract(r.meta, '$.pinned') DESC, ${orderCol} ${orderDirSql}`;
+  // 排序：文件夹先、再按所选排序字段（置顶功能已从文件页移除，不再按 pinned 优先排序）
+  const orderSql = `ORDER BY CASE r.type WHEN 'folder' THEN 0 ELSE 1 END, ${orderCol} ${orderDirSql}`;
 
   // 标签聚合（数据库视图显示用；子查询走 resource_tags 主键索引，仅对返回行执行）
   const tagNamesSub = `(SELECT GROUP_CONCAT(t.name, '|') FROM resource_tags rt JOIN tags t ON t.id = rt.tag_id WHERE rt.resource_id = r.id)`;
@@ -192,6 +197,24 @@ router.get('/dashboard', (_req, res) => {
   res.json({ code: 0, data: { total, byType, tagCount, topFolders, recent, topTags } });
 });
 
+/** GET /api/today —— 今日新增计数（工作台"今日新增"卡片用）
+ *  统计 created_at 落在本地今天 00:00 之后的资源，按类型拆分；导图来自独立 mindmaps 表 */
+router.get('/today', (_req, res) => {
+  const db = getDb();
+  const today = (db.prepare(`SELECT date('now','localtime') AS d`).get() as { d: string }).d;
+  const counts = db.prepare(
+    `SELECT type, COUNT(*) AS n FROM resources
+     WHERE status='active' AND date(created_at) = @today GROUP BY type`
+  ).all({ today }) as { type: string; n: number }[];
+  const map: Record<string, number> = { note: 0, bookmark: 0, file: 0, todo: 0 };
+  for (const c of counts) if (c.type in map) map[c.type] += c.n;
+  const mindmap = (db.prepare(
+    `SELECT COUNT(*) AS n FROM mindmaps WHERE date(created_at) = @today`
+  ).get({ today }) as { n: number }).n;
+  const total = map.note + map.bookmark + map.file + map.todo + mindmap;
+  res.json({ code: 0, data: { note: map.note, bookmark: map.bookmark, file: map.file, todo: map.todo, mindmap, total, date: today } });
+});
+
 /** GET /api/timeline?type=&tag= —— 垂直时间线：按创建时间倒序的资源流（前端按天分组，含大小/标签辅助信息） */
 router.get('/timeline', (req, res) => {
   const db = getDb();
@@ -205,7 +228,17 @@ router.get('/timeline', (req, res) => {
        AND (? = '' OR EXISTS (SELECT 1 FROM resource_tags rt WHERE rt.resource_id = r.id AND rt.tag_id = ?))
      ORDER BY r.created_at DESC LIMIT 500`
   ).all(type, type, tag, tag) as { id: string; type: string; title: string; path: string; parent_id: string | null; created_at: string; updated_at: string; size: number | null; tag_names: string | null }[];
-  res.json({ code: 0, data: rows });
+  // 文件：检测磁盘是否仍存在（删除/改名 → 历史卡片浅色提示）
+  // 注意：resources.path 存的是相对 STORAGE_ROOT 的路径，需拼接后检测
+  const out = rows.map(r => {
+    let missing = false;
+    if (r.type === 'file' && r.path) {
+      const full = path.isAbsolute(r.path) ? r.path : path.join(STORAGE_ROOT, r.path);
+      missing = !fs.existsSync(full);
+    }
+    return { ...r, missing };
+  });
+  res.json({ code: 0, data: out });
 });
 
 /** GET /api/search?q= —— FTS5 全文检索（跨 title/content） */
@@ -543,7 +576,7 @@ router.post('/resources/pending', (req, res) => {
   res.json({ code: 0, data: { ok: true, count, skipped, pending: !!pending } });
 });
 
-/** POST /api/resources/:id/pin —— 置顶/取消置顶（meta.pinned；浏览页列表/卡片图标单击切换，置顶资源排序优先） */
+/** POST /api/resources/:id/pin —— 置顶/取消置顶（meta.pinned；当前文件页已移除置顶入口与排序优先，接口保留以备后续扩展） */
 router.post('/resources/:id/pin', (req, res) => {
   const db = getDb();
   const pinned = req.body?.pinned ? 1 : 0;
@@ -649,7 +682,7 @@ router.put('/resources/:id', (req, res) => {
     { id: string; type: string } | undefined;
   if (!row) { res.status(404).json({ code: 1, msg: '资源不存在' }); return; }
   if (!SELF_TYPES.has(row.type)) { res.status(400).json({ code: 1, msg: '该类型不支持此更新方式' }); return; }
-  const { title, content, source_url, done } = req.body as { title?: string; content?: string; source_url?: string; done?: unknown };
+  const { title, content, source_url, done, meta } = req.body as { title?: string; content?: string; source_url?: string; done?: unknown; meta?: unknown };
   const set: string[] = [];
   const params: unknown[] = [];
   if (title !== undefined) {
@@ -662,6 +695,11 @@ router.put('/resources/:id', (req, res) => {
     set.push('source_url = ?'); params.push(String(source_url));
   }
   if (done !== undefined) { set.push('done = ?'); params.push(done ? 1 : 0); }
+  // meta：仅整体覆盖（书签图标 icon / 待整理 pending 等）；前端负责合并后传入完整 meta
+  if (meta !== undefined) {
+    const metaStr = typeof meta === 'string' ? meta : JSON.stringify(meta || {});
+    set.push('meta = ?'); params.push(metaStr);
+  }
   if (set.length === 0) { res.json({ code: 0, data: { ok: true } }); return; }
   set.push('updated_at = ?'); params.push(new Date().toISOString());
   params.push(req.params.id);

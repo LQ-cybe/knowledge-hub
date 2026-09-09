@@ -3,7 +3,9 @@
 // 勾选切换完成状态（done 持久化）；右键删除进回收站；未完成项可划线完成态
 import { onMounted, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { getResourcesPage, createResource, updateResource, deleteResource, type Resource } from './api';
+import { getResourcesPage, createResource, updateResource, deleteResource, setResourceTags, type Resource } from './api';
+import TagChips from './components/TagChips.vue';
+import TagManageDialog from './components/TagManageDialog.vue';
 
 const list = ref<Resource[]>([]);
 const total = ref(0);
@@ -94,6 +96,27 @@ async function onCtxCmd(cmd: string) {
   }
 }
 onMounted(() => document.addEventListener('click', closeCtx));
+
+// ---------- 标签 ----------
+const tagDlg = ref({ visible: false, row: null as Resource | null });
+function openTagDialog(row: Resource) {
+  tagDlg.value = { visible: true, row };
+}
+async function saveTags(ids: string[]) {
+  const row = tagDlg.value.row;
+  if (!row) return;
+  try {
+    await setResourceTags(row.id, ids);
+    const tags = await getResourcesPage({ page: '1', pageSize: '1', type: 'todo', id: row.id, status: 'active' });
+    const fresh = tags.list[0];
+    if (fresh) { row.tag_names = fresh.tag_names; row.tag_ids = fresh.tag_ids; }
+    ElMessage.success('标签已更新');
+  } catch (e: any) {
+    ElMessage.error('标签更新失败：' + (e?.message || '服务异常'));
+  }
+}
+const rowTagNames = (row: Resource) => (row.tag_names || '').split('|').filter(Boolean);
+const rowTagIds = (row: Resource) => (row.tag_ids || '').split('|').filter(Boolean);
 </script>
 
 <template>
@@ -115,11 +138,16 @@ onMounted(() => document.addEventListener('click', closeCtx));
             <el-checkbox :model-value="!!row.done" @change="toggleDone(row)" @click.stop />
           </template>
         </el-table-column>
-        <el-table-column label="待办内容" min-width="280">
+        <el-table-column label="待办内容" min-width="240">
           <template #default="{ row }">
             <span class="tv-name" :class="{ done: !!row.done }">
               <span class="tv-ico">{{ row.done ? '✅' : '⭕' }}</span>{{ row.title }}
             </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="标签" min-width="180">
+          <template #default="{ row }">
+            <TagChips :names="rowTagNames(row)" @open="openTagDialog(row)" />
           </template>
         </el-table-column>
         <el-table-column label="创建时间" width="150">
@@ -144,6 +172,14 @@ onMounted(() => document.addEventListener('click', closeCtx));
         <el-button type="primary" :loading="createDialog.saving" @click="doCreate">添加</el-button>
       </template>
     </el-dialog>
+
+    <!-- 添加标签（统一弹窗：可直接新建/删除） -->
+    <TagManageDialog
+      v-model="tagDlg.visible"
+      :ids="tagDlg.row ? rowTagIds(tagDlg.row) : []"
+      title="添加标签"
+      @save="saveTags"
+    />
 
     <!-- 右键菜单 -->
     <Teleport to="body">

@@ -2,7 +2,30 @@
 import { onMounted, ref } from 'vue';
 import { getTimeline, getTags, type Resource, type TagItem } from './api';
 
-const emit = defineEmits<{ (e: 'open-resource', parentId: string | null): void }>();
+const emit = defineEmits<{ (e: 'open-resource', parentId: string | null): void; (e: 'open-file', r: Resource): void }>();
+
+// 文件可编辑性：文本类进编辑器编辑；图片类进编辑器预览；其它二进制进所在目录
+const TEXT_EXT = new Set(['txt', 'md', 'markdown', 'json', 'csv', 'xml', 'html', 'htm', 'css', 'js', 'ts', 'jsx', 'tsx', 'vue', 'py', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'go', 'rs', 'php', 'sh', 'yml', 'yaml', 'ini', 'log', 'sql', 'bas', 'cls', 'frm', 'vba', 'conf', 'bat', 'ps1', 'toml', 'env']);
+const IMG_EXT = new Set(['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg', 'ico']);
+function extOf(p: string) { const i = p.lastIndexOf('.'); return i >= 0 ? p.slice(i + 1).toLowerCase() : ''; }
+function fileKind(p: string): 'text' | 'image' | 'binary' {
+  const e = extOf(p);
+  if (IMG_EXT.has(e)) return 'image';
+  if (TEXT_EXT.has(e)) return 'text';
+  return 'binary';
+}
+
+/** 卡片单击：文件→可编辑进编辑器，非编辑类进目录；其它类型进目录；已删除/改名文件不响应 */
+function onCardClick(r: Resource) {
+  if (r.missing) return;
+  if (r.type === 'file') {
+    const kind = fileKind(r.path);
+    if (kind === 'binary') emit('open-resource', r.parent_id); // 二进制：进所在目录
+    else emit('open-file', r); // 文本/图片：进编辑器
+  } else {
+    emit('open-resource', r.parent_id);
+  }
+}
 
 const typeFilter = ref('');
 const tagFilter = ref('');
@@ -124,13 +147,15 @@ function fmtBytes(b?: number | null) {
           <div class="tl-cards">
             <button
               v-for="r in g.list" :key="r.id"
-              class="tl-card" :title="r.path"
+              class="tl-card" :class="{ missing: r.missing }"
+              :title="r.missing ? (r.path + '（文件已在磁盘上删除或改名，无法打开）') : r.path"
               v-show="!isCollapsed(g.date)"
-              @click="emit('open-resource', r.parent_id)"
+              @click="onCardClick(r)"
             >
               <span class="tl-dot"></span>
               <span class="tl-ico">{{ typeIcons[r.type] || '📄' }}</span>
               <span class="tl-name">{{ r.title }}</span>
+              <span v-if="r.missing" class="tl-missing" title="文件已在磁盘上删除或改名，无法打开">⚠ 已删除/改名</span>
               <span v-if="isModified(r)" class="tl-op">已修改</span>
               <span v-if="r.tag_names" class="tl-tags" :title="r.tag_names">{{ r.tag_names }}</span>
               <span v-if="r.size" class="tl-size">{{ fmtBytes(r.size) }}</span>
@@ -196,6 +221,9 @@ function fmtBytes(b?: number | null) {
   background: none; border: none; transition: background .12s;
 }
 .tl-card:hover { background: var(--el-fill-color-light, #f5f7fa); }
+.tl-card.missing { opacity: .5; cursor: not-allowed; filter: grayscale(1); }
+.tl-card.missing:hover { background: transparent; }
+.tl-missing { flex: none; font-size: 11px; padding: 1px 6px; border-radius: 4px; color: #fff; background: #e6a23c; }
 .tl-dot {
   position: absolute; left: -17.5px; top: 50%; margin-top: -4.5px;
   width: 9px; height: 9px; border-radius: 50%;

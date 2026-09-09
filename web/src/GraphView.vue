@@ -6,8 +6,8 @@ import { ElMessage } from 'element-plus';
 import { getGraph, getGraphHierarchy, type GraphData, type HierarchyNode } from './api';
 
 const dimension = ref<'folder' | 'tag' | 'link'>('folder');
-// 关系图/桑基图/树图基于统一 nodes+links（维度可选）；矩形树图/旭日图/打包图基于文件夹层级（文件数）；弦图基于标签共现
-const view = ref<'graph' | 'sankey' | 'tree' | 'treemap' | 'sunburst' | 'pack' | 'chord'>('graph');
+// 关系图/桑基图/树图/折线树图基于统一 nodes+links（维度可选）；矩形树图/旭日图/打包图基于文件夹层级（文件数）；弦图基于标签共现
+const view = ref<'graph' | 'sankey' | 'tree' | 'polytree' | 'treemap' | 'sunburst' | 'pack' | 'chord'>('graph');
 const chartEl = ref<HTMLElement>();
 const loading = ref(false);
 const nodeCount = ref(0);
@@ -18,8 +18,48 @@ const collapseMode = ref<'all' | 'root' | 'depth'>('all');
 const collapseDepth = ref(2);
 const maxDepth = ref(1);
 
+/** 层级树节点 → 父节点 id 映射（矩形树图点叶子块进所属分组用） */
+const parentIdMap = computed(() => {
+  const m = new Map<string, string>();
+  const walk = (ns: HierarchyNode[], pid: string | null) => {
+    for (const n of ns) {
+      if (pid) m.set(String(n.id), pid);
+      walk(n.children || [], String(n.id));
+    }
+  };
+  walk(hierarchy, null);
+  return m;
+});
+
 /** 全局标签显示开关（默认不显示；控制所有视图的节点标签） */
 const showLabels = ref(false);
+
+/** 关系图节点坐标缓存：标签显隐切换时改用 layout:'none' + 已捕获坐标重渲染，
+ *  避免force 布局重新模拟导致整图旋转/跳动（视图/维度切换时清空重排） */
+let graphPos: Map<string, { x: number; y: number }> | null = null;
+/** 从 ECharts 内部模型读取关系图当前布局坐标（含拖拽后的位置；getItemLayout 返回 [x,y] 数组） */
+function captureGraphPositions(): Map<string, { x: number; y: number }> | null {
+  try {
+    const model = (chart as any)?.getModel?.();
+    if (!model) return null;
+    const sm = model.getSeriesByIndex(0);
+    if (!sm || sm.type !== 'series.graph') return null;
+    const gd = sm.getData();
+    if (!gd || !gd.count) return null;
+    const pos = new Map<string, { x: number; y: number }>();
+    const n = gd.count();
+    for (let i = 0; i < n; i++) {
+      const lay = gd.getItemLayout(i);
+      const lx = Array.isArray(lay) ? lay[0] : lay?.x;
+      const ly = Array.isArray(lay) ? lay[1] : lay?.y;
+      const id = gd.getId(i);
+      if (isFinite(lx) && isFinite(ly) && id) pos.set(id, { x: lx, y: ly });
+    }
+    return pos.size > 0 ? pos : null;
+  } catch {
+    return null;
+  }
+}
 
 /** 层级图下钻栈：点击某个组节点后，只显示该组及其子节点；点空白/返回按钮逐级返回 */
 const drillStack = ref<HierarchyNode[]>([]);
@@ -32,8 +72,13 @@ const cssZoom = ref(1);
 /** 桑基图平移偏移（px，配合 scale 的 translate，缩放时保持光标下的点不动） */
 const sankeyTx = ref(0);
 const sankeyTy = ref(0);
-/** 树图 wheel 补偿系数：原生 roam 整图缩放时，节点符号反向缩小、标签正向放大（用户口径：放大时节点适当缩小、标签放大） */
-const treeZoom = ref(1);
+/** 滚轮缩放系数（关系图/树图/折线树图/矩形树图/弦图 共用）：原生 roam 负责布局缩放与平移，
+ *  本系数仅同步驱动"标签字号"随缩放放大/缩小；树图额外用它反向缩小节点符号（放大时节点变小） */
+const roamZoom = ref(1);
+/** 标签字号：随滚轮缩放系数双向变化（放大字号增大、缩小字号减小） */
+function roamLabelSize() { return Math.max(9, Math.min(40, Math.round(12 * roamZoom.value))); }
+/** 树图节点符号大小：放大时反向缩小（roam 不缩放符号像素，故手动补偿） */
+function treeNodeSize() { return Math.max(1.5, Math.min(10, 7 / Math.pow(roamZoom.value, 1.1))); }
 
 let chart: echarts.ECharts | null = null;
 let data: GraphData = { nodes: [], links: [] };
@@ -46,9 +91,11 @@ function initChart(): echarts.ECharts {
   const el = chartEl.value || (document.querySelector('.chart-box .chart') as HTMLElement | null);
   if (!el) throw new Error('chart element not found');
   chart = echarts.init(el, null, { renderer: view.value === 'sankey' ? 'svg' : 'canvas' });
-  chart.getZr().off('wheel');
+  (window as any).__khChart = chart; // 调试用：控制台可访问当前实例
   chart.getZr().on('wheel', (e: any) => {
+    (window as any).__wheel = ((window as any).__wheel || 0) + 1;
     const dz = e?.event?.deltaY ?? 0;
+    e.event?.preventDefault?.();
     if (view.value === 'pack') {
       zoomFactor.value = Math.min(3, Math.max(0.4, zoomFactor.value * (dz > 0 ? 0.9 : 1.1)));
       renderHierarchy();
@@ -56,28 +103,28 @@ function initChart(): echarts.ECharts {
       sunZoom.value = Math.min(1.8, Math.max(0.6, sunZoom.value * (dz > 0 ? 0.92 : 1.08)));
       chart?.setOption({ series: [{ radius: [`0%`, `${(94 * sunZoom.value).toFixed(1)}%`], label: { fontSize: sunLabelSize() } }] }, { lazyUpdate: true });
     } else if (view.value === 'sankey') {
-      const factor = dz > 0 ? 0.9 : 1.1;
+      // 缩放比例调小：每格 0.95/1.05（原 0.9/1.1），上限 3（原 4），文字/节点放大更平缓
+      const factor = dz > 0 ? 0.95 : 1.05;
       const sOld = cssZoom.value / factor;
-      cssZoom.value = Math.min(4, Math.max(0.4, cssZoom.value * factor));
+      cssZoom.value = Math.min(3, Math.max(0.4, cssZoom.value * factor));
       const c = chartEl.value || (document.querySelector('.chart-box .chart') as HTMLElement | null);
       if (c) {
-        // 以光标为中心缩放：变换 translate(t) scale(s)，保持光标下点不动 → t' = t + p·sOld·(1-factor)
         const ox = e.event?.offsetX ?? c.clientWidth / 2;
         const oy = e.event?.offsetY ?? c.clientHeight / 2;
         sankeyTx.value += ox * sOld * (1 - factor);
         sankeyTy.value += oy * sOld * (1 - factor);
         applySankeyTransform(c);
       }
-    } else if (view.value === 'tree') {
-      // 原生 roam 整图缩放的同时做符号/文字补偿：节点视觉大小不随放大膨胀、文字视觉放大
-      treeZoom.value = Math.min(4, Math.max(0.4, treeZoom.value * (dz > 0 ? 0.9 : 1.1)));
-      const z = treeZoom.value;
-      chart?.setOption({
-        series: [{
-          symbolSize: Math.min(10, Math.max(2, 6.5 / z)),
-          label: { fontSize: Math.min(22, Math.max(8, Math.round(7 / z + 3))) },
-        }],
-      }, { lazyUpdate: true });
+    } else if (view.value === 'tree' || view.value === 'polytree') {
+      // 原生 roam 负责布局缩放与平移；本处仅补偿：放大时节点符号反向缩小、标签字号同步放大
+      // 滚轮上滚（dz<0）= 放大 → roamZoom 增大：节点符号 7/roamZoom 变小、标签字号 12*roamZoom 变大
+      // 用 rAF 延迟到原生 roam 处理之后，避免与 roam 同帧重渲染相互覆盖
+      roamZoom.value = Math.min(4, Math.max(0.4, roamZoom.value * (dz < 0 ? 1.1 : 0.9)));
+      requestAnimationFrame(() => chart?.setOption({ series: [{ symbolSize: treeNodeSize(), label: { fontSize: roamLabelSize() } }] }));
+    } else {
+      // 关系图/矩形树图/弦图：原生 roam 负责缩放平移；本处仅同步放大标签字号（roam 不缩放文字像素）
+      roamZoom.value = Math.min(4, Math.max(0.4, roamZoom.value * (dz < 0 ? 1.1 : 0.9)));
+      requestAnimationFrame(() => chart?.setOption({ series: [{ label: { fontSize: roamLabelSize() }, upperLabel: { fontSize: roamLabelSize() } }] }));
     }
   });
   return chart;
@@ -131,7 +178,7 @@ function ensureRenderer() {
 
 const dimensionLabels: Record<string, string> = { folder: '文件夹', tag: '标签', link: '引用' };
 const viewLabels: Record<string, string> = {
-  graph: '关系图', sankey: '桑基图', tree: '树图',
+  graph: '关系图', sankey: '桑基图', tree: '树图', polytree: '折线树图',
   treemap: '矩形树图', sunburst: '旭日图', pack: '打包图', chord: '弦图',
 };
 const typeLabels: Record<string, string> = { folder: '文件夹', file: '文件', tag: '标签', resource: '资源' };
@@ -217,6 +264,8 @@ function render() {
     if (view.value === 'graph') {
       const { nodes, links } = filtered();
       const idToLabel = new Map(nodes.map(n => [n.id, n.label]));
+      // 已捕获布局坐标（标签显隐切换/重渲染）→ layout:'none' 固定坐标，避免 force 重新模拟导致整图旋转
+      const fixed = view.value === 'graph' && graphPos ? graphPos : null;
       chart.setOption({
         tooltip: {
           trigger: 'item', confine: true, hideDelay: 60,
@@ -230,14 +279,18 @@ function render() {
           },
         },
         series: [{
-          type: 'graph', layout: 'force', roam: true, draggable: true,
+          type: 'graph', layout: fixed ? 'none' : 'force', roam: true, draggable: true,
           animation: false, // 关系图动画彻底关闭（初始布局与拖动重排直接呈现）
           emphasis: { scale: 1.15, label: { show: true } },
-          data: nodes.map(n => ({
-            id: n.id, name: n.name, symbolSize: (n.symbolSize || 12) * 0.7, category: n.category,
-          })),
+          data: nodes.map(n => {
+            const pos = fixed?.get(n.id);
+            return {
+              id: n.id, name: n.name, symbolSize: (n.symbolSize || 12) * 0.7, category: n.category,
+              ...(pos ? { x: pos.x, y: pos.y } : {}),
+            };
+          }),
           links: links.map(l => ({ source: l.source, target: l.target })),
-          label: { show: showLabels.value, formatter: fmt, fontSize: 12, color: labelColor() },
+          label: { show: showLabels.value, formatter: fmt, fontSize: roamLabelSize(), color: labelColor() },
           categories: [
             { name: 'folder', itemStyle: { color: '#409eff' } },
             { name: 'file', itemStyle: { color: '#5b6b7d' } },
@@ -263,7 +316,18 @@ function render() {
         value: l.value || 1,
       }));
       chart.setOption({
-        tooltip: { trigger: 'item', triggerOn: 'mousemove', confine: true, hideDelay: 60, formatter: fmt },
+        tooltip: {
+          trigger: 'item', triggerOn: 'mousemove', confine: true, hideDelay: 60,
+          formatter: (p: any) => {
+            // 边提示：显示两端节点的显示名与流量（此前直接 fmt(p.name) 会把内部 name "A > res_xxx" 原样显示）
+            if (p.dataType === 'edge' || p.data?.source != null) {
+              const s = labelMap.get(p.data.source) || p.data.source;
+              const t = labelMap.get(p.data.target) || p.data.target;
+              return `${s} → ${t}：${p.data.value ?? '-'} 项`;
+            }
+            return labelMap.get(p.name) || p.name;
+          },
+        },
         series: [{
           type: 'sankey',
           data: sNodes,
@@ -275,8 +339,8 @@ function render() {
         }],
       }, true);
       requestAnimationFrame(() => chart?.resize());
-    } else if (view.value === 'tree') {
-      renderTree();
+    } else if (view.value === 'tree' || view.value === 'polytree') {
+      renderTree(view.value === 'polytree');
       return;
     } else if (view.value === 'treemap' || view.value === 'sunburst' || view.value === 'pack') {
       renderHierarchy();
@@ -334,7 +398,7 @@ function resetView() {
   cssZoom.value = 1;
   sankeyTx.value = 0;
   sankeyTy.value = 0;
-  treeZoom.value = 1;
+  roamZoom.value = 1;
   const el = chartEl.value || (document.querySelector('.chart-box .chart') as HTMLElement | null);
   if (el) el.style.transform = '';
   renderHierarchy();
@@ -353,9 +417,9 @@ function onWheel(e: WheelEvent) {
     chart?.setOption({ series: [{ radius: [`0%`, `${(94 * sunZoom.value).toFixed(1)}%`], label: { fontSize: sunLabelSize() } }] }, { lazyUpdate: true });
   } else if (view.value === 'sankey') {
     e.preventDefault();
-    const factor = dz > 0 ? 0.9 : 1.1;
+    const factor = dz > 0 ? 0.95 : 1.05;
     const sOld = cssZoom.value / factor;
-    cssZoom.value = Math.min(4, Math.max(0.4, cssZoom.value * factor));
+    cssZoom.value = Math.min(3, Math.max(0.4, cssZoom.value * factor));
     const el = chartEl.value || (document.querySelector('.chart-box .chart') as HTMLElement | null);
     if (el) {
       const ox = e.offsetX ?? el.clientWidth / 2;
@@ -394,31 +458,59 @@ function renderHierarchy() {
   const itemTip = (p: any) => {
     const n = p.data;
     const nm = (n && (n.name || n.title)) || '所有文件';
+    // 已下钻时，当前根块即"返回上一级"入口：提示与块上标签一致（此前提示"所有文件"与标签不符）
+    const top = drillStack.value[drillStack.value.length - 1];
+    const pid = n?.id ?? n?.src?.id;
+    if (view.value !== 'treemap' && drillStack.value.length > 0 && top && pid != null && String(pid) === String(top.id)) {
+      return `<b>← 返回上一级</b><br/><span style="color:${dimColor()};font-size:11px;">单击该块或空白处返回上级视图</span>`;
+    }
     const size = n?.size ? `<br/><span style="color:${dimColor()};font-size:11px;">${fmtBytes(n.size)}</span>` : '';
     return `<b>${nm}</b> · 文件 ${n?.value ?? 0} 个${size}`;
   };
   chart?.dispose();
   chart = initChart();
-  // 点击组节点 → 下钻到该组（只显示它和它的子节点）；点击空白 → 返回上一级
+  // 点击组节点 → 下钻到该组（只显示它和它的子节点）。
+  // 矩形树图：叶子块被最深层子块覆盖（点中的总是叶子）→ 点叶子进入其所属分组；点击当前组（最外层）不返回（返回由工具栏"← 返回上一级"按钮负责）；
+  // 旭日图/打包图：点击当前根（中心圆/最外侧返回块）→ 返回上一级；点击其它组 → 下钻。
   chart.on('click', (p: any) => {
     if (view.value !== 'sunburst' && view.value !== 'pack' && view.value !== 'treemap') return;
-    // pack：custom 系列 params.data 是渲染项（含 src 原始引用）；sunburst：用 id 回原始树找干净节点（name 不丢）
-    // 注意：找不到干净节点（如点击中心孔的虚拟根）时不下钻，避免虚拟根入栈产生“未命名”
+    // 用 id 回原始树找干净节点（name 不丢）；pack：custom 系列 params.data 含 src 原始引用
     const pid = p?.data?.id ?? p?.data?.src?.id;
     const target = p?.data?.src || (pid ? findNode(hierarchy, String(pid)) : null);
-    if (target && Array.isArray(target.children) && target.children.length > 0) {
-      // 点击的是当前根（中心圆/最外侧返回块）→ 返回上一级；否则下钻（按 id 判定，避免 HMR/重载后引用失效重复 push）
-      const top = drillStack.value[drillStack.value.length - 1];
-      if (drillStack.value.length > 0 && top && String(target.id) === String(top.id)) {
-        drillStack.value.pop();
+    if (!target) return;
+    const hasChildren = Array.isArray(target.children) && target.children.length > 0;
+    if (view.value === 'treemap') {
+      // 矩形树图：点击组块下钻；点击叶子块 → 进入其所属分组；点击当前组本身不返回（返回由工具栏"← 返回上一级"按钮负责）
+      if (hasChildren) {
+        const top = drillStack.value[drillStack.value.length - 1];
+        if (top && String(target.id) === String(top.id)) return; // 点击当前组本身不动作（避免重复入栈）
+        drillStack.value.push(target);
+        renderHierarchy();
+      } else {
+        const parentId = parentIdMap.value.get(String(target.id));
+        const rootId = hierarchy[0] ? String(hierarchy[0].id) : '';
+        const top = drillStack.value[drillStack.value.length - 1];
+        if (parentId && parentId !== rootId && (!top || parentId !== String(top.id))) {
+          const parent = findNode(hierarchy, parentId);
+          if (parent && Array.isArray(parent.children) && parent.children.length > 0) {
+            drillStack.value.push(parent);
+            renderHierarchy();
+          }
+        }
+      }
+      return;
+    }
+    // 旭日图 / 打包图
+    const top = drillStack.value[drillStack.value.length - 1];
+    if (hasChildren) {
+      if (top && String(target.id) === String(top.id)) {
+        drillStack.value.pop(); // 点击当前根 → 返回上一级
       } else if (drillStack.value.length === 0 && hierarchy[0] && String(target.id) === String(hierarchy[0].id)) {
-        return; // 未下钻点击根块（所有文件）无操作（它就是当前全部内容）
+        return; // 未下钻点击最外层（所有文件）无操作
       } else {
         drillStack.value.push(target);
       }
       renderHierarchy();
-    } else if (!p?.data) {
-      goBack();
     }
   });
 
@@ -430,11 +522,13 @@ function renderHierarchy() {
     // 注意：ECharts treemap 对 data[0] 根块加工后 p.name 会丢失（undefined）→ label/upperLabel/tooltip 均需兜底；
     // data 项级 label 覆盖对根块不生效，故返回语义经 series label formatter 闭包注入
     const drilled = drillStack.value.length > 0;
-    const rootName = drilled ? '← 返回上一级' : '所有文件';
+    const topNode = drillStack.value[drillStack.value.length - 1];
+    // 当前根块显示"当前渲染组的名称"（仅展示，不绑定返回；返回由工具栏"← 返回上一级"按钮负责）
+    const rootName = drilled ? (topNode?.name || '未命名') : '所有文件';
     if (tmData[0]) {
-      tmData[0] = { ...tmData[0], itemStyle: { ...(tmData[0].itemStyle || {}), color: '#3a4356' } };
+      tmData[0] = { ...tmData[0], isRoot: true, itemStyle: { ...(tmData[0].itemStyle || {}), color: '#3a4356' } };
     }
-    const rootOrName = (p: any) => (p?.name == null || p?.name === '') ? rootName : p.name;
+    const rootOrName = (p: any) => (p?.data?.isRoot ? rootName : (p.name || '未命名'));
     chart.setOption({
       tooltip: { trigger: 'item', confine: true, hideDelay: 60, formatter: itemTip },
       series: [{
@@ -443,8 +537,8 @@ function renderHierarchy() {
         roam: true,
         nodeClick: false, // 自定义下钻：点击组进入子组并隐藏其它组（同旭日图原理，参考 ECharts treemap-drill-down）
         breadcrumb: { show: false }, // 底部浅蓝色路径条去掉（非必要控件，层级由下钻表达）
-        label: { show: showLabels.value, formatter: rootOrName, fontSize: 12, color: '#fff' },
-        upperLabel: { show: true, height: 20, formatter: rootOrName, fontSize: 12, color: labelColor() },
+        label: { show: showLabels.value, formatter: rootOrName, fontSize: roamLabelSize(), color: '#fff' },
+        upperLabel: { show: true, height: 20, formatter: rootOrName, fontSize: roamLabelSize(), color: labelColor() },
         itemStyle: { borderColor: isDark() ? '#1f2937' : '#fff', borderWidth: 1, gapWidth: 1 },
         levels: [
           { itemStyle: { borderColor: isDark() ? '#1f2937' : '#fff', borderWidth: 2, gapWidth: 2 } },
@@ -539,8 +633,9 @@ function renderPack(tree: HierarchyNode[]) {
         const color = palette[it.depth % palette.length];
         const xy = api.coord([(it.x - W / 2) * z + W / 2, (it.y - H / 2) * z + H / 2]);
         // 滚轮缩放：以画布中心为基准放大/缩小（custom 系列无坐标系，坐标即像素）
-        // 统一缩放策略：放大时节点半径增长明显放缓（避免占满屏幕）、文字字号同步放大；缩小时节点/文字同步缩小（双向有效）
-        const zk = 1 + (z - 1) * 0.3;
+        // 缩放策略：位置按 z 扩散；半径按 zk（≤ z，保证缩小选环时圆间隙不挤成负值 → 子圆永不与父圆/兄弟圆重叠）
+        // 放大时节点半径增长放缓（z>1 时 zk<z，留出呼吸空间）；缩小时半径与位置同步等比（嵌套关系保持）
+        const zk = Math.min(1 + (z - 1) * 0.3, z);
         const fontSize = Math.max(6, Math.round(10 + (z - 1) * 6));
         const children = [
           { type: 'circle', shape: { cx: xy[0], cy: xy[1], r: it.r * zk },
@@ -640,11 +735,16 @@ function renderChord() {
     series: [{
       type: 'graph',
       layout: 'circular', // 圆周分布，外观接近弦图
-      circular: { rotateLabel: false },
+      // 标签以圆心为基点呈放射状发散摆放（沿圆心→节点半径方向旋转，左右两侧自动翻转防倒置，
+      // 与 ECharts sunburst-drink 示例的径向标签同风格），避免标签与节点/其它标签重叠
+      circular: { rotateLabel: true },
       roam: true, // 滚轮缩放、拖拽平移
       draggable: false,
       animation: false,
-      data: sNodes.map(n => ({ ...n, label: { show: showLabels.value, formatter: n.name, fontSize: 12, color: labelColor() } })),
+      // 系列级 label：仅设 fontSize（随滚轮缩放同步放大/缩小），由滚轮 handler 的 setOption 合并更新；
+      // 每节点的 show/formatter/color 在 data 项里单独设置，不在这里写 fontSize（否则会盖掉系列级缩放）
+      label: { show: showLabels.value, fontSize: roamLabelSize(), color: labelColor() },
+      data: sNodes.map(n => ({ ...n, label: { show: showLabels.value, formatter: n.name, color: labelColor() } })),
       links: chordLinks.map(l => ({
         source: l.source, target: l.target, value: l.value,
         lineStyle: { color: colorById.get(l.source) || '#909399', width: 1.6, opacity: 0.6, curveness: 0.08 }, // 连线统一粗细（用户：粗细不统一，按统一线条）
@@ -682,7 +782,8 @@ function pruneTree(nodes: TreeNode[], maxDepth: number, cur = 1): TreeNode[] {
   }));
 }
 
-function renderTree() {
+/** 渲染树图 / 折线树图（polyline=true 时连线为直角折线，参考 ECharts tree-polyline 官方示例） */
+function renderTree(polyline = false) {
   if (!chartEl.value) return;
   const roots = buildTree();
   let treeData: TreeNode[] = roots;
@@ -697,7 +798,7 @@ function renderTree() {
   // 解决：包一个隐藏虚拟根，转成单根树（虚拟根 symbolSize 0、无 label、连线透明，不影响层数语义）
   if (treeData.length > 1) {
     treeData = [{
-      id: '__forest__', name: '__forest__', label: '', category: 'tag', symbolSize: 0,
+      id: '__forest__', name: '__forest__', category: 'tag', symbolSize: 0,
       children: treeData, collapsed: false,
       itemStyle: { color: 'transparent', borderWidth: 0 },
       lineStyle: { color: 'transparent', opacity: 0 },
@@ -719,12 +820,14 @@ function renderTree() {
       data: treeData,
       layout: 'orthogonal',
       orient: 'LR',
+      edgeShape: polyline ? 'polyline' : 'curve', // 折线树图：直角折线连线
+      edgeForkPosition: '63%',
       top: 12, left: 10, right: 70, bottom: 12,
-      roam: true, // 滚轮缩放、拖拽平移（树图此前无法缩放）
-      symbolSize: 7, // 节点缩小（原 9）
+      roam: true, // 滚轮缩放、拖拽平移（标签随 roamLabelSize 同步放大；节点随 treeNodeSize 反向缩小）
+      symbolSize: treeNodeSize(), // 节点基准大小（滚轮放大时反向缩小）
       initialTreeDepth: -1,
-      label: { show: showLabels.value, formatter: (p: any) => labelMap.get(p.name) || p.name, fontSize: 12, color: labelColor(), position: 'right' },
-      lineStyle: { color: lineColor(), width: 1.8 }, // 线条加粗（原 1 过细）
+      label: { show: showLabels.value, formatter: (p: any) => labelMap.get(p.name) || p.name, fontSize: roamLabelSize(), color: labelColor(), position: 'right' },
+      lineStyle: { color: lineColor(), width: polyline ? 1.2 : 1.8 }, // 折线树用细线（折线风格）
       expandAndCollapse: true,
     }],
   }, true);
@@ -752,6 +855,8 @@ function visibleDepth(roots: TreeNode[]): number {
 /** 层级控制：全部视图可用（关系图/桑基图按深度过滤节点，树图按 collapsed 折叠） */
 function setCollapse(mode: 'all' | 'root' | 'depth') {
   collapseMode.value = mode;
+  // 层级变化 = 节点子集变化，关系图缓存的坐标不再完整 → 清空，重新 force 布局
+  graphPos = null;
   render();
 }
 
@@ -767,12 +872,13 @@ async function load() {
   loading.value = true;
   // 视图/维度切换后清除下钻与缩放状态
   drillStack.value = [];
+  graphPos = null; // 关系图坐标缓存清空（新数据重新 force 布局）
   zoomFactor.value = 1;
   sunZoom.value = 1;
   cssZoom.value = 1;
   sankeyTx.value = 0;
   sankeyTy.value = 0;
-  treeZoom.value = 1;
+  roamZoom.value = 1;
   const resetEl = chartEl.value || (document.querySelector('.chart-box .chart') as HTMLElement | null);
   if (resetEl) resetEl.style.transform = '';
   // 立即清空旧图，给用户"正在切换"的明确反馈（维度/视图数据量大时渲染较慢）
@@ -810,19 +916,30 @@ function onThemeChange() { render(); }
 let ro: ResizeObserver | null = null;
 
 watch([dimension, view], load);
-// 标签显示开关：只局部更新 label 显示（不重建图表 → 关系图 force 布局不重排、树图不闪烁）
-// pack 为 custom 系列（文字在 renderItem 内）、chord 标签在 data 项上，这两类局部更新无效 → 重渲染
+// 标签显示开关：
+// - 关系图：先捕获当前 force 布局坐标，再以 layout:'none'+固定坐标重渲染（只变标签，不重排）
+// - 旭日图/矩形树图/打包图/弦图：全量重渲染（下钻栈 drillStack 保留，不会退回主层级）
+// - 树图/折线树图/桑基图：局部 patch label（数据与布局不变，不闪烁）
 watch(showLabels, () => {
   if (!chart || !chartEl.value) return;
-  if (view.value === 'pack' || view.value === 'chord') { render(); return; }
   if (view.value === 'graph') {
-    // 关系图（force 布局）：只 patch label 显示，不改动 data（引用不变 → force 不重启 → 布局稳定不跳动）
-    chart.setOption({ series: [{ label: { show: showLabels.value } }] }, { lazyUpdate: true });
+    // 捕获当前布局（含用户拖拽后的位置）；失败则保持 force（接受重排）
+    const pos = captureGraphPositions();
+    if (pos) graphPos = pos;
+    render(); // 全量重渲染（render 内部按 roamLabelSize 应用当前缩放下的标签字号）
     return;
   }
-  const patch: any = { series: [{ label: { show: showLabels.value } }] };
-  if (view.value === 'treemap') patch.series[0].upperLabel = { show: showLabels.value };
-  chart.setOption(patch, { lazyUpdate: true });
+  if (view.value === 'sunburst' || view.value === 'treemap' || view.value === 'pack' || view.value === 'chord') {
+    render(); // 全量重渲染（内部保留下钻与缩放状态，并按缩放系数应用标签字号）
+    return;
+  }
+  if (view.value === 'tree' || view.value === 'polytree') {
+    // 树图/折线树图：局部 patch（数据与布局不变 → 不闪烁）；同步当前缩放下的节点大小与标签字号
+    chart.setOption({ series: [{ label: { show: showLabels.value, fontSize: roamLabelSize() }, symbolSize: treeNodeSize() }] }, { lazyUpdate: true });
+    return;
+  }
+  // 桑基图：局部 patch（CSS transform 负责缩放，标签字号固定）
+  chart.setOption({ series: [{ label: { show: showLabels.value } }] }, { lazyUpdate: true });
 });
 
 onMounted(() => {
@@ -870,8 +987,9 @@ onBeforeUnmount(() => {
         <el-option v-for="d in maxDepth" :key="d" :value="d" :label="`第${d}层`" />
       </el-select>
 
-      <!-- 层级图下钻 / 缩放：点击组节点只显示该组及其子节点，点空白返回上级（返回上级=点击空白区域，无需独立按钮） -->
+      <!-- 层级图下钻 / 缩放：点击组节点只显示该组及其子节点，点空白返回上级 -->
       <template v-if="isHierarchyView()">
+        <el-button size="small" :disabled="drillStack.length === 0" @click="goBack">← 返回上一级</el-button>
         <el-button size="small" :disabled="drillStack.length === 0 && zoomFactor === 1" @click="resetView">重置视图</el-button>
         <span class="hint">{{ view === 'treemap' ? '滚轮/拖动缩放，点击组节点下钻，点空白返回' : view === 'pack' ? '滚轮缩放，点击组节点下钻，点空白返回' : '点击组节点下钻（放大），点空白返回' }}</span>
       </template>

@@ -2,11 +2,13 @@
 import { onMounted, ref, nextTick, watch, onBeforeUnmount } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
-  getTree, getResourcesPage, getTags, createTag, updateTag, deleteTag, setResourceTags,
-  search as apiSearch, fileUrl, rescan, moveResource, setPending, setPin, getStats,
+  getTree, getResourcesPage, getTags, setResourceTags,
+  search as apiSearch, fileUrl, rescan, moveResource, setPending, getStats,
   createResource, deleteResource, getResource, updateResource,
-  type Resource, type TagItem, type TreeNode,
+  type Resource, type TreeNode,
 } from './api';
+import TagChips from './components/TagChips.vue';
+import TagManageDialog from './components/TagManageDialog.vue';
 
 /** 独立编辑器事件：文本/图片预览 → 整页切换（App.vue 全屏渲染 FileEditorView） */
 const emit = defineEmits<{ (e: 'open-editor', p: { id: string; title: string; ext: string; path: string; isImage: boolean; mode?: 'file' | 'note' }): void }>();
@@ -159,7 +161,7 @@ const boxDragging = ref(false);
 function onBoxMouseDown(e: MouseEvent) {
   // 不拦截：按钮 / 输入框 / 标签 / 复选框 / 树 / 分页等控件上的按下
   const t = e.target as HTMLElement;
-  if (t.closest('button, input, textarea, .el-checkbox, .el-select, .el-pagination, .el-radio, .add-tag-btn, .el-dropdown, .el-tree, .el-dialog, .cell-tag')) return;
+  if (t.closest('button, input, textarea, .el-checkbox, .el-select, .el-pagination, .el-radio, .add-tag-btn, .el-dropdown, .el-tree, .el-dialog, .cell-tag, .ts-trigger, .ts-pop')) return;
   if (e.button !== 0) return;
   boxDragging.value = false;
   boxOrigin.value = { x: e.clientX, y: e.clientY, ctrl: e.ctrlKey || e.metaKey };
@@ -357,18 +359,6 @@ async function goParent() {
   searchKeyword.value = '';
   page.value = 1;
   await loadResources();
-}
-
-/** 置顶/取消置顶（列表图标前 + 卡片右上角图标单击切换；置顶资源排序优先） */
-async function togglePin(r: Resource) {
-  const pinned = !r.pinned;
-  try {
-    await setPin(r.id, pinned);
-    r.pinned = pinned ? 1 : 0;
-    await loadResources(); // 排序变化，刷新保持顺序一致
-  } catch (e) {
-    ElMessage.error('置顶失败：' + ((e as Error).message || '服务异常'));
-  }
 }
 
 async function refreshTags() {
@@ -625,17 +615,17 @@ function hostOf(url: string) {
   try { return new URL(url).host.replace(/^www\./, ''); } catch { return ''; }
 }
 
-// ---------- 打标对话框（行内 / 批量共用，可直接新建标签；文件夹可选递归） ----------
-const tagDialog = ref({
+// ---------- 打标对话框（行内 / 批量共用，直接新建/删除标签；文件夹可选递归） ----------
+const tagDlg = ref({
   visible: false, mode: 'single' as 'single' | 'batch',
   resourceId: '', resourceTitle: '', resourceType: '',
-  checked: [] as string[], newName: '', recursive: false,
+  checked: [] as string[], recursive: false,
 });
 
 function openTagDialog(row: Resource) {
-  tagDialog.value = {
+  tagDlg.value = {
     visible: true, mode: 'single', resourceId: row.id, resourceTitle: row.title,
-    resourceType: row.type, checked: rowTagIds(row), newName: '', recursive: false,
+    resourceType: row.type, checked: rowTagIds(row), recursive: false,
   };
 }
 function openBatchDialog() {
@@ -643,72 +633,33 @@ function openBatchDialog() {
     ElMessage.warning('请先在表格中勾选要打标的资源');
     return;
   }
-  tagDialog.value = {
+  tagDlg.value = {
     visible: true, mode: 'batch', resourceId: '', resourceTitle: '',
-    resourceType: '', checked: [], newName: '', recursive: false,
+    resourceType: '', checked: [], recursive: false,
   };
 }
 
-/** 打标弹窗是否显示"包含子项"选项（勾选的资源里有文件夹时才需要） */
-function dialogHasFolder() {
-  if (tagDialog.value.mode === 'single') return tagDialog.value.resourceType === 'folder';
+/** 弹窗是否显示"包含子项"选项（只有包含文件夹才需要） */
+function tagDialogHasFolder() {
+  if (tagDlg.value.mode === 'single') return tagDlg.value.resourceType === 'folder';
   return selection.value.some(r => r.type === 'folder');
 }
 
-/** 在打标弹窗内直接新建标签 */
-async function createTagInDialog() {
-  const name = tagDialog.value.newName.trim();
-  if (!name) { ElMessage.warning('请输入新标签名'); return; }
-  try {
-    const t = await createTag(name);
-    await refreshTags();
-    if (!tagDialog.value.checked.includes(t.id)) tagDialog.value.checked.push(t.id);
-    tagDialog.value.newName = '';
-    ElMessage.success(`标签「${t.name}」已创建并勾选`);
-  } catch (e: any) {
-    ElMessage.error(e?.response?.data?.msg || '创建失败');
-  }
-}
-
-/** 点击标签切换勾选 */
-function toggleTagInDialog(id: string) {
-  const i = tagDialog.value.checked.indexOf(id);
-  if (i >= 0) tagDialog.value.checked.splice(i, 1);
-  else tagDialog.value.checked.push(id);
-}
-
-/** 在打标弹窗内直接删除标签（含确认，同时从所有资源上移除） */
-async function removeTagFromDialog(t: TagItem) {
-  try {
-    await ElMessageBox.confirm(`删除标签「${t.name}」？将同时从所有资源上移除。`, '确认删除', { type: 'warning' });
-  } catch {
-    return;
-  }
-  await deleteTag(t.id);
-  const i = tagDialog.value.checked.indexOf(t.id);
-  if (i >= 0) tagDialog.value.checked.splice(i, 1);
-  await refreshTags();
-  loadResources();
-  ElMessage.success('标签已删除');
-}
-
-async function saveTagDialog() {
-  const d = tagDialog.value;
+async function onTagSave(ids: string[], recursive: boolean) {
+  const d = tagDlg.value;
   if (d.mode === 'single') {
-    await setResourceTags(d.resourceId, d.checked, d.recursive);
+    await setResourceTags(d.resourceId, ids, recursive);
   } else {
-    const add = d.checked;
-    if (add.length === 0) { ElMessage.warning('请选择要添加的标签'); return; }
+    if (ids.length === 0) { ElMessage.warning('请选择要添加的标签'); return; }
     for (const row of selection.value) {
-      const merged = [...new Set([...rowTagIds(row), ...add])];
-      // 文件夹 + 勾选递归 → 递归应用到整个子树（子资源合并追加）；其余全量替换
-      await setResourceTags(row.id, merged, d.recursive && row.type === 'folder');
+      const merged = [...new Set([...rowTagIds(row), ...ids])];
+      // 文件夹 + 勾选递归 → 递归应用到整个子树；其余全量替换
+      await setResourceTags(row.id, merged, recursive && row.type === 'folder');
     }
   }
-  d.visible = false;
-  ElMessage.success(d.recursive && dialogHasFolder() ? '标签已更新（含所有子项）' : '标签已更新');
-  loadResources();
-  refreshTags();
+  ElMessage.success(recursive && tagDialogHasFolder() ? '标签已更新（含所有子项）' : '标签已更新');
+  await loadResources();
+  await refreshTags();
 }
 
 function isImage(r: Resource) {
@@ -875,12 +826,6 @@ defineExpose({ openFolder, openTag, reload });
           <el-table-column label="名称" min-width="200">
             <template #default="{ row }">
               <span class="name-cell">
-                <span v-if="row.pinned" class="pin-ico on" title="置顶中" @click.stop="togglePin(row)">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M16 3l5 5-2.1 2.1-2.2-.5-3.8 3.8.5 2.2L11.3 18 6 12.7l-.6 3.9 1.9 1.9L6 21l-3-3 2.5-1.3 1.9 1.9 3.9-.6L9 11l2.2-.5 3.8-3.8-.5-2.2L16 3z"/></svg>
-                </span>
-                <span v-else class="pin-ico" title="置顶（单击置顶到最前）" @click.stop="togglePin(row)">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M16 3l5 5-2.1 2.1-2.2-.5-3.8 3.8.5 2.2L11.3 18 6 12.7l-.6 3.9 1.9 1.9L6 21l-3-3 2.5-1.3 1.9 1.9 3.9-.6L9 11l2.2-.5 3.8-3.8-.5-2.2L16 3z"/></svg>
-                </span>
                 <span class="name-ico" :title="typeLabels[row.type] || row.type">{{ row.type === 'file' ? fileIcon(row.title) : typeIcons[row.type] || '📄' }}</span>
                 <span class="name-text" :title="row.title">{{ row.title }}</span>
               </span>
@@ -895,12 +840,8 @@ defineExpose({ openFolder, openTag, reload });
           </el-table-column>
           <el-table-column label="标签" min-width="140">
             <template #default="{ row }">
-              <div class="tag-cell" v-if="rowTagNames(row).length > 0">
-                <span v-for="(n, i) in rowTagNames(row)" :key="i" class="cell-tag" :title="n">{{ n }}</span>
-              </div>
-              <div class="tag-cell" v-else>
-                <el-button size="small" text type="primary" class="add-tag-btn" @click.stop="openTagDialog(row)">加标签</el-button>
-              </div>
+              <!-- 统一：只读虚线框+椭圆标签展示，点击打开打标弹窗（文件夹可递归） -->
+              <TagChips :names="rowTagNames(row)" @open="openTagDialog(row)" />
             </template>
           </el-table-column>
           <el-table-column label="大小" width="82" align="right">
@@ -920,9 +861,6 @@ defineExpose({ openFolder, openTag, reload });
           <span class="card-check" :class="{ on: gridSelected.has(r.id) }" @click.stop="toggleGridSelect(r)">
             <svg v-if="gridSelected.has(r.id)" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8.5L6.5 12L13 4.5"/></svg>
           </span>
-          <span class="card-pin" :class="{ on: r.pinned }" :title="r.pinned ? '置顶中（单击取消）' : '置顶（单击置顶到最前）'" @click.stop="togglePin(r)">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M16 3l5 5-2.1 2.1-2.2-.5-3.8 3.8.5 2.2L11.3 18 6 12.7l-.6 3.9 1.9 1.9L6 21l-3-3 2.5-1.3 1.9 1.9 3.9-.6L9 11l2.2-.5 3.8-3.8-.5-2.2L16 3z"/></svg>
-          </span>
           <div class="thumb" :class="{ 'thumb-img': isImage(r) }">
             <img v-if="isImage(r)" :src="fileUrl(r.id)" loading="lazy" :alt="r.title" />
             <span v-else class="thumb-icon">{{ r.type === 'file' ? fileIcon(r.title) : typeIcons[r.type] || '📄' }}</span>
@@ -930,8 +868,7 @@ defineExpose({ openFolder, openTag, reload });
           <div class="card-title" :title="r.title">{{ r.title }}</div>
           <div class="card-meta">{{ r.type === 'file' ? r.path : (r.type === 'bookmark' ? (hostOf(r.source_url || '') || '书签') : typeLabels[r.type]) }}</div>
           <div class="card-tags">
-            <span v-for="(n, i) in rowTagNames(r)" :key="i" class="cell-tag" :title="n">{{ n }}</span>
-            <el-button v-if="rowTagNames(r).length === 0" size="small" text type="primary" class="add-tag-btn" @click.stop="openTagDialog(r)">加标签</el-button>
+            <TagChips :names="rowTagNames(r)" @open="openTagDialog(r)" />
           </div>
         </div>
       </div>
@@ -959,37 +896,15 @@ defineExpose({ openFolder, openTag, reload });
     </main>
 
     <!-- 打标（行内/批量共用，可直接新建/删除标签） -->
-    <el-dialog
-      v-model="tagDialog.visible"
-      :title="tagDialog.mode === 'single' ? `打标：${tagDialog.resourceTitle}` : `批量添加标签（${selection.length} 项）`"
-      width="440"
-    >
-      <div class="dlg-new-tag">
-        <el-input v-model="tagDialog.newName" placeholder="输入新标签名直接创建" style="flex: 1;" @keyup.enter="createTagInDialog" />
-        <el-button type="primary" plain @click="createTagInDialog">新建标签</el-button>
-      </div>
-      <p class="dlg-hint">点击标签勾选/取消，点 × 删除：</p>
-      <div class="dlg-tags">
-        <el-tag
-          v-for="t in tags" :key="t.id"
-          :effect="tagDialog.checked.includes(t.id) ? 'dark' : 'plain'"
-          class="dlg-tag"
-          closable
-          @click.stop="toggleTagInDialog(t.id)"
-          @close="removeTagFromDialog(t)"
-        >{{ t.name }}</el-tag>
-        <p v-if="tags.length === 0" class="tm-empty">暂无标签，输入上方名称直接创建</p>
-      </div>
-      <el-checkbox
-        v-if="dialogHasFolder()"
-        v-model="tagDialog.recursive"
-        class="dlg-recursive"
-      >同时应用到所有子文件和子文件夹</el-checkbox>
-      <template #footer>
-        <el-button @click="tagDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="saveTagDialog">保存</el-button>
-      </template>
-    </el-dialog>
+    <TagManageDialog
+      v-model="tagDlg.visible"
+      :ids="tagDlg.checked"
+      :title="tagDlg.mode === 'single' ? `添加标签：${tagDlg.resourceTitle}` : `批量添加标签（${selection.length} 项）`"
+      :recursive-label="tagDialogHasFolder() ? '同时应用到所有子文件和子文件夹' : ''"
+      :recursive="tagDlg.recursive"
+      @update:recursive="(v: boolean) => (tagDlg.recursive = v)"
+      @save="onTagSave"
+    />
 
     <!-- 移动位置：选择目标文件夹 -->
     <el-dialog v-model="moveDialog.visible" title="移动位置" width="440">
@@ -1174,12 +1089,7 @@ html.dark .tree-wrap::-webkit-scrollbar-thumb:hover, html.dark .grid::-webkit-sc
 .ctx-item:hover { background: var(--kh-brand, #409eff); color: #fff; }
 .ctx-item.danger { color: #f56c6c; }
 .ctx-item.danger:hover { background: #f56c6c; color: #fff; }
-.dlg-new-tag { display: flex; gap: 8px; margin-bottom: 10px; }
 .dlg-hint { margin: 0 0 8px; font-size: 13px; color: var(--el-text-color-secondary, #6b7280); }
-.dlg-tags { display: flex; flex-wrap: wrap; gap: 6px; max-height: 260px; overflow: auto; padding-right: 4px; }
-.dlg-tag { cursor: pointer; }
-.dlg-recursive { margin-top: 12px; }
-.tm-empty { color: var(--el-text-color-secondary, #9ca3af); font-size: 13px; text-align: center; padding: 16px 0; }
 
 /* 行内"加标签"按钮：小号、不撑高行 */
 .add-tag-btn { margin: 0; padding: 0 6px; font-size: 12px; }
@@ -1236,23 +1146,4 @@ html.dark .tree-wrap::-webkit-scrollbar-thumb:hover, html.dark .grid::-webkit-sc
 .card:hover .card-check { opacity: 1; }
 .card-check.on { background: var(--kh-brand, #409eff); border-color: var(--kh-brand, #409eff); opacity: 1; }
 .card-sel { outline: 2px solid var(--kh-brand, #409eff); outline-offset: -2px; }
-
-/* ---------- 置顶图标：列表（图标前）+ 卡片（右上角）单色浅色 ---------- */
-.pin-ico {
-  flex: none; display: inline-flex; align-items: center; justify-content: center;
-  width: 18px; height: 18px; border-radius: 4px; cursor: pointer;
-  color: var(--el-text-color-placeholder, #b6c2d1); transition: color 0.15s, background 0.15s;
-}
-.pin-ico:hover { color: var(--kh-brand, #409eff); background: rgba(64, 158, 255, 0.1); }
-.pin-ico.on { color: var(--kh-brand, #409eff); }
-.card-pin {
-  position: absolute; top: 6px; right: 6px; z-index: 2;
-  width: 20px; height: 20px; border-radius: 5px;
-  display: flex; align-items: center; justify-content: center; cursor: pointer;
-  color: rgba(255, 255, 255, 0.85); background: rgba(0, 0, 0, 0.18);
-  opacity: 0.5; transition: opacity 0.15s;
-}
-.card:hover .card-pin { opacity: 1; }
-.card-pin:hover { color: #fff; background: rgba(0, 0, 0, 0.35); }
-.card-pin.on { color: var(--kh-brand, #409eff); opacity: 1; background: rgba(255, 255, 255, 0.9); }
 </style>

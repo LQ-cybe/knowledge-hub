@@ -12,3 +12,6 @@ server/data/*.db-shm
 *.log
 .DS_Store
 Thumbs.db
+
+# AI 助手工作区（会话/记忆/临时脚本，不入库）
+.workbuddy/
