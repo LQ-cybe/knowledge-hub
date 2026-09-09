@@ -198,13 +198,13 @@ router.get('/timeline', (req, res) => {
   const type = (req.query.type as string || '').trim();
   const tag = (req.query.tag as string || '').trim();
   const rows = db.prepare(
-    `SELECT r.id, r.type, r.title, r.path, r.parent_id, r.created_at, r.size,
+    `SELECT r.id, r.type, r.title, r.path, r.parent_id, r.created_at, r.updated_at, r.size,
        (SELECT GROUP_CONCAT(t.name, ',') FROM resource_tags rt JOIN tags t ON t.id = rt.tag_id WHERE rt.resource_id = r.id) AS tag_names
      FROM resources r
      WHERE r.status='active' AND (? = '' OR r.type = ?)
        AND (? = '' OR EXISTS (SELECT 1 FROM resource_tags rt WHERE rt.resource_id = r.id AND rt.tag_id = ?))
      ORDER BY r.created_at DESC LIMIT 500`
-  ).all(type, type, tag, tag) as { id: string; type: string; title: string; path: string; parent_id: string | null; created_at: string; size: number | null; tag_names: string | null }[];
+  ).all(type, type, tag, tag) as { id: string; type: string; title: string; path: string; parent_id: string | null; created_at: string; updated_at: string; size: number | null; tag_names: string | null }[];
   res.json({ code: 0, data: rows });
 });
 
@@ -649,7 +649,7 @@ router.put('/resources/:id', (req, res) => {
     { id: string; type: string } | undefined;
   if (!row) { res.status(404).json({ code: 1, msg: '资源不存在' }); return; }
   if (!SELF_TYPES.has(row.type)) { res.status(400).json({ code: 1, msg: '该类型不支持此更新方式' }); return; }
-  const { title, content, source_url } = req.body as { title?: string; content?: string; source_url?: string };
+  const { title, content, source_url, done } = req.body as { title?: string; content?: string; source_url?: string; done?: unknown };
   const set: string[] = [];
   const params: unknown[] = [];
   if (title !== undefined) {
@@ -661,6 +661,7 @@ router.put('/resources/:id', (req, res) => {
     if (row.type === 'bookmark' && !String(source_url).trim()) { res.status(400).json({ code: 1, msg: '书签链接不能为空' }); return; }
     set.push('source_url = ?'); params.push(String(source_url));
   }
+  if (done !== undefined) { set.push('done = ?'); params.push(done ? 1 : 0); }
   if (set.length === 0) { res.json({ code: 0, data: { ok: true } }); return; }
   set.push('updated_at = ?'); params.push(new Date().toISOString());
   params.push(req.params.id);

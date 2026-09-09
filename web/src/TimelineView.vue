@@ -76,6 +76,10 @@ function fmtHM(s: string) {
   const d = new Date(s.replace(' ', 'T'));
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
+/** 是否在创建后被修改过（updated_at 晚于 created_at 视为一次修改操作） */
+function isModified(r: Resource) {
+  return !!r.updated_at && !!r.created_at && r.updated_at !== r.created_at;
+}
 function fmtBytes(b?: number | null) {
   if (!b) return '';
   if (b >= 1 << 20) return (b / (1 << 20)).toFixed(1) + ' MB';
@@ -87,7 +91,7 @@ function fmtBytes(b?: number | null) {
 <template>
   <div class="tl" v-loading="loading">
     <div class="tl-head">
-      <div class="tl-title">🕐 时间线<small>（按创建时间倒序 · 最近 {{ items.length }} 条）</small></div>
+      <div class="tl-title">🕐 历史<small>（按创建时间倒序 · 最近 {{ items.length }} 条）</small></div>
       <el-select v-model="typeFilter" size="default" style="width: 130px;" @change="load">
         <el-option v-for="o in typeOptions" :key="o.value" :value="o.value" :label="o.label" />
       </el-select>
@@ -127,6 +131,7 @@ function fmtBytes(b?: number | null) {
               <span class="tl-dot"></span>
               <span class="tl-ico">{{ typeIcons[r.type] || '📄' }}</span>
               <span class="tl-name">{{ r.title }}</span>
+              <span v-if="isModified(r)" class="tl-op">已修改</span>
               <span v-if="r.tag_names" class="tl-tags" :title="r.tag_names">{{ r.tag_names }}</span>
               <span v-if="r.size" class="tl-size">{{ fmtBytes(r.size) }}</span>
               <span class="tl-time">{{ fmtHM(r.created_at) }}</span>
@@ -205,9 +210,11 @@ function fmtBytes(b?: number | null) {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .tl-tags {
-  flex: 1; min-width: 0; font-size: 11px; color: var(--el-color-primary, #409eff);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left;
+  flex: 0 1 auto; min-width: 0; max-width: 140px; font-size: 11px; color: var(--el-text-color-secondary, #6b7280);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 1px 6px; border-radius: 4px;
+  background: var(--el-fill-color-light, #f0f2f5); text-align: left;
 }
+.tl-op { flex: none; font-size: 11px; padding: 1px 6px; border-radius: 4px; color: #fff; background: var(--kh-brand, #409eff); }
 .tl-size { flex: none; font-size: 12px; color: var(--el-text-color-secondary, #9ca3af); }
 .tl-time { flex: none; font-size: 12px; color: var(--el-text-color-secondary, #9ca3af); }
 .tl-empty { color: var(--el-text-color-secondary, #9ca3af); text-align: center; padding: 40px 0; font-size: 13px; }

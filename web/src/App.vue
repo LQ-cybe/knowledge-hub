@@ -6,6 +6,8 @@ import GraphView from './GraphView.vue';
 import HomeView from './HomeView.vue';
 import BrowserView from './BrowserView.vue';
 import TimelineView from './TimelineView.vue';
+import NotesView from './NotesView.vue';
+import TodosView from './TodosView.vue';
 import ReportView from './ReportView.vue';
 import MindmapView from './MindmapView.vue';
 import FileEditorView from './FileEditorView.vue';
@@ -116,8 +118,14 @@ async function openResource(parentId: string | null) {
       <el-tab-pane label="🕸️ 图谱" name="graph">
         <GraphView />
       </el-tab-pane>
-      <el-tab-pane label="🕐 时间线" name="timeline">
+      <el-tab-pane label="🕐 历史" name="timeline">
         <TimelineView @open-resource="openResource" />
+      </el-tab-pane>
+      <el-tab-pane label="📝 笔记" name="notes">
+        <NotesView @open-editor="openEditor" />
+      </el-tab-pane>
+      <el-tab-pane label="✅ 待办" name="todos">
+        <TodosView />
       </el-tab-pane>
       <el-tab-pane label="📊 报表" name="report">
         <ReportView />

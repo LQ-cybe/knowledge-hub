@@ -113,7 +113,7 @@ export const createResource = (type: 'note' | 'bookmark' | 'todo', title: string
   http.post('/resources', { type, title, content, source_url }).then(r => r.data.data as { id: string; type: string; title: string });
 export const getResource = (id: string) =>
   http.get(`/resources/${id}`).then(r => r.data.data as ResourceDetail);
-export const updateResource = (id: string, patch: { title?: string; content?: string; source_url?: string }) =>
+export const updateResource = (id: string, patch: { title?: string; content?: string; source_url?: string; done?: boolean }) =>
   http.put(`/resources/${id}`, patch).then(r => r.data.data);
 export const deleteResource = (id: string) =>
   http.delete(`/resources/${id}`).then(r => r.data.data);
