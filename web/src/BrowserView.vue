@@ -292,7 +292,9 @@ async function loadResources() {
     };
     // 待整理筛选
     if (pendingOnly.value) params.pending = '1';
-    if (currentFolderId.value) params.parentId = currentFolderId.value === rootId.value ? 'root' : currentFolderId.value;
+    // 主目录（根）= Code 内部内容：直接以根文件夹 id 作为 parentId 查询其子项（文件+文件夹），
+    // 不再使用 'root' 语义（该语义曾返回"根文件夹自身+全部笔记/书签/待办"混排；笔记/待办已有独立页，书签经新建/搜索/历史管理）
+    if (currentFolderId.value) params.parentId = currentFolderId.value;
     const res = await getResourcesPage(params);
     list.value = res.list;
     total.value = res.total;

@@ -14,17 +14,25 @@ import FileEditorView from './FileEditorView.vue';
 
 const activeTab = ref('browse');
 const browserRef = ref<InstanceType<typeof BrowserView>>();
+const notesRef = ref<InstanceType<typeof NotesView>>();
+const todosRef = ref<InstanceType<typeof TodosView>>();
 
 /** 独立文件编辑器状态（非空 = 全屏编辑器页，替代弹窗）；mode='file' 磁盘文件 / 'note' 数据库笔记 */
 const editor = ref<{ id: string; title: string; ext: string; path: string; isImage: boolean; mode: 'file' | 'note' } | null>(null);
+/** 编辑器打开来源页（打开时记录当前 tab）：关闭时返回该页而不是固定回浏览页 */
+const editorFrom = ref<'browse' | 'notes' | 'todos'>('browse');
 function openEditor(e: { id: string; title: string; ext: string; path: string; isImage: boolean; mode?: 'file' | 'note' }) {
+  editorFrom.value = (activeTab.value === 'notes' || activeTab.value === 'todos' ? activeTab.value : 'browse');
   editor.value = { mode: 'file', ...e };
 }
 function closeEditor() {
   editor.value = null;
-  // 回到编辑器前的页面（浏览页），并刷新列表
-  activeTab.value = 'browse';
-  browserRef.value?.reload?.();
+  // 回到编辑器前的页面（笔记页/待办页/浏览页），并刷新对应列表
+  const back = editorFrom.value;
+  activeTab.value = back;
+  if (back === 'browse') browserRef.value?.reload?.();
+  else if (back === 'notes') notesRef.value?.reload?.();
+  else if (back === 'todos') todosRef.value?.reload?.();
 }
 
 const stats = ref<{ total: number; byType: { type: string; n: number }[] }>({ total: 0, byType: [] });
@@ -122,10 +130,10 @@ async function openResource(parentId: string | null) {
         <TimelineView @open-resource="openResource" />
       </el-tab-pane>
       <el-tab-pane label="📝 笔记" name="notes">
-        <NotesView @open-editor="openEditor" />
+        <NotesView ref="notesRef" @open-editor="openEditor" />
       </el-tab-pane>
       <el-tab-pane label="✅ 待办" name="todos">
-        <TodosView />
+        <TodosView ref="todosRef" />
       </el-tab-pane>
       <el-tab-pane label="📊 报表" name="report">
         <ReportView />

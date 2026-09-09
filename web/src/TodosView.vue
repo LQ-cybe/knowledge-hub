@@ -26,6 +26,8 @@ async function load() {
   }
 }
 onMounted(load);
+/** 供 App.vue 从编辑器返回时刷新列表 */
+defineExpose({ reload: load });
 
 function fmtTime(s: string) {
   if (!s) return '';
@@ -162,6 +164,7 @@ onMounted(() => document.addEventListener('click', closeCtx));
 .tv-body :deep(.el-table td.el-table__cell) { padding: 2px 0; }
 .tv-body :deep(.el-table th.el-table__cell) { padding: 4px 0; }
 .tv-body :deep(.el-table .cell) { padding: 0 8px; line-height: 1.5; }
+.tv-body :deep(.el-table__row) { cursor: pointer; } /* 行内勾选/右键可操作 → 手型光标 */
 .tv-name { display: flex; align-items: center; gap: 8px; overflow: hidden; }
 .tv-name.done { color: var(--el-text-color-secondary, #9ca3af); text-decoration: line-through; }
 .tv-ico { flex: none; font-size: 14px; }

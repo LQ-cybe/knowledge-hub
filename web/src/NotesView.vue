@@ -30,6 +30,8 @@ async function load() {
   }
 }
 onMounted(load);
+/** 供 App.vue 从编辑器返回时刷新列表 */
+defineExpose({ reload: load });
 
 function fmtTime(s: string) {
   if (!s) return '';
@@ -162,6 +164,7 @@ onMounted(() => document.addEventListener('click', closeCtx));
 .nv-body :deep(.el-table td.el-table__cell) { padding: 2px 0; }
 .nv-body :deep(.el-table th.el-table__cell) { padding: 4px 0; }
 .nv-body :deep(.el-table .cell) { padding: 0 8px; line-height: 1.5; }
+.nv-body :deep(.el-table__row) { cursor: pointer; } /* 行可点击打开 → 手型光标 */
 .nv-name { display: flex; align-items: center; gap: 8px; overflow: hidden; }
 .nv-ico { flex: none; font-size: 15px; }
 .nv-tags { font-size: 11px; color: var(--el-text-color-secondary, #6b7280); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
