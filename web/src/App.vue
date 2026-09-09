@@ -13,10 +13,10 @@ import FileEditorView from './FileEditorView.vue';
 const activeTab = ref('browse');
 const browserRef = ref<InstanceType<typeof BrowserView>>();
 
-/** 独立文件编辑器状态（非空 = 全屏编辑器页，替代弹窗） */
-const editor = ref<{ id: string; title: string; ext: string; path: string; isImage: boolean } | null>(null);
-function openEditor(e: { id: string; title: string; ext: string; path: string; isImage: boolean }) {
-  editor.value = { ...e };
+/** 独立文件编辑器状态（非空 = 全屏编辑器页，替代弹窗）；mode='file' 磁盘文件 / 'note' 数据库笔记 */
+const editor = ref<{ id: string; title: string; ext: string; path: string; isImage: boolean; mode: 'file' | 'note' } | null>(null);
+function openEditor(e: { id: string; title: string; ext: string; path: string; isImage: boolean; mode?: 'file' | 'note' }) {
+  editor.value = { mode: 'file', ...e };
 }
 function closeEditor() {
   editor.value = null;
@@ -73,6 +73,7 @@ async function openResource(parentId: string | null) {
     :ext="editor.ext"
     :path="editor.path"
     :is-image="editor.isImage"
+    :mode="editor.mode"
     @close="closeEditor"
   />
 

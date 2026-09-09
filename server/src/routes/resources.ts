@@ -42,7 +42,12 @@ router.get('/resources', (req: Request, res) => {
   const params: Record<string, unknown> = { status };
   if (type) { where.push('r.type = @type'); params.type = type; }
   if (id) { where.push('r.id = @id'); params.id = id; }
-  if (parentId !== undefined) { where.push('r.parent_id = @parentId'); params.parentId = parentId === 'root' ? null : parentId; }
+  if (parentId === 'root') {
+    // 主目录视图：根文件夹 + 全局自建资源（笔记/书签/待办，无文件系统归属）
+    where.push(`(r.parent_id IS NULL AND r.type = 'folder') OR r.type IN ('note','bookmark','todo')`);
+  } else if (parentId !== undefined) {
+    where.push('r.parent_id = @parentId'); params.parentId = parentId;
+  }
   if (q) { where.push('(r.title LIKE @like OR r.path LIKE @like)'); params.like = `%${q}%`; }
   if (tag) {
     where.push('EXISTS (SELECT 1 FROM resource_tags rt WHERE rt.resource_id = r.id AND rt.tag_id = @tag)');
@@ -64,7 +69,7 @@ router.get('/resources', (req: Request, res) => {
   // 标签聚合（数据库视图显示用；子查询走 resource_tags 主键索引，仅对返回行执行）
   const tagNamesSub = `(SELECT GROUP_CONCAT(t.name, '|') FROM resource_tags rt JOIN tags t ON t.id = rt.tag_id WHERE rt.resource_id = r.id)`;
   const tagIdsSub = `(SELECT GROUP_CONCAT(t.id, '|') FROM resource_tags rt JOIN tags t ON t.id = rt.tag_id WHERE rt.resource_id = r.id)`;
-  const cols = `r.id, r.type, r.title, r.path, r.parent_id, r.done, r.size, r.created_at, r.updated_at,
+  const cols = `r.id, r.type, r.title, r.path, r.parent_id, r.done, r.size, r.source_url, r.created_at, r.updated_at,
                 json_extract(r.meta, '$.pinned') AS pinned,
                 ${tagNamesSub} AS tag_names, ${tagIdsSub} AS tag_ids`;
 
@@ -577,6 +582,105 @@ router.put('/resources/:id/tags', (req, res) => {  const db = getDb();
   });
   tx();
   res.json({ code: 0, data: { resourceId: req.params.id, tagIds: ids, recursive: recursive === true } });
+});
+
+// ============ 自建资源（笔记 / 书签 / 待办）：创建、详情、更新、删除（回收站软删） ============
+
+/** 可自建资源类型（文件/文件夹来自磁盘扫描，不走此路径） */
+const SELF_TYPES = new Set(['note', 'bookmark', 'todo']);
+
+/** 清理回收站中超过 30 天的资源（软删 meta.deleted_at 早于 30 天前 → 彻底删除，FTS 由触发器同步） */
+function purgeTrashed(db: ReturnType<typeof getDb>): void {
+  const cut = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+  db.prepare(
+    `DELETE FROM resources WHERE status='trashed' AND json_extract(meta, '$.deleted_at') IS NOT NULL
+     AND json_extract(meta, '$.deleted_at') < ?`
+  ).run(cut);
+}
+
+/** GET /api/resources/trash/info —— 回收站信息（工作台显示清理提示） */
+router.get('/resources/trash/info', (_req, res) => {
+  const db = getDb();
+  purgeTrashed(db);
+  const row = db.prepare(
+    `SELECT COUNT(*) AS n, MIN(json_extract(meta, '$.deleted_at')) AS oldest
+     FROM resources WHERE status='trashed'`
+  ).get() as { n: number; oldest: string | null };
+  // 最早的删除时间 + 30 天 = 自动清理时间（已过期但尚未 purge 的也一并显示）
+  const clear_at = row.oldest
+    ? new Date(new Date(row.oldest).getTime() + 30 * 24 * 3600 * 1000).toISOString()
+    : null;
+  res.json({ code: 0, data: { count: row.n, clear_at, days: 30 } });
+});
+
+/** POST /api/resources —— 创建自建资源（note/bookmark/todo） */
+router.post('/resources', (req, res) => {
+  const db = getDb();
+  const { type, title, content, source_url } = req.body as {
+    type?: string; title?: string; content?: string; source_url?: string;
+  };
+  if (!type || !SELF_TYPES.has(type)) { res.status(400).json({ code: 1, msg: '仅支持创建笔记/书签/待办' }); return; }
+  if (!title || !String(title).trim()) { res.status(400).json({ code: 1, msg: '标题不能为空' }); return; }
+  if (type === 'bookmark' && !String(source_url || '').trim()) { res.status(400).json({ code: 1, msg: '书签链接不能为空' }); return; }
+  const id = randomUUID();
+  const now = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO resources (id, type, title, content, source_url, path, parent_id, status, done, meta, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, '', NULL, 'active', 0, '{}', ?, ?)`
+  ).run(id, type, String(title).trim(), String(content || ''), String(source_url || ''), now, now);
+  res.json({ code: 0, data: { id, type, title: String(title).trim() } });
+});
+
+/** GET /api/resources/:id —— 资源详情（含 content/source_url/meta，笔记编辑器与书签编辑用） */
+router.get('/resources/:id', (req, res) => {
+  const db = getDb();
+  const row = db.prepare(
+    `SELECT id, type, title, content, source_url, path, parent_id, done, meta, created_at, updated_at
+     FROM resources WHERE id = ? AND status='active'`
+  ).get(req.params.id);
+  if (!row) { res.status(404).json({ code: 1, msg: '资源不存在' }); return; }
+  res.json({ code: 0, data: row });
+});
+
+/** PUT /api/resources/:id —— 更新自建资源（note/bookmark/todo 的标题/内容/链接） */
+router.put('/resources/:id', (req, res) => {
+  const db = getDb();
+  const row = db.prepare(`SELECT id, type FROM resources WHERE id = ? AND status='active'`).get(req.params.id) as
+    { id: string; type: string } | undefined;
+  if (!row) { res.status(404).json({ code: 1, msg: '资源不存在' }); return; }
+  if (!SELF_TYPES.has(row.type)) { res.status(400).json({ code: 1, msg: '该类型不支持此更新方式' }); return; }
+  const { title, content, source_url } = req.body as { title?: string; content?: string; source_url?: string };
+  const set: string[] = [];
+  const params: unknown[] = [];
+  if (title !== undefined) {
+    if (!String(title).trim()) { res.status(400).json({ code: 1, msg: '标题不能为空' }); return; }
+    set.push('title = ?'); params.push(String(title).trim());
+  }
+  if (content !== undefined) { set.push('content = ?'); params.push(String(content)); }
+  if (source_url !== undefined) {
+    if (row.type === 'bookmark' && !String(source_url).trim()) { res.status(400).json({ code: 1, msg: '书签链接不能为空' }); return; }
+    set.push('source_url = ?'); params.push(String(source_url));
+  }
+  if (set.length === 0) { res.json({ code: 0, data: { ok: true } }); return; }
+  set.push('updated_at = ?'); params.push(new Date().toISOString());
+  params.push(req.params.id);
+  db.prepare(`UPDATE resources SET ${set.join(', ')} WHERE id = ?`).run(...params);
+  res.json({ code: 0, data: { ok: true } });
+});
+
+/** DELETE /api/resources/:id —— 删除自建资源（软删进回收站，30 天后自动清理） */
+router.delete('/resources/:id', (req, res) => {
+  const db = getDb();
+  const row = db.prepare(`SELECT id, type FROM resources WHERE id = ? AND status='active'`).get(req.params.id) as
+    { id: string; type: string } | undefined;
+  if (!row) { res.status(404).json({ code: 1, msg: '资源不存在' }); return; }
+  if (!SELF_TYPES.has(row.type)) { res.status(400).json({ code: 1, msg: '该类型不支持删除' }); return; }
+  const now = new Date().toISOString();
+  db.prepare(
+    `UPDATE resources SET status='trashed', meta = json_set(CASE WHEN json_valid(meta) THEN meta ELSE '{}' END, '$.deleted_at', ?), updated_at = ? WHERE id = ?`
+  ).run(now, now, req.params.id);
+  purgeTrashed(db); // 顺带清理超期回收站
+  res.json({ code: 0, data: { ok: true } });
 });
 
 export default router;

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 // 独立文件编辑器页（替代早期弹窗）：整个页面切换进入，顶栏含文件名 + 保存/关闭
+// mode='file' 读写磁盘文本文件；mode='note' 读写数据库笔记（resources.content）
 import { ref, watch, nextTick } from 'vue';
 import { ElMessage } from 'element-plus';
-import { fileUrl, readFileText, saveFile } from './api';
+import { fileUrl, readFileText, saveFile, getResource, updateResource } from './api';
 
 const props = defineProps<{
   id: string;
@@ -10,6 +11,7 @@ const props = defineProps<{
   ext: string;
   path?: string;
   isImage?: boolean;
+  mode?: 'file' | 'note';
 }>();
 
 const emit = defineEmits<{ (e: 'close'): void }>();
@@ -20,7 +22,7 @@ const loading = ref(true);
 const saving = ref(false);
 
 /** 是否为 md（左右分栏） */
-const isMd = () => props.ext === 'md';
+const isMd = () => props.mode === 'note' || props.ext === 'md';
 
 /** 极简 MD 渲染：标题/列表/代码块/行内代码/链接/粗体/分割线。
  *  逐行渲染：空行不输出（消除"很多空行"）；连续普通行合为段落（行内用 <br/>）；
@@ -72,7 +74,12 @@ async function load() {
   if (props.isImage) { loading.value = false; return; }
   loading.value = true;
   try {
-    content.value = await readFileText(props.id);
+    if (props.mode === 'note') {
+      const d = await getResource(props.id);
+      content.value = d.content || '';
+    } else {
+      content.value = await readFileText(props.id);
+    }
     if (isMd()) renderMd();
   } catch (e: any) {
     ElMessage.error('读取失败：' + (e?.message || '服务异常'));
@@ -85,7 +92,11 @@ async function save() {
   if (saving.value) return;
   saving.value = true;
   try {
-    await saveFile(props.id, content.value);
+    if (props.mode === 'note') {
+      await updateResource(props.id, { content: content.value });
+    } else {
+      await saveFile(props.id, content.value);
+    }
     ElMessage.success('已保存');
     if (isMd()) renderMd();
   } catch (e: any) {

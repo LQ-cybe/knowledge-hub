@@ -10,6 +10,7 @@ export interface Resource {
   parent_id: string | null;
   done: number;
   size?: number;
+  source_url?: string;
   created_at: string;
   updated_at: string;
   highlight?: string;
@@ -92,6 +93,32 @@ export const setPending = (ids: string[], pending: boolean) =>
 /** 置顶/取消置顶（浏览页列表/卡片图标单击切换） */
 export const setPin = (id: string, pinned: boolean) =>
   http.post(`/resources/${id}/pin`, { pinned }).then(r => r.data.data);
+
+// ---------- 自建资源（笔记 / 书签 / 待办） ----------
+export interface ResourceDetail {
+  id: string;
+  type: 'bookmark' | 'note' | 'file' | 'todo' | 'report' | 'folder';
+  title: string;
+  content: string;
+  source_url: string;
+  path: string;
+  parent_id: string | null;
+  done: number;
+  meta: string;
+  created_at: string;
+  updated_at: string;
+}
+export interface TrashInfo { count: number; clear_at: string | null; days: number }
+export const createResource = (type: 'note' | 'bookmark' | 'todo', title: string, content = '', source_url = '') =>
+  http.post('/resources', { type, title, content, source_url }).then(r => r.data.data as { id: string; type: string; title: string });
+export const getResource = (id: string) =>
+  http.get(`/resources/${id}`).then(r => r.data.data as ResourceDetail);
+export const updateResource = (id: string, patch: { title?: string; content?: string; source_url?: string }) =>
+  http.put(`/resources/${id}`, patch).then(r => r.data.data);
+export const deleteResource = (id: string) =>
+  http.delete(`/resources/${id}`).then(r => r.data.data);
+export const getTrashInfo = () =>
+  http.get('/resources/trash/info').then(r => r.data.data as TrashInfo);
 
 export interface GraphNode {
   id: string;

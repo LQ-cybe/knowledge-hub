@@ -4,11 +4,12 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   getTree, getResourcesPage, getTags, createTag, updateTag, deleteTag, setResourceTags,
   search as apiSearch, fileUrl, rescan, moveResource, setPending, setPin, getStats,
+  createResource, deleteResource, getResource, updateResource,
   type Resource, type TagItem, type TreeNode,
 } from './api';
 
 /** 独立编辑器事件：文本/图片预览 → 整页切换（App.vue 全屏渲染 FileEditorView） */
-const emit = defineEmits<{ (e: 'open-editor', p: { id: string; title: string; ext: string; path: string; isImage: boolean }): void }>();
+const emit = defineEmits<{ (e: 'open-editor', p: { id: string; title: string; ext: string; path: string; isImage: boolean; mode?: 'file' | 'note' }): void }>();
 
 // ---------- 左侧：文件结构树 ----------
 const treeData = ref<TreeNode[]>([]);
@@ -240,12 +241,19 @@ function onPendingToggle() {
 onMounted(() => {
   document.addEventListener('mousemove', onBoxMouseMove);
   document.addEventListener('mouseup', onBoxMouseUp);
+  document.addEventListener('click', closeCtxMenu);
   loadStats();
 });
 onBeforeUnmount(() => {
   document.removeEventListener('mousemove', onBoxMouseMove);
   document.removeEventListener('mouseup', onBoxMouseUp);
+  document.removeEventListener('click', closeCtxMenu);
 });
+
+/** 点击任意处关闭右键菜单 */
+function closeCtxMenu() {
+  ctxMenu.value.visible = false;
+}
 
 const typeOptions = [
   { value: '', label: '全部类型' },
@@ -284,7 +292,7 @@ async function loadResources() {
     };
     // 待整理筛选
     if (pendingOnly.value) params.pending = '1';
-    if (currentFolderId.value) params.parentId = currentFolderId.value;
+    if (currentFolderId.value) params.parentId = currentFolderId.value === rootId.value ? 'root' : currentFolderId.value;
     const res = await getResourcesPage(params);
     list.value = res.list;
     total.value = res.total;
@@ -419,10 +427,21 @@ async function onRowClick(row: Resource) {
     await loadResources();
     return;
   }
+  if (row.type === 'note') {
+    // 笔记：打开 Markdown 编辑器（数据库内容，左右分栏）
+    emit('open-editor', { id: row.id, title: row.title, ext: 'md', path: '', isImage: false, mode: 'note' });
+    return;
+  }
+  if (row.type === 'bookmark') {
+    // 书签：新标签页打开链接（无链接则提示）
+    if (row.source_url) { window.open(row.source_url, '_blank', 'noopener'); return; }
+    ElMessage.info('该书签没有链接');
+    return;
+  }
   if (row.type !== 'file') { ElMessage.info('该类型暂不支持预览'); return; }
   if (isImage(row) || isTextPreview(row)) {
     const ext = (row.title.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1]) || '';
-    emit('open-editor', { id: row.id, title: row.title, ext, path: row.path || '', isImage: isImage(row) });
+    emit('open-editor', { id: row.id, title: row.title, ext, path: row.path || '', isImage: isImage(row), mode: 'file' });
     return;
   }
   ElMessage.info('该文件类型暂不支持预览');
@@ -484,6 +503,124 @@ function onBatchCmd(cmd: string) {
   else if (cmd === 'move') openMoveDialog();
   else if (cmd === 'pending') markPending(true);
   else if (cmd === 'unpending') markPending(false);
+}
+
+// ---------- 新建笔记 / 添加书签 ----------
+const noteDialog = ref({ visible: false, title: '', content: '', saving: false });
+const bookmarkDialog = ref({ visible: false, title: '', url: '', desc: '', saving: false });
+
+function openNoteDialog() {
+  noteDialog.value = { visible: true, title: '', content: '', saving: false };
+}
+function openBookmarkDialog() {
+  bookmarkDialog.value = { visible: true, title: '', url: '', desc: '', saving: false };
+}
+
+async function createNote() {
+  const d = noteDialog.value;
+  if (!d.title.trim()) { ElMessage.warning('请输入笔记标题'); return; }
+  d.saving = true;
+  try {
+    const r = await createResource('note', d.title.trim(), d.content);
+    d.visible = false;
+    ElMessage.success('笔记已创建');
+    await loadResources(); loadStats();
+    // 创建后直接打开编辑器继续写
+    emit('open-editor', { id: r.id, title: r.title, ext: 'md', path: '', isImage: false, mode: 'note' });
+  } catch (e: any) {
+    ElMessage.error('创建失败：' + (e?.response?.data?.msg || e?.message || '服务异常'));
+  } finally {
+    d.saving = false;
+  }
+}
+
+async function createBookmark() {
+  const d = bookmarkDialog.value;
+  if (!d.title.trim()) { ElMessage.warning('请输入书签标题'); return; }
+  const url = d.url.trim();
+  if (!url) { ElMessage.warning('请输入链接地址'); return; }
+  // 无协议时自动补 https://
+  const full = /^https?:\/\//i.test(url) ? url : 'https://' + url;
+  d.saving = true;
+  try {
+    await createResource('bookmark', d.title.trim(), d.desc.trim(), full);
+    d.visible = false;
+    ElMessage.success('书签已添加');
+    // 保持当前筛选可见（若当前在"全部类型"或"书签"筛选下才刷新可见）
+    await loadResources(); loadStats();
+  } catch (e: any) {
+    ElMessage.error('添加失败：' + (e?.response?.data?.msg || e?.message || '服务异常'));
+  } finally {
+    d.saving = false;
+  }
+}
+
+// ---------- 笔记 / 书签行右键菜单：编辑 / 删除（回收站） ----------
+const ctxMenu = ref({ visible: false, x: 0, y: 0, row: null as Resource | null });
+function onRowContextMenu(e: MouseEvent, row: Resource) {
+  if (row.type !== 'note' && row.type !== 'bookmark') return;
+  e.preventDefault();
+  ctxMenu.value = { visible: true, x: e.clientX, y: e.clientY, row };
+}
+function onCtxCmd(cmd: string) {
+  const row = ctxMenu.value.row;
+  ctxMenu.value.visible = false;
+  if (!row) return;
+  if (cmd === 'edit') {
+    if (row.type === 'note') {
+      emit('open-editor', { id: row.id, title: row.title, ext: 'md', path: '', isImage: false, mode: 'note' });
+    } else if (row.type === 'bookmark') {
+      // 编辑书签：打开编辑对话框（需加载详情）
+      openBookmarkEdit(row);
+    }
+  } else if (cmd === 'delete') {
+    removeSelfResource(row);
+  }
+}
+const bookmarkEdit = ref({ visible: false, id: '', title: '', url: '', desc: '', saving: false });
+async function openBookmarkEdit(row: Resource) {
+  try {
+    const d = await getResource(row.id);
+    bookmarkEdit.value = { visible: true, id: row.id, title: d.title, url: d.source_url || '', desc: d.content || '', saving: false };
+  } catch (e: any) {
+    ElMessage.error('读取书签失败：' + (e?.message || '服务异常'));
+  }
+}
+async function saveBookmarkEdit() {
+  const d = bookmarkEdit.value;
+  if (!d.title.trim()) { ElMessage.warning('请输入书签标题'); return; }
+  const url = d.url.trim();
+  if (!url) { ElMessage.warning('请输入链接地址'); return; }
+  d.saving = true;
+  try {
+    await updateResource(d.id, { title: d.title.trim(), source_url: /^https?:\/\//i.test(url) ? url : 'https://' + url, content: d.desc.trim() });
+    d.visible = false;
+    ElMessage.success('书签已更新');
+    await loadResources();
+  } catch (e: any) {
+    ElMessage.error('保存失败：' + (e?.response?.data?.msg || e?.message || '服务异常'));
+  } finally {
+    d.saving = false;
+  }
+}
+async function removeSelfResource(row: Resource) {
+  try {
+    await ElMessageBox.confirm(`将「${row.title}」移入回收站？回收站资源 30 天后自动清理。`, '移入回收站', { type: 'warning' });
+  } catch {
+    return;
+  }
+  try {
+    await deleteResource(row.id);
+    ElMessage.success('已移入回收站（30 天后自动清理）');
+    await loadResources(); loadStats();
+  } catch (e: any) {
+    ElMessage.error('删除失败：' + (e?.response?.data?.msg || e?.message || '服务异常'));
+  }
+}
+
+/** 书签域名（列表/卡片显示用） */
+function hostOf(url: string) {
+  try { return new URL(url).host.replace(/^www\./, ''); } catch { return ''; }
 }
 
 // ---------- 打标对话框（行内 / 批量共用，可直接新建标签；文件夹可选递归） ----------
@@ -663,6 +800,15 @@ defineExpose({ openFolder, openTag, reload });
     <main class="main">
       <div class="toolbar">
         <el-button v-if="currentFolderId && currentFolderId !== rootId" size="default" @click="goParent" title="返回上一级目录">← 返回</el-button>
+        <el-dropdown @command="(c: string) => c === 'note' ? openNoteDialog() : openBookmarkDialog()">
+          <el-button type="primary" size="default">新建 ▾</el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="note">📝 新建笔记</el-dropdown-item>
+              <el-dropdown-item command="bookmark">🔖 添加书签</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
         <el-input
           v-model="searchKeyword"
           placeholder="按文件名或内容搜索"
@@ -722,7 +868,7 @@ defineExpose({ openFolder, openTag, reload });
       <div v-if="viewMode === 'table'" class="table-wrap" v-loading="loading" @mousedown="onBoxMouseDown">
         <el-table ref="tableRef" :data="list" size="small" height="100%" stripe highlight-current-row
           @selection-change="(rows: Resource[]) => { selection = rows; gridSelected.value = new Set(rows.map(r => r.id)); }"
-          @row-click="onRowClick" :row-class-name="() => 'browse-row'">
+          @row-click="onRowClick" @row-contextmenu="onRowContextMenu" :row-class-name="() => 'browse-row'">
           <el-table-column type="selection" width="38" @click.stop />
           <el-table-column label="名称" min-width="200">
             <template #default="{ row }">
@@ -738,8 +884,12 @@ defineExpose({ openFolder, openTag, reload });
               </span>
             </template>
           </el-table-column>
-          <el-table-column prop="path" label="路径" min-width="220" show-overflow-tooltip>
-            <template #default="{ row }"><span class="path">{{ row.path || '-' }}</span></template>
+          <el-table-column prop="path" label="路径/链接" min-width="220" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="path" :title="row.type === 'bookmark' ? (row.source_url || '') : (row.path || '')">
+                {{ row.type === 'bookmark' ? (row.source_url || '-') : (row.path || '-') }}
+              </span>
+            </template>
           </el-table-column>
           <el-table-column label="标签" min-width="140">
             <template #default="{ row }">
@@ -776,7 +926,7 @@ defineExpose({ openFolder, openTag, reload });
             <span v-else class="thumb-icon">{{ r.type === 'file' ? fileIcon(r.title) : typeIcons[r.type] || '📄' }}</span>
           </div>
           <div class="card-title" :title="r.title">{{ r.title }}</div>
-          <div class="card-meta">{{ r.type === 'file' ? r.path : typeLabels[r.type] }}</div>
+          <div class="card-meta">{{ r.type === 'file' ? r.path : (r.type === 'bookmark' ? (hostOf(r.source_url || '') || '书签') : typeLabels[r.type]) }}</div>
           <div class="card-tags">
             <span v-for="(n, i) in rowTagNames(r)" :key="i" class="cell-tag" :title="n">{{ n }}</span>
             <el-button v-if="rowTagNames(r).length === 0" size="small" text type="primary" class="add-tag-btn" @click.stop="openTagDialog(r)">加标签</el-button>
@@ -865,6 +1015,70 @@ defineExpose({ openFolder, openTag, reload });
         <el-button type="primary" :loading="moveDialog.loading" @click="doMove">移动</el-button>
       </template>
     </el-dialog>
+
+    <!-- 新建笔记 -->
+    <el-dialog v-model="noteDialog.visible" title="新建笔记" width="560">
+      <div class="new-field">
+        <label>标题</label>
+        <el-input v-model="noteDialog.title" placeholder="笔记标题" maxlength="200" @keyup.enter="createNote" />
+      </div>
+      <div class="new-field">
+        <label>内容（Markdown）</label>
+        <el-input v-model="noteDialog.content" type="textarea" :rows="10" placeholder="在此输入笔记内容，支持 Markdown 语法…" />
+      </div>
+      <template #footer>
+        <el-button @click="noteDialog.visible = false">取消</el-button>
+        <el-button type="primary" :loading="noteDialog.saving" @click="createNote">创建并编辑</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 添加书签 -->
+    <el-dialog v-model="bookmarkDialog.visible" title="添加书签" width="520">
+      <div class="new-field">
+        <label>标题</label>
+        <el-input v-model="bookmarkDialog.title" placeholder="书签名称（默认取网页标题可稍后修改）" maxlength="200" @keyup.enter="createBookmark" />
+      </div>
+      <div class="new-field">
+        <label>链接地址</label>
+        <el-input v-model="bookmarkDialog.url" placeholder="https://…（不填协议会自动补 https://）" @keyup.enter="createBookmark" />
+      </div>
+      <div class="new-field">
+        <label>备注</label>
+        <el-input v-model="bookmarkDialog.desc" type="textarea" :rows="3" placeholder="选填：一句话描述这个书签" />
+      </div>
+      <template #footer>
+        <el-button @click="bookmarkDialog.visible = false">取消</el-button>
+        <el-button type="primary" :loading="bookmarkDialog.saving" @click="createBookmark">添加</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑书签 -->
+    <el-dialog v-model="bookmarkEdit.visible" title="编辑书签" width="520">
+      <div class="new-field">
+        <label>标题</label>
+        <el-input v-model="bookmarkEdit.title" placeholder="书签名称" maxlength="200" />
+      </div>
+      <div class="new-field">
+        <label>链接地址</label>
+        <el-input v-model="bookmarkEdit.url" placeholder="https://…" />
+      </div>
+      <div class="new-field">
+        <label>备注</label>
+        <el-input v-model="bookmarkEdit.desc" type="textarea" :rows="3" placeholder="一句话描述" />
+      </div>
+      <template #footer>
+        <el-button @click="bookmarkEdit.visible = false">取消</el-button>
+        <el-button type="primary" :loading="bookmarkEdit.saving" @click="saveBookmarkEdit">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 笔记/书签右键菜单：编辑 / 删除（回收站） -->
+    <Teleport to="body">
+      <div v-if="ctxMenu.visible" class="ctx-menu" :style="{ left: ctxMenu.x + 'px', top: ctxMenu.y + 'px' }" @contextmenu.prevent>
+        <div class="ctx-item" @click="onCtxCmd('edit')">编辑</div>
+        <div class="ctx-item danger" @click="onCtxCmd('delete')">删除（回收站）</div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -944,6 +1158,20 @@ html.dark .tree-wrap::-webkit-scrollbar-thumb:hover, html.dark .grid::-webkit-sc
 .empty { color: var(--el-text-color-secondary, #9ca3af); text-align: center; padding: 40px 0; font-size: 13px; }
 
 .footer { display: flex; justify-content: flex-end; padding: 8px 14px 12px; }
+.new-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.new-field label { font-size: 12px; color: var(--el-text-color-secondary, #6b7280); }
+.ctx-menu {
+  position: fixed; z-index: 3000; min-width: 120px; padding: 4px; border-radius: 8px;
+  background: var(--el-bg-color, #fff); border: 1px solid var(--el-border-color, #e5e7eb);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+.ctx-item {
+  padding: 6px 12px; font-size: 13px; border-radius: 5px; cursor: pointer;
+  color: var(--el-text-color-primary, #1f2937);
+}
+.ctx-item:hover { background: var(--kh-brand, #409eff); color: #fff; }
+.ctx-item.danger { color: #f56c6c; }
+.ctx-item.danger:hover { background: #f56c6c; color: #fff; }
 .dlg-new-tag { display: flex; gap: 8px; margin-bottom: 10px; }
 .dlg-hint { margin: 0 0 8px; font-size: 13px; color: var(--el-text-color-secondary, #6b7280); }
 .dlg-tags { display: flex; flex-wrap: wrap; gap: 6px; max-height: 260px; overflow: auto; padding-right: 4px; }
