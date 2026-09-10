@@ -5,6 +5,11 @@ import utils from './fishboneUtils'
 import { SVG } from '@svgdotjs/svg.js'
 import { shapeStyleProps } from '../core/render/node/Style'
 
+// 折叠占位宽度缓存：uid -> 该节点最近一次展开渲染时的子树水平宽度。
+// 折叠后渲染树中不再包含子节点实例，无法计算子树宽度，用此缓存保持兄弟节点位置稳定，
+// 避免鱼骨（放射）布局折叠中间分支后右侧分支整体前移、破坏层级顺序。
+const expandedWidthCache = new Map()
+
 //  鱼骨图
 class Fishbone extends Base {
   //  构造函数
@@ -29,8 +34,11 @@ class Fishbone extends Base {
 
   // 重新渲染时，节点连线是否全部删除
   // 鱼尾鱼骨图会多渲染一些连线，按需删除无法删除掉，只能全部删除重新创建
+  // 补丁：二级节点（layerIndex===1）不再全部删除——其子列横短线按 childrenLen 复用
+  // _lines（lines[index]），全部删除会导致横短线拿到 undefined 线实例而报错；
+  // 斜线/竖干线每次新建 push，下次渲染开头的截断逻辑会自动移除多余的线
   nodeIsRemoveAllLines(node) {
-    return node.isRoot || node.layerIndex === 1
+    return node.isRoot || (this.isFishbone2() && node.layerIndex === 1)
   }
 
   // 是否是带鱼头鱼尾的鱼骨图
@@ -221,10 +229,13 @@ class Fishbone extends Base {
           node.children.forEach(item => {
             if (this.checkIsTop(item)) {
               item.left = topTotalLeft
-              topTotalLeft += item.width + marginX
+              // 补丁：此处不再按 item.width 累加——adjustLeftTopValue 根节点回调整段
+              // 会按子树真实边界宽度（getNodeBoundaries）重新累加排布，两处叠加导致
+              // 相邻分支水平留白双倍（竖列布局下子树不再右漂移，双倍留白完全多余）
+              topTotalLeft += marginX
             } else {
               item.left = bottomTotalLeft + 20
-              bottomTotalLeft += item.width + marginX
+              bottomTotalLeft += marginX
             }
           })
         }
@@ -246,9 +257,8 @@ class Fishbone extends Base {
       this.root,
       null,
       (node, parent, isRoot, layerIndex) => {
-        if (!node.getData('expand')) {
-          return
-        }
+        // 折叠节点：不调整内部子节点，但保留其子树布局占位（子树边界仍参与兄弟节点间距计算），
+        // 保证折叠后同级兄弟节点位置稳定、层级顺序不被破坏（鱼骨/放射布局核心修复）
         let params = { node, parent, layerIndex, ctx: this }
         if (this.checkIsTop(node)) {
           utils.top.adjustLeftTopValueBefore(params)
@@ -265,19 +275,53 @@ class Fishbone extends Base {
         }
         // 调整二级节点的子节点的left值
         if (node.isRoot) {
+          let topTotalLeft = 0
+          let bottomTotalLeft = 0
           let maxx = -Infinity
           node.children.forEach(item => {
-            if (this.checkIsTop(item)) {
-              let { right } = this.getNodeBoundaries(item, 'h')
-              if (right > maxx) {
-                maxx = right
+            // 折叠节点：渲染树中无子节点实例，无法通过 getNodeBoundaries 计算子树宽度，
+            // 改用该节点最近一次展开渲染时缓存的子树水平宽度占位，保证折叠后同级兄弟位置稳定
+            const isExpanded = item.getData('expand')
+            const isTop = this.checkIsTop(item)
+            if (isTop) {
+              if (isExpanded) {
+                item.left += topTotalLeft
+                this.updateChildren(item.children, 'left', topTotalLeft)
+                let { left, right } = this.getNodeBoundaries(item, 'h')
+                if (right > maxx) {
+                  maxx = right
+                }
+                expandedWidthCache.set(item.uid, right - left)
+                topTotalLeft += right - left
+              } else {
+                const cachedW = expandedWidthCache.get(item.uid)
+                const w = typeof cachedW === 'number' ? cachedW : item.width || 0
+                item.left += topTotalLeft
+                this.updateChildren(item.children, 'left', topTotalLeft)
+                if (item.left + w > maxx) {
+                  maxx = item.left + w
+                }
+                topTotalLeft += w
               }
-              // 紧凑：不再按子树水平宽二次平移（computedLeftTopValue 已按"前兄弟宽 + second.marginX"绝对排布），
-              // 消除短文本节点后大片横向空白；子树随节点整体平移，保持父子相对位置
             } else {
-              let { right } = this.getNodeBoundaries(item, 'h')
-              if (right > maxx) {
-                maxx = right
+              if (isExpanded) {
+                item.left += bottomTotalLeft
+                this.updateChildren(item.children, 'left', bottomTotalLeft)
+                let { left, right } = this.getNodeBoundaries(item, 'h')
+                if (right > maxx) {
+                  maxx = right
+                }
+                expandedWidthCache.set(item.uid, right - left)
+                bottomTotalLeft += right - left
+              } else {
+                const cachedW = expandedWidthCache.get(item.uid)
+                const w = typeof cachedW === 'number' ? cachedW : item.width || 0
+                item.left += bottomTotalLeft
+                this.updateChildren(item.children, 'left', bottomTotalLeft)
+                if (item.left + w > maxx) {
+                  maxx = item.left + w
+                }
+                bottomTotalLeft += w
               }
             }
           })
@@ -363,6 +407,52 @@ class Fishbone extends Base {
     return node.dir === CONSTANTS.LAYOUT_GROW_DIR.TOP
   }
 
+  // 补丁（2026-09-10）：计算斜线终点——从节点「矩形包围盒角点」沿连线方向推进到
+  // 「节点圆角轮廓」上。
+  // 背景：节点形状是圆角矩形（圆角半径取节点样式的 borderRadius），包围盒角点落在圆角
+  // 外侧（沿对角线偏离轮廓 r*(√2-1)），直接把斜线画到角点，视觉上就会与节点断开一段缝
+  // （半径越大缝越明显）；用户反馈的"斜线与节点断开/顶到选中外框"即此。
+  // 做法：以 0.2 为单位沿连线方向步进，用「点到内部收缩矩形的距离 ≤ r」判定是否进入
+  // 节点内部，取第一个进入点后再向内压 2，保证线段压在节点轮廓描边上、不留发丝缝
+  // （节点容器绘制在连线之上，压进去的一小段被节点填充色遮住）。
+  reachNodeOutline(from, cornerX, cornerY, node) {
+    const w = node.width
+    const h = node.height
+    const left = node.left
+    const top = node.top
+    let r = 0
+    try {
+      r = parseFloat(node.style.merge('borderRadius')) || 0
+    } catch (e) {
+      r = 0
+    }
+    r = Math.max(0, Math.min(r, w / 2, h / 2))
+    if (r <= 0) return { x: cornerX, y: cornerY }
+    let dx = cornerX - from.x
+    let dy = cornerY - from.y
+    const len = Math.sqrt(dx * dx + dy * dy)
+    if (!len) return { x: cornerX, y: cornerY }
+    dx /= len
+    dy /= len
+    const inNode = (x, y) => {
+      if (x < left || x > left + w || y < top || y > top + h) return false
+      const cx = Math.min(Math.max(x, left + r), left + w - r)
+      const cy = Math.min(Math.max(y, top + r), top + h - r)
+      const ox = x - cx
+      const oy = y - cy
+      return ox * ox + oy * oy <= r * r
+    }
+    const step = 0.2
+    const maxT = r * 2 + 2
+    for (let t = step; t <= maxT; t += step) {
+      if (inNode(cornerX + dx * t, cornerY + dy * t)) {
+        const t2 = t + 2
+        return { x: cornerX + dx * t2, y: cornerY + dy * t2 }
+      }
+    }
+    return { x: cornerX, y: cornerY }
+  }
+
   //  绘制连线，连接该节点到其子节点
   renderLine(node, lines, style) {
     if (node.layerIndex !== 1 && node.children.length <= 0) {
@@ -389,21 +479,27 @@ class Fishbone extends Base {
           node.height / 2 + marginY - (this.isFishbone2() ? node.height / 4 : 0)
         let offsetX = offset / Math.tan(degToRad(this.mindMap.opt.fishboneDeg))
         let line = this.lineDraw.path()
+        // 补丁：斜线终点不再直接取节点包围盒角点（圆角外侧，会留缝），
+        // 改为沿连线方向推进到节点圆角轮廓上（见 reachNodeOutline）
         if (this.checkIsTop(item)) {
+          let start = {
+            x: nodeLineX - offsetX,
+            y: item.top + item.height + offset
+          }
+          let end = this.reachNodeOutline(
+            start,
+            item.left,
+            item.top + item.height,
+            item
+          )
           line.plot(
-            this.transformPath(
-              `M ${nodeLineX - offsetX},${item.top + item.height + offset} L ${
-                item.left
-              },${item.top + item.height}`
-            )
+            this.transformPath(`M ${start.x},${start.y} L ${end.x},${end.y}`)
           )
         } else {
+          let start = { x: nodeLineX - offsetX, y: item.top - offset }
+          let end = this.reachNodeOutline(start, nodeLineX, item.top, item)
           line.plot(
-            this.transformPath(
-              `M ${nodeLineX - offsetX},${item.top - offset} L ${nodeLineX},${
-                item.top
-              }`
-            )
+            this.transformPath(`M ${start.x},${start.y} L ${end.x},${end.y}`)
           )
         }
         node.style.line(line)
@@ -444,8 +540,9 @@ class Fishbone extends Base {
         if (y < miny) {
           miny = y
         }
-        // 水平线
-        if (node.layerIndex > 1) {
+        // 水平线（肘形横短线）：所有非根层级都画——二级节点子列已改为紧凑竖列，
+        // 需与竖干线（fishboneUtils renderLine 补丁）构成肘形连接，与更深层级风格统一
+        {
           let path = `M ${x},${y} L ${item.left},${y}`
           this.setLineStyle(style, lines[index], path, item)
         }

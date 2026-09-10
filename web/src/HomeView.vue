@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, nextTick } from 'vue';
+import { computed, onMounted, onBeforeUnmount, ref, nextTick } from 'vue';
 import * as echarts from 'echarts';
 import { getDashboard, getRecycleInfo, getToday, type DashboardData, type RecycleInfo, type TodayCount } from './api';
 
@@ -10,8 +10,12 @@ const loading = ref(true);
 const recycle = ref<RecycleInfo>({ count: 0, clear_at: null, days: 30 });
 const today = ref<TodayCount>({ note: 0, bookmark: 0, file: 0, todo: 0, mindmap: 0, total: 0, date: '' });
 
+/** 统计总览：文件总数 / 文件夹总数（顶层目录递归统计，与「今日新增」chip 同布局） */
+const fileTotal = computed(() => (dash.value?.topFolders ?? []).reduce((a, f) => a + f.files, 0));
+const folderTotal = computed(() => (dash.value?.topFolders ?? []).reduce((a, f) => a + f.subFolders, 0));
+
 const typeIcons: Record<string, string> = {
-  folder: '📂', file: '📄', note: '📝', bookmark: '🔖', todo: '✅', report: '📊',
+  folder: '📂', file: '📄', note: '📝', bookmark: '🔖', todo: '✅', report: '📅',
 };
 const typeLabels: Record<string, string> = {
   folder: '文件夹', file: '文件', note: '笔记', bookmark: '书签', todo: '待办', report: '报表',
@@ -150,37 +154,31 @@ function fmtTime(s: string) {
 
 <template>
   <div class="home" v-loading="loading">
-    <!-- 统计卡片 -->
-    <div class="cards">
-      <div class="card">
-        <div class="card-num">{{ dash?.total ?? 0 }}</div>
-        <div class="card-label">资源总数</div>
-      </div>
-      <div class="card">
-        <div class="card-num">{{ dash?.topFolders.reduce((a, f) => a + f.files, 0) ?? 0 }}</div>
-        <div class="card-label">文件总数</div>
-      </div>
-      <div class="card">
-        <div class="card-num">{{ dash?.topFolders.reduce((a, f) => a + f.subFolders, 0) ?? 0 }}</div>
-        <div class="card-label">文件夹总数</div>
-      </div>
-      <div class="card">
-        <div class="card-num">{{ dash?.tagCount ?? 0 }}</div>
-        <div class="card-label">标签数</div>
-      </div>
-    </div>
+    <!-- 统计卡 + 今日新增（同一行：左侧合并统计控件，右侧今日新增） -->
+    <div class="cards-row">
+      <!-- 统计总览：与右侧「今日新增」完全一致的 chip 布局（无竖线分隔，仅换数字与标签） -->
+      <section class="panel stat-panel">
+        <div class="panel-title">统计总览</div>
+        <div class="today-chips">
+          <div class="today-chip c-total"><span class="tc-num">{{ dash?.total ?? 0 }}</span><span class="tc-label">📊 资源总数</span></div>
+          <div class="today-chip c-files"><span class="tc-num">{{ fileTotal }}</span><span class="tc-label">📄 文件总数</span></div>
+          <div class="today-chip c-folders"><span class="tc-num">{{ folderTotal }}</span><span class="tc-label">📁 文件夹总数</span></div>
+          <div class="today-chip c-tags"><span class="tc-num">{{ dash?.tagCount ?? 0 }}</span><span class="tc-label">🏷️ 标签数</span></div>
+        </div>
+      </section>
 
-    <!-- 今日新增 -->
-    <div class="today-bar" v-if="today.total > 0 || dash">
-      <div class="today-title">🆕 今日新增</div>
-      <div class="today-chips">
-        <div class="today-chip file"><span class="tc-num">{{ today.file }}</span><span class="tc-label">📄 文件</span></div>
-        <div class="today-chip note"><span class="tc-num">{{ today.note }}</span><span class="tc-label">📝 笔记</span></div>
-        <div class="today-chip bookmark"><span class="tc-num">{{ today.bookmark }}</span><span class="tc-label">🔖 书签</span></div>
-        <div class="today-chip mindmap"><span class="tc-num">{{ today.mindmap }}</span><span class="tc-label">🧠 思维导图</span></div>
-        <div class="today-chip todo"><span class="tc-num">{{ today.todo }}</span><span class="tc-label">✅ 待办</span></div>
-        <div class="today-chip total"><span class="tc-num">{{ today.total }}</span><span class="tc-label">总计</span></div>
-      </div>
+      <!-- 今日新增：与统计控件同一行（右侧 panel，标题左上、无 🆕） -->
+      <section class="panel today-panel" v-if="today.total > 0 || dash">
+        <div class="panel-title">今日新增</div>
+        <div class="today-chips">
+          <div class="today-chip file"><span class="tc-num">{{ today.file }}</span><span class="tc-label">📄 文件</span></div>
+          <div class="today-chip note"><span class="tc-num">{{ today.note }}</span><span class="tc-label">📝 笔记</span></div>
+          <div class="today-chip bookmark"><span class="tc-num">{{ today.bookmark }}</span><span class="tc-label">🔖 书签</span></div>
+          <div class="today-chip mindmap"><span class="tc-num">{{ today.mindmap }}</span><span class="tc-label">🧩 思维导图</span></div>
+          <div class="today-chip todo"><span class="tc-num">{{ today.todo }}</span><span class="tc-label">✅ 待办</span></div>
+          <div class="today-chip total"><span class="tc-num">{{ today.total }}</span><span class="tc-label">总计</span></div>
+        </div>
+      </section>
     </div>
 
     <!-- 回收站清理信息：全局删除约定——删除先移入回收站，超期自动清理 -->
@@ -190,14 +188,14 @@ function fmtTime(s: string) {
     </div>
 
     <div class="cols">
-      <!-- 顶层目录 -->
-      <section class="panel">
-        <div class="panel-title">📁 顶层目录（点击进入）</div>
+      <!-- 文件（顶层目录）柱状图：占 2/3 宽 -->
+      <section class="panel panel-2">
+        <div class="panel-title">📁 文件</div>
         <div ref="barEl" class="chart" style="height: 260px;"></div>
       </section>
-      <!-- 类型分布 -->
-      <section class="panel">
-        <div class="panel-title">🧩 资源类型分布</div>
+      <!-- 类型分布环形图：占 1/3 宽 -->
+      <section class="panel panel-1">
+        <div class="panel-title">📊 资源类型分布</div>
         <div ref="pieEl" class="chart" style="height: 260px;"></div>
       </section>
     </div>
@@ -230,7 +228,7 @@ function fmtTime(s: string) {
     <div class="cols">
       <!-- 常用标签 -->
       <section class="panel">
-        <div class="panel-title">🏷️ 常用标签（点击按标签浏览）</div>
+        <div class="panel-title">🏷️ 常用标签</div>
         <div class="tag-cloud">
           <button
             v-for="t in dash?.topTags ?? []" :key="t.id"
@@ -254,12 +252,18 @@ function fmtTime(s: string) {
 .recycle-banner { margin-top: 12px; font-size: 13px; color: var(--el-text-color-regular, #4b5563); background: rgba(230, 162, 60, .1); border: 1px solid rgba(230, 162, 60, .3); border-radius: 10px; padding: 10px 14px; line-height: 1.6; }
 .recycle-banner b { color: #e6a23c; }
 
-.today-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; background: var(--el-bg-color, #fff); border: 1px solid var(--el-border-color, #e5e7eb); border-radius: 10px; padding: 12px 16px; }
-.today-title { font-size: 14px; font-weight: 600; color: var(--el-text-color-primary, #1f2937); flex: none; }
-.today-chips { display: flex; gap: 10px; flex-wrap: wrap; }
-.today-chip { display: flex; flex-direction: column; align-items: center; min-width: 78px; padding: 8px 14px; border-radius: 10px; background: var(--el-fill-color-light, #f5f7fa); border: 1px solid var(--el-border-color-lighter, #ebeef5); }
-.today-chip .tc-num { font-size: 22px; font-weight: 700; line-height: 1.1; }
-.today-chip .tc-label { font-size: 12px; color: var(--el-text-color-secondary, #9ca3af); margin-top: 3px; }
+/* 统计控件 + 今日新增 并成一行：左右 panel 按各自 chip 数（4 : 6）分配宽度，
+   chip 等宽拉伸铺满 → 两侧方格尺寸完全一致、左右边界对齐（宽度合并） */
+.cards-row { display: flex; align-items: stretch; gap: 14px; flex-wrap: wrap; }
+/* 统计总览：4 个 chip */
+.cards-row .stat-panel { flex: 4 1 0; min-width: 300px; }
+/* 今日新增：6 个 chip */
+.cards-row .today-panel { flex: 6 1 0; min-width: 420px; }
+/* 今日新增 / 统计总览：同一套 chip 布局（两侧结构完全一致，仅数字与标签不同） */
+.today-chips { display: flex; gap: 8px; flex-wrap: nowrap; }
+.today-chip { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; min-width: 62px; padding: 6px 10px; border-radius: 8px; background: var(--el-fill-color-light, #f5f7fa); border: 1px solid var(--el-border-color-lighter, #ebeef5); box-sizing: border-box; }
+.today-chip .tc-num { font-size: 22px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.today-chip .tc-label { font-size: 12px; color: var(--el-text-color-secondary, #9ca3af); margin-top: 3px; white-space: nowrap; }
 .today-chip.file .tc-num { color: #409EFF; }
 .today-chip.note .tc-num { color: #67C23A; }
 .today-chip.bookmark .tc-num { color: #E6A23C; }
@@ -267,14 +271,12 @@ function fmtTime(s: string) {
 .today-chip.todo .tc-num { color: #F56C6C; }
 .today-chip.total { background: rgba(64,158,255,.08); border-color: rgba(64,158,255,.3); }
 .today-chip.total .tc-num { color: #409EFF; }
-.card {
-  flex: 1 1 160px; min-width: 0; padding: 14px 18px;
-  background: var(--el-bg-color, #fff);
-  border: 1px solid var(--el-border-color, #e5e7eb);
-  border-radius: 10px; box-sizing: border-box;
-}
-.card-num { font-size: 24px; font-weight: 600; color: var(--el-text-color-primary, #1f2937); line-height: 1.2; }
-.card-label { font-size: 12px; color: var(--el-text-color-secondary, #9ca3af); margin-top: 4px; }
+/* 统计总览 chip 配色（与今日新增调色一致，区分四类） */
+.today-chip.c-total   { background: rgba(64,158,255,.08); border-color: rgba(64,158,255,.3); }
+.today-chip.c-total   .tc-num { color: #409EFF; }
+.today-chip.c-files   .tc-num { color: #67C23A; }
+.today-chip.c-folders .tc-num { color: #E6A23C; }
+.today-chip.c-tags    .tc-num { color: #B37FEB; }
 
 .cols { display: flex; gap: 14px; flex-wrap: wrap; }
 .panel {
@@ -283,6 +285,9 @@ function fmtTime(s: string) {
   border: 1px solid var(--el-border-color, #e5e7eb);
   border-radius: 10px; box-sizing: border-box;
 }
+/* 图表区比例：柱形图 2/3、环形图 1/3 */
+.cols > .panel-2 { flex: 2 1 0; }
+.cols > .panel-1 { flex: 1 1 0; }
 .panel-title { font-size: 14px; font-weight: 600; color: var(--el-text-color-primary, #1f2937); margin-bottom: 10px; }
 .chart { width: 100%; min-width: 0; }
 

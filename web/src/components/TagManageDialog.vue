@@ -95,7 +95,7 @@ function save() {
     <el-checkbox v-if="recursiveLabel" v-model="rec" class="tg-recursive">{{ recursiveLabel }}</el-checkbox>
     <template #footer>
       <el-button @click="close">取消</el-button>
-      <el-button type="primary" @click="save">保存</el-button>
+      <el-button type="primary" @click="save">确定</el-button>
     </template>
   </el-dialog>
 </template>

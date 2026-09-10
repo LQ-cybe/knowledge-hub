@@ -10,12 +10,20 @@ const typeOptions = [
   { value: 'quarter', label: '📊 季报' },
   { value: 'year', label: '📈 年报' },
 ];
-const typeFilter = ref('week');
+const typeFilter = ref('day'); // 默认日报
 const refDate = ref('');
 const content = ref('');
 const loading = ref(false);
 const saved = ref<ReportItem[]>([]);
 const period = ref<{ start: string; end: string }>({ start: '', end: '' });
+const activeId = ref(''); // 左侧列表当前选中的报表（右侧展示其内容）
+
+/** 单击左侧已保存报表 → 右侧内容区展示该报表 */
+function openSaved(s: ReportItem) {
+  content.value = s.content || '';
+  period.value = { start: s.period_start || '', end: s.period_end || '' };
+  activeId.value = s.id;
+}
 
 /** 今天日期（YYYY-MM-DD） */
 function today(): string {
@@ -29,6 +37,7 @@ async function generate() {
     const r = await generateReport(typeFilter.value, refDate.value);
     content.value = r.content;
     period.value = { start: r.period_start, end: r.period_end };
+    activeId.value = ''; // 新生成内容尚未关联左侧已保存报表
   } catch (e) {
     ElMessage.error('生成失败：' + (e as Error).message);
   } finally {
@@ -74,7 +83,8 @@ async function save() {
   const title = `${label} ${period.value.start || today()} ~ ${period.value.end || today()}`;
   try {
     const r = await saveReport(title, content.value, period.value.start, period.value.end);
-    saved.value = [{ id: r.id, title: r.title, period_start: period.value.start, period_end: period.value.end, created_at: r.created_at }, ...saved.value];
+    saved.value = [{ id: r.id, title: r.title, period_start: period.value.start, period_end: period.value.end, content: content.value, created_at: r.created_at }, ...saved.value];
+    activeId.value = r.id;
     ElMessage.success(`已保存：${title}（可在浏览页/时间线查看）`);
   } catch (e) {
     ElMessage.error('保存失败：' + (e as Error).message);
@@ -89,7 +99,7 @@ onMounted(async () => {
 <template>
   <div class="rp" v-loading="loading">
     <div class="rp-head">
-      <div class="rp-title">📊 报表中心<small>（自动汇总数据 · 可修改 · 可导出/保存）</small></div>
+      <div class="rp-title">📅 报表中心</div>
       <el-select v-model="typeFilter" style="width: 130px;" @change="generate">
         <el-option v-for="o in typeOptions" :key="o.value" :value="o.value" :label="o.label" />
       </el-select>
@@ -106,15 +116,16 @@ onMounted(async () => {
     <div class="rp-main">
       <!-- 已保存报表列表在左（窄），报表内容在右（宽） -->
       <div class="rp-side">
-        <div class="rp-pane-title">已保存报表（{{ saved.length }}）</div>
-        <div v-if="saved.length === 0" class="rp-none">暂无已保存报表</div>
-        <div v-for="s in saved" :key="s.id" class="rp-item" :title="s.created_at">
+        <div class="rp-pane-title">报表列表（{{ saved.length }}）</div>
+        <div v-if="saved.length === 0" class="rp-none">暂无报表</div>
+        <div v-for="s in saved" :key="s.id" class="rp-item" :class="{ active: s.id === activeId }"
+          :title="s.created_at" @click="openSaved(s)">
           <div class="rp-item-title">{{ s.title }}</div>
           <div class="rp-item-time">{{ s.created_at }}</div>
         </div>
       </div>
       <div class="rp-editor">
-        <div class="rp-pane-title">报表内容（可直接编辑）</div>
+        <div class="rp-pane-title">报表内容</div>
         <textarea v-model="content" class="rp-text" spellcheck="false"
           placeholder="选择报表类型并点击「生成」，内容将自动汇总；可在此修改后再导出/保存。"></textarea>
       </div>
@@ -145,6 +156,7 @@ onMounted(async () => {
 .rp-none { padding: 24px 12px; text-align: center; font-size: 12px; color: var(--el-text-color-secondary, #9ca3af); }
 .rp-item { padding: 8px 12px; border-bottom: 1px solid var(--el-border-color-lighter, #f0f2f5); cursor: pointer; }
 .rp-item:hover { background: var(--el-fill-color-light, #f5f7fa); }
+.rp-item.active { background: var(--el-color-primary-light-9, #ecf5ff); box-shadow: inset 3px 0 0 var(--el-color-primary, #409eff); }
 .rp-item-title { font-size: 13px; color: var(--el-text-color-primary, #1f2937); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rp-item-time { font-size: 11px; color: var(--el-text-color-secondary, #9ca3af); margin-top: 2px; }
 </style>

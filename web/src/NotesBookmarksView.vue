@@ -6,7 +6,7 @@ import { onMounted, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   getResourcesPage, createResource, deleteResource, getResource, updateResource,
-  setResourceTags, type Resource,
+  setResourceTags, getTags, type Resource,
 } from './api';
 import TagChips from './components/TagChips.vue';
 import TagManageDialog from './components/TagManageDialog.vue';
@@ -38,6 +38,14 @@ async function load() {
   }
 }
 onMounted(load);
+onMounted(() => {
+  // 预加载标签 id->名称 映射，供表单内把选中 id 还原成可读标签名
+  getTags().then(ts => {
+    const m: Record<string, string> = {};
+    ts.forEach(t => { m[t.id] = t.name; });
+    tagsMap.value = m;
+  }).catch(() => { /* 忽略 */ });
+});
 defineExpose({ reload: load });
 watch(subFilter, () => { page.value = 1; load(); });
 
@@ -56,6 +64,11 @@ function iconOf(row: Resource) {
 }
 function parseMeta(row: Resource): Record<string, unknown> {
   try { return JSON.parse(row.meta || '{}'); } catch { return {}; }
+}
+/** 书签描述：取 content 首行（截断显示，完整内容在编辑弹层查看） */
+function descOf(row: Resource): string {
+  const raw = (row.content || '').replace(/\s+/g, ' ').trim();
+  return raw.length > 60 ? raw.slice(0, 60) + '…' : raw;
 }
 
 // ---------- 标签 ----------
@@ -80,10 +93,19 @@ async function saveRowTags(ids: string[]) {
 const rowTagNames = (row: Resource) => (row.tag_names || '').split('|').filter(Boolean);
 const rowTagIds = (row: Resource) => (row.tag_ids || '').split('|').filter(Boolean);
 
+// 标签 id -> 名称 映射（用于表单内把选中 id 还原成可读标签名，列表存的是 id、展示需名称）
+const tagsMap = ref<Record<string, string>>({});
+function namesOf(ids: string[]): string[] {
+  return ids.map(id => tagsMap.value[id] || id).filter(Boolean);
+}
+
 // 新建 / 编辑表单内：仅选择已有标签（不新建、不删除），选中回填 tagIds
 const formTagDlg = ref({ visible: false, target: 'create' as 'create' | 'bm' });
 function openFormTagDialog(target: 'create' | 'bm') { formTagDlg.value = { visible: true, target }; }
-function formTagIds() { return formTagDlg.value.target === 'bm' ? bmDialog.value.tagIds : createDialog.value.tagIds; }
+/** 表单内标签弹层打开时，回显当前所属弹层（新建/编辑）已选 id */
+function currentFormTagIds(): string[] {
+  return formTagDlg.value.target === 'bm' ? bmDialog.value.tagIds : createDialog.value.tagIds;
+}
 function onFormTagSave(ids: string[]) {
   if (formTagDlg.value.target === 'bm') bmDialog.value.tagIds = ids;
   else createDialog.value.tagIds = ids;
@@ -191,15 +213,22 @@ onMounted(() => document.addEventListener('click', closeCtx));
 
     <div class="nb-body" v-loading="loading">
       <el-table :data="list" size="small" height="100%" stripe @row-click="onRowClick" @row-contextmenu="onCtx">
-        <el-table-column label="标题" min-width="280">
+        <el-table-column label="标题" min-width="240">
           <template #default="{ row }">
             <span class="nb-name">
-              <span class="nb-ico">{{ iconOf(row) }}</span>{{ row.title }}
+              <span class="nb-ico">{{ iconOf(row) }}</span>
+              <span class="nb-name-text">{{ row.title }}</span>
               <span v-if="row.type === 'bookmark' && row.source_url" class="nb-url" :title="row.source_url" @click.stop="openLink(row.source_url)">🔗</span>
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="标签" min-width="180">
+        <el-table-column label="描述" min-width="240">
+          <template #default="{ row }">
+            <span v-if="row.type === 'bookmark'" class="nb-desc" :title="descOf(row)">{{ descOf(row) }}</span>
+            <span v-else class="nb-desc nb-desc-empty"></span>
+          </template>
+        </el-table-column>
+        <el-table-column label="标签" min-width="160">
           <template #default="{ row }">
             <TagChips :names="rowTagNames(row)" @open="openTagDialog(row)" />
           </template>
@@ -252,7 +281,7 @@ onMounted(() => document.addEventListener('click', closeCtx));
       </template>
       <div class="nb-field">
         <label>标签</label>
-        <TagChips :names="formTagIds()" placeholder="选择标签" @open="openFormTagDialog('create')" />
+        <TagChips :names="namesOf(createDialog.tagIds)" placeholder="选择标签" @open="openFormTagDialog('create')" />
       </div>
       <template #footer>
         <el-button @click="createDialog.visible = false">取消</el-button>
@@ -284,7 +313,7 @@ onMounted(() => document.addEventListener('click', closeCtx));
       </div>
       <div class="nb-field">
         <label>标签</label>
-        <TagChips :names="formTagIds()" placeholder="选择标签" @open="openFormTagDialog('bm')" />
+        <TagChips :names="namesOf(bmDialog.tagIds)" placeholder="选择标签" @open="openFormTagDialog('bm')" />
       </div>
       <template #footer>
         <el-button @click="bmDialog.visible = false">取消</el-button>
@@ -303,7 +332,7 @@ onMounted(() => document.addEventListener('click', closeCtx));
     <!-- 表单内选择标签（仅选择已存在标签，不新建/删除） -->
     <TagManageDialog
       v-model="formTagDlg.visible"
-      :ids="formTagIds()"
+      :ids="currentFormTagIds()"
       title="选择标签"
       :allow-create="false"
       :allow-delete="false"
@@ -331,9 +360,12 @@ onMounted(() => document.addEventListener('click', closeCtx));
 .nb-body :deep(.el-table .cell) { padding: 0 8px; line-height: 1.5; }
 .nb-body :deep(.el-table__row) { cursor: pointer; }
 .nb-name { display: flex; align-items: center; gap: 8px; overflow: hidden; }
+.nb-name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nb-ico { flex: none; font-size: 15px; }
 .nb-url { flex: none; cursor: pointer; font-size: 13px; }
 .nb-url:hover { filter: brightness(1.2); }
+.nb-desc { display: block; font-size: 12px; color: var(--el-text-color-secondary, #9ca3af); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nb-desc-empty { opacity: .5; }
 .nb-foot { display: flex; justify-content: flex-end; padding: 8px 16px 12px; }
 .nb-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
 .nb-field label { font-size: 12px; color: var(--el-text-color-secondary, #6b7280); }

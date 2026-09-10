@@ -74,7 +74,8 @@ router.get('/resources', (req: Request, res) => {
   // 标签聚合（数据库视图显示用；子查询走 resource_tags 主键索引，仅对返回行执行）
   const tagNamesSub = `(SELECT GROUP_CONCAT(t.name, '|') FROM resource_tags rt JOIN tags t ON t.id = rt.tag_id WHERE rt.resource_id = r.id)`;
   const tagIdsSub = `(SELECT GROUP_CONCAT(t.id, '|') FROM resource_tags rt JOIN tags t ON t.id = rt.tag_id WHERE rt.resource_id = r.id)`;
-  const cols = `r.id, r.type, r.title, r.path, r.parent_id, r.done, r.size, r.source_url, r.created_at, r.updated_at,
+  const cols = `r.id, r.type, r.title, r.path, r.parent_id, r.done, r.size, r.source_url, r.content, r.created_at, r.updated_at,
+                r.meta,
                 json_extract(r.meta, '$.pinned') AS pinned,
                 ${tagNamesSub} AS tag_names, ${tagIdsSub} AS tag_ids`;
 
@@ -94,17 +95,6 @@ router.get('/resources', (req: Request, res) => {
      LIMIT @limit OFFSET @offset`
   ).all({ ...params, limit: pageSize, offset: (page - 1) * pageSize }) as ResourceRow[];
   res.json({ code: 0, data: { list: rows, total } });
-});
-
-/** GET /api/tags —— 标签列表（含各标签资源数；数据库视图标签筛选/标签维度图谱用） */
-router.get('/tags', (_req, res) => {
-  const db = getDb();
-  const rows = db.prepare(
-    `SELECT t.id, t.name, COUNT(rt.resource_id) AS count
-     FROM tags t LEFT JOIN resource_tags rt ON rt.tag_id = t.id
-     GROUP BY t.id ORDER BY t.name`
-  ).all();
-  res.json({ code: 0, data: rows });
 });
 
 /** GET /api/folders —— 文件夹树（嵌套层级，供树视图/文件夹维度链图） */
@@ -468,35 +458,36 @@ router.get('/graph/hierarchy', (_req, res) => {
   res.json({ code: 0, data: roots });
 });
 
-/** GET /api/tags —— 标签列表（含各标签资源数；数据库视图标签筛选/标签维度图谱用） */
+/** GET /api/tags —— 标签列表（含类别/图标/各标签资源数；待办页左栏按类别归类管理标签） */
 router.get('/tags', (_req, res) => {
   const db = getDb();
   const rows = db.prepare(
-    `SELECT t.id, t.name, t.color, COUNT(rt.resource_id) AS count
+    `SELECT t.id, t.name, t.color, t.icon, t.category, t.sort, COUNT(rt.resource_id) AS count
      FROM tags t LEFT JOIN resource_tags rt ON rt.tag_id = t.id
-     GROUP BY t.id ORDER BY t.name`
+     GROUP BY t.id ORDER BY t.category, t.sort, t.name`
   ).all();
   res.json({ code: 0, data: rows });
 });
 
-/** POST /api/tags —— 创建标签 */
+/** POST /api/tags —— 创建标签（可指定类别） */
 router.post('/tags', (req, res) => {
   const db = getDb();
-  const { name, color } = req.body as { name?: string; color?: string };
+  const { name, color, category } = req.body as { name?: string; color?: string; category?: string };
   const n = (name || '').trim();
   if (!n) { res.status(400).json({ code: 1, msg: '标签名不能为空' }); return; }
   const exists = db.prepare(`SELECT id FROM tags WHERE name = ?`).get(n) as { id: string } | undefined;
   if (exists) { res.status(400).json({ code: 1, msg: '标签已存在' }); return; }
   const id = randomUUID();
   const c = color || '#8BC8EA';
-  db.prepare(`INSERT INTO tags (id, name, color) VALUES (?, ?, ?)`).run(id, n, c);
-  res.json({ code: 0, data: { id, name: n, color: c, count: 0 } });
+  const cat = (category || '').trim();
+  db.prepare(`INSERT INTO tags (id, name, color, category) VALUES (?, ?, ?, ?)`).run(id, n, c, cat);
+  res.json({ code: 0, data: { id, name: n, color: c, category: cat, count: 0 } });
 });
 
-/** PUT /api/tags/:id —— 重命名 / 改色 */
+/** PUT /api/tags/:id —— 重命名 / 改色 / 设置类别 */
 router.put('/tags/:id', (req, res) => {
   const db = getDb();
-  const { name, color } = req.body as { name?: string; color?: string };
+  const { name, color, category } = req.body as { name?: string; color?: string; category?: string };
   const row = db.prepare(`SELECT id, name, color FROM tags WHERE id = ?`).get(req.params.id) as { id: string; name: string; color: string } | undefined;
   if (!row) { res.status(404).json({ code: 1, msg: '标签不存在' }); return; }
   const newName = (name ?? row.name).trim();
@@ -504,8 +495,13 @@ router.put('/tags/:id', (req, res) => {
   const dup = db.prepare(`SELECT id FROM tags WHERE name = ? AND id != ?`).get(newName, row.id) as { id: string } | undefined;
   if (dup) { res.status(400).json({ code: 1, msg: '标签名已存在' }); return; }
   const newColor = color || row.color;
-  db.prepare(`UPDATE tags SET name = ?, color = ? WHERE id = ?`).run(newName, newColor, row.id);
-  res.json({ code: 0, data: { id: row.id, name: newName, color: newColor } });
+  // category 仅在显式传入时更新（可传空串取消归类）
+  if (category !== undefined) {
+    db.prepare(`UPDATE tags SET name = ?, color = ?, category = ? WHERE id = ?`).run(newName, newColor, String(category).trim(), row.id);
+  } else {
+    db.prepare(`UPDATE tags SET name = ?, color = ? WHERE id = ?`).run(newName, newColor, row.id);
+  }
+  res.json({ code: 0, data: { id: row.id, name: newName, color: newColor, category: category !== undefined ? String(category).trim() : undefined } });
 });
 
 /** DELETE /api/tags/:id —— 删除标签（resource_tags 级联清理） */
@@ -649,18 +645,22 @@ router.get('/resources/trash/info', (_req, res) => {
 /** POST /api/resources —— 创建自建资源（note/bookmark/todo） */
 router.post('/resources', (req, res) => {
   const db = getDb();
-  const { type, title, content, source_url } = req.body as {
-    type?: string; title?: string; content?: string; source_url?: string;
+  const { type, title, content, source_url, meta } = req.body as {
+    type?: string; title?: string; content?: string; source_url?: string; meta?: unknown;
   };
   if (!type || !SELF_TYPES.has(type)) { res.status(400).json({ code: 1, msg: '仅支持创建笔记/书签/待办' }); return; }
   if (!title || !String(title).trim()) { res.status(400).json({ code: 1, msg: '标题不能为空' }); return; }
   if (type === 'bookmark' && !String(source_url || '').trim()) { res.status(400).json({ code: 1, msg: '书签链接不能为空' }); return; }
   const id = randomUUID();
   const now = new Date().toISOString();
+  // meta 仅自建资源使用：待办存优先级/子项/时间/提醒等扩展；笔记书签存图标等（整体覆盖语义）
+  const metaStr = meta !== undefined
+    ? (typeof meta === 'string' ? meta : JSON.stringify(meta || {}))
+    : '{}';
   db.prepare(
     `INSERT INTO resources (id, type, title, content, source_url, path, parent_id, status, done, meta, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, '', NULL, 'active', 0, '{}', ?, ?)`
-  ).run(id, type, String(title).trim(), String(content || ''), String(source_url || ''), now, now);
+     VALUES (?, ?, ?, ?, ?, '', NULL, 'active', 0, ?, ?, ?)`
+  ).run(id, type, String(title).trim(), String(content || ''), String(source_url || ''), metaStr, now, now);
   res.json({ code: 0, data: { id, type, title: String(title).trim() } });
 });
 

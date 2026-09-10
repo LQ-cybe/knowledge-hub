@@ -34,7 +34,7 @@ const items = ref<Resource[]>([]);
 const loading = ref(true);
 
 const typeIcons: Record<string, string> = {
-  folder: '📂', file: '📄', note: '📝', bookmark: '🔖', todo: '✅', report: '📊',
+  folder: '📂', file: '📄', note: '📝', bookmark: '🔖', todo: '✅', report: '📅',
 };
 const typeOptions = [
   { value: '', label: '全部类型' },
@@ -114,7 +114,7 @@ function fmtBytes(b?: number | null) {
 <template>
   <div class="tl" v-loading="loading">
     <div class="tl-head">
-      <div class="tl-title">🕐 历史<small>（按创建时间倒序 · 最近 {{ items.length }} 条）</small></div>
+      <div class="tl-title">🕐 历史<small>（最近 {{ items.length }} 条）</small></div>
       <el-select v-model="typeFilter" size="default" style="width: 130px;" @change="load">
         <el-option v-for="o in typeOptions" :key="o.value" :value="o.value" :label="o.label" />
       </el-select>

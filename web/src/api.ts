@@ -14,6 +14,8 @@ export interface Resource {
   created_at: string;
   updated_at: string;
   highlight?: string;
+  /** 笔记/书签正文；书签场景为「描述」 */
+  content?: string;
   tag_names?: string;
   tag_ids?: string;
   pinned?: number;
@@ -65,13 +67,13 @@ export const getDashboard = () => http.get('/dashboard').then(r => r.data.data a
 
 /** 数据库视图：分页 + 筛选 + 排序 */
 export interface PageResult<T> { list: T[]; total: number }
-export interface TagItem { id: string; name: string; color: string; count: number }
+export interface TagItem { id: string; name: string; color: string; icon?: string; category?: string; sort?: number; count: number }
 export const getResourcesPage = (params: Record<string, string>) =>
   http.get('/resources', { params }).then(r => r.data.data as PageResult<Resource>);
 export const getTags = () => http.get('/tags').then(r => r.data.data as TagItem[]);
-export const createTag = (name: string, color?: string) =>
-  http.post('/tags', { name, color }).then(r => r.data.data as TagItem);
-export const updateTag = (id: string, patch: { name?: string; color?: string }) =>
+export const createTag = (name: string, color?: string, category?: string) =>
+  http.post('/tags', { name, color, category }).then(r => r.data.data as TagItem);
+export const updateTag = (id: string, patch: { name?: string; color?: string; category?: string }) =>
   http.put(`/tags/${id}`, patch).then(r => r.data.data as TagItem);
 export const deleteTag = (id: string) => http.delete(`/tags/${id}`).then(r => r.data.data);
 export const setResourceTags = (resourceId: string, tagIds: string[], recursive = false) =>
@@ -198,6 +200,7 @@ export interface ReportItem {
   title: string;
   period_start: string | null;
   period_end: string | null;
+  content?: string;
   created_at: string;
 }
 export const generateReport = (type: string, ref = '') =>

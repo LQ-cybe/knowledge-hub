@@ -183,12 +183,12 @@ router.post('/reports/save', (req: Request, res) => {
   res.json({ code: 0, data: { id, title, created_at: now } });
 });
 
-/** GET /api/reports —— 已保存的报表列表 */
+/** GET /api/reports —— 已保存的报表列表（含 content，供左侧列表单击时右侧直接展示） */
 router.get('/reports', (_req: Request, res) => {
   const db = getDb();
   const rows = db.prepare(
-    `SELECT id, title, period_start, period_end, created_at FROM reports ORDER BY created_at DESC LIMIT 200`
-  ).all() as { id: string; title: string; period_start: string | null; period_end: string | null; created_at: string }[];
+    `SELECT id, type, title, period_start, period_end, content, created_at FROM reports ORDER BY created_at DESC LIMIT 200`
+  ).all();
   res.json({ code: 0, data: rows });
 });
 

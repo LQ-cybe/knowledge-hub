@@ -152,6 +152,15 @@ function migrate(db: Database.Database): void {
     // 分支节点折叠状态：1=展开（默认），0=折叠；用于跨会话恢复导图折叠布局
     db.exec(`ALTER TABLE mindmap_nodes ADD COLUMN expand INTEGER NOT NULL DEFAULT 1`);
   }
+  const tcols = db.prepare(`PRAGMA table_info(tags)`).all() as { name: string }[];
+  if (!tcols.some(c => c.name === 'category')) {
+    // 标签类别（用户自定义分组名，空 = 未分类）：待办页左栏按类别归类管理标签
+    db.exec(`ALTER TABLE tags ADD COLUMN category TEXT NOT NULL DEFAULT ''`);
+  }
+  if (!tcols.some(c => c.name === 'sort')) {
+    // 同类标签/类别内的排序权重
+    db.exec(`ALTER TABLE tags ADD COLUMN sort INTEGER NOT NULL DEFAULT 0`);
+  }
 }
 
 /** 获取全局数据库连接（单例，初始化建表） */

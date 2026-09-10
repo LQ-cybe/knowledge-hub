@@ -41,7 +41,7 @@ const orderOptions = [
   { value: 'type', label: '类型' },
 ];
 const typeLabels: Record<string, string> = { file: '文件', folder: '文件夹', note: '笔记', bookmark: '书签', todo: '待办', report: '报表' };
-const typeIcons: Record<string, string> = { folder: '📂', file: '📄', note: '📝', bookmark: '🔖', todo: '✅', report: '📊' };
+const typeIcons: Record<string, string> = { folder: '📂', file: '📄', note: '📝', bookmark: '🔖', todo: '✅', report: '📅' };
 
 const tagColor = (id: string) => tags.value.find(t => t.id === id)?.color || '#8BC8EA';
 

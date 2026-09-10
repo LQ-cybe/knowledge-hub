@@ -3,7 +3,7 @@
     <!-- ============ 导图库 ============ -->
     <div v-if="view === 'library'" class="mm-library">
       <div class="ml-head">
-        <h3>📐 思维导图库</h3>
+        <h3>🧩 思维导图库</h3>
         <div class="ml-head-right">
           <el-button size="small" text :class="{ 'recycle-on': showRecycle }" title="回收站：删除的导图将保留 30 天，超期自动清理" @click="toggleRecycle">
             🗑 回收站<template v-if="recycleInfo.count">（{{ recycleInfo.count }}）</template>
@@ -388,8 +388,8 @@ const LAYOUT_ICONS: Record<string, string> = {
   timeline: '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="2.5" cy="8" r="1.4" fill="currentColor"/><path d="M4 8h10.5M6.5 5l4.5-2M6.5 11l4.5 2" stroke="currentColor" stroke-width="1" fill="none"/><circle cx="7" cy="8" r="1.2" fill="currentColor"/><circle cx="12" cy="8" r="1.2" fill="currentColor"/></svg>',
 };
 
-// 思维导图文件图标（列表视图文件名前）
-const MAP_ICON = '<svg viewBox="0 0 16 16" width="14" height="14" style="vertical-align:-2px"><circle cx="3" cy="3" r="1.8" fill="currentColor"/><circle cx="13" cy="4" r="1.5" fill="currentColor"/><circle cx="4" cy="13" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><path d="M4.4 4.2l1.4 2.2M10.9 5.6l-3 1.4M5.4 11.4l2-2M9.9 10.5l.9-3" stroke="currentColor" stroke-width="1" fill="none"/></svg>';
+// 思维导图文件图标（列表视图文件名前）——统一用 🧩（与顶部 Tab、导图库标题一致）
+const MAP_ICON = '🧩';
 const view = ref<'library' | 'editor'>('library');
 const maps = ref<MindmapMeta[]>([]);
 const mapId = ref('');
@@ -694,11 +694,14 @@ async function openMap(id: string) {
       mousewheelAction: 'zoom',
       // 左键拖拽空白处 = 框选多选（右键仍可拖动画布）；默认是右键框选，不符合直觉
       useLeftKeySelectionRightKeyDrag: true,
-      // 鱼骨（放射）布局夹角：原官方默认 45° 对角过陡，相邻肋子树纵向压盖重叠；
-      // 放平缓到 63° 减小每根肋的纵向展开高度，配合上方加大的 marginX/marginY 消除重叠
-      fishboneDeg: 63,
+      // 鱼骨（放射）布局夹角：默认 45° 会让上下分支横向间距过大，调大后更紧凑（配合主题 second.marginX 缩减）
+      fishboneDeg: 72,
       // 分支节点展开/折叠按钮：光标悬停时显示（不常驻）
       alwaysShowExpandBtn: false,
+      // 节点选中/悬停高亮框：默认会向节点外扩 2px（hoverRectPadding），选中时看起来像是
+      // 一个比节点大的"包围盒"。改为 0，配合主题里的 hoverRectRadius（=节点 borderRadius），
+      // 高亮框完全贴合节点自身形状——不再有多余外框。
+      hoverRectPadding: 0,
       // 关闭节点位置过渡动画：打开/切换布局/展开折叠直接到位，
       // 避免动画中间帧出现节点从中心重叠飞出、连线暂缺（"看起来重叠/孤立"）
       transition: 0,
@@ -1039,6 +1042,8 @@ function addAssoc() {
 function onLayoutChange() {
   if (!mm) return;
   mm.setLayout(LAYOUT_MAP[layoutKey.value] || 'logicalStructure');
+  // 鱼骨布局禁用节点自由拖拽（位置全自动），切回其他布局时恢复
+  try { mm.opt.enableFreeDrag = layoutKey.value !== 'radial'; } catch {}
   // 切布局后必须重设主题配置：放射分支会覆盖 second.marginX（横向紧凑），否则沿用旧 marginX 间距不生效
   try { mm.setThemeConfig(themeCfgFor(themeKey.value)); } catch {}
   applyCanvasBg();
@@ -1059,17 +1064,29 @@ function themeCfgFor(k: string): Record<string, any> {
   const t = THEMES[k] || THEMES['nexa-light'];
   const isDark = document.documentElement.classList.contains('dark');
   const cfg = { ...t.cfg };
-  // 间距：鱼骨图（radial）此前未设 marginX/marginY，导致 getMarginY/Y 返回 undefined+hoverRectPadding = NaN，
-  // 节点相互压盖重叠（用户第 18 轮要求消除重叠）。在上一轮基础上继续加大间距并配合更平缓的鱼骨夹角，
-  // 进一步消除相邻肋（rib）子树之间的横向/纵向压盖（Fishbone.js 中肋节点按"前兄弟宽 + marginX"绝对排布，
-  // 肋内子节点按"节点高 + marginY"沿对角列式堆叠，二者过小即重叠）。
-  // 其他布局保留第 8 轮纵向修复（second.marginY 9 / node.marginY 12，教育心理学纵向过密）
+  // 节点选中/悬停高亮框（.smm-hover-node）的圆角：SMM 构建 themeConfig 时用 deepmerge
+  // 把内置主题每一层的 hoverRectRadius(5) 合并了进来，只写在最外层会被层级值盖掉——
+  // 必须逐层写入。取值与节点自身 borderRadius 一致，高亮框才贴合节点形状而非戳出四角。
+  const hoverR = (t.cfg as any).borderRadius ?? 10;
+  (['root', 'second', 'node', 'generalization'] as const).forEach((lv) => {
+    cfg[lv] = { ...(cfg[lv] || {}), hoverRectRadius: hoverR };
+  });
+  // 子节点纵向间距（所有布局）：SMM 内置默认 node.marginY = 0，第三层及以下兄弟节点本应贴死，
+  // 之前一直是靠 hoverRectPadding(2)×2 = 4px 撑着；为去掉选中包围盒把 hoverRectPadding 设为 0 后，
+  // 这点空白也没了，节点直接挨在一起 —— 这里显式补 10px 空白。
+  // 注意：组织（组织图）是横向布点，它把「兄弟间距」读作 marginY（见 OrganizationStructure.js），
+  // 所以同一数值正好对应组织图里兄弟节点的横向间隙。
+  cfg.node = { ...(cfg.node || {}), marginY: 10 };
+  // 第二层分支节点纵向间距：内置默认 second.marginY = 40，向右/向左/思维导图这三种布局显得过疏，
+  // 按用户「减掉一半」的直观口径实测校准：40 → 10，常见分支间隙从 60.5 降到 30.5（≈ 一半）；
+  // 带 3 个子节点的分支因子树需要空间（防重叠的刚性下限），只能到 98.5 → 68.5（约 −30%）。
+  // （鱼骨图/组织图/时间轴的该值含义不同——鱼骨按夹角排布、组织图为横向、时间轴按轴线排布——保持默认）
+  if (['right', 'left', 'mind'].includes(layoutKey.value)) {
+    cfg.second = { ...(cfg.second || {}), marginY: 10 };
+  }
+  // 放射（鱼骨）布局角度：默认 45° 会让上下分支横向间距过大，调大后更紧凑（配合主题 second.marginX 缩减）
   if (layoutKey.value === 'radial') {
-    cfg.second = { ...(cfg.second || {}), marginY: 30, marginX: 64 };
-    cfg.node = { ...(cfg.node || {}), marginY: 24, marginX: 52 };
-  } else {
-    cfg.second = { ...(cfg.second || {}), marginY: 9 };
-    cfg.node = { ...(cfg.node || {}), marginY: 12 };
+    cfg.second = { ...(cfg.second || {}), marginX: 10 };
   }
   // SMM 重渲染（切布局等）会用 themeConfig.backgroundColor 覆盖容器背景，必须同时替换该字段
   return isDark ? { ...cfg, backgroundColor: t.darkBg, background: t.darkBg } : cfg;
